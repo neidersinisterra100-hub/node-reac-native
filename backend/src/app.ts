@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import "./config/mongo";
+import "./config/mongo.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import ticketRoutes from "./routes/ticket.routes.js";

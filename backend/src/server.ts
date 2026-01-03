@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import "./config/mongo";
+import "./config/mongo.js";
 import app from "./app.js";
 
 // 👇 CONVERTIMOS A NUMBER

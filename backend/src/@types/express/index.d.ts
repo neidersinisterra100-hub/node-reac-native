@@ -2,13 +2,30 @@ import "express";
 
 declare global {
   namespace Express {
-    interface User {
+    interface UserPayload {
       id: string;
-      role: string;
+      role?: "user" | "admin" | "owner";
     }
 
     interface Request {
-      user?: User;
+      user?: UserPayload;
     }
   }
 }
+
+
+
+// import "express";
+
+// declare global {
+//   namespace Express {
+//     interface User {
+//       id: string;
+//       role: string;
+//     }
+
+//     interface Request {
+//       user?: User;
+//     }
+//   }
+// }

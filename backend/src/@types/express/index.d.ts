@@ -1,9 +1,14 @@
 import "express";
 
-declare module "express" {
-  interface Request {
-    user?: {
+declare global {
+  namespace Express {
+    interface User {
       id: string;
-    };
+      role: string;
+    }
+
+    interface Request {
+      user?: User;
+    }
   }
 }

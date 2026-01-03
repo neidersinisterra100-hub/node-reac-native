@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import HomeScreen from "../screens/HomeScreen";
+import HomeScreen from "./publicStack/HomeScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import ProfileStack from "./ProfileStack";
 

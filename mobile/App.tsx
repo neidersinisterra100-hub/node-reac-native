@@ -1,20 +1,3 @@
-// import { View, Text } from "react-native";
-
-// export default function App() {
-//   return (
-//     <View
-//       style={{
-//         flex: 1,
-//         justifyContent: "center",
-//         alignItems: "center",
-//       }}
-//     >
-//       <Text>APP ARRANCA</Text>
-//     </View>
-//   );
-// }
-
-
 import { useState } from "react";
 import { AuthProvider } from "./src/context/AuthContext";
 import AppNavigator from "./src/navigation/AppNavigator";

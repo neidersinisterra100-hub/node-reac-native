@@ -1,10 +1,10 @@
 import axios from "axios";
 import { loadSession } from "../utils/authStorage";
+ 
+const API_URL = "http://localhost:3000/api"
 
 export const api = axios.create({
-  baseURL:
-    "https://gramophonical-silvana-unmurmuringly.ngrok-free.dev/api",
-  timeout: 10000,
+  baseURL: API_URL
 });
 
 api.interceptors.request.use(async (config) => {

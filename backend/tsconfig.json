@@ -3,7 +3,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ESNext",
-
+    // "moduleResolution": "node",
     "rootDir": "src",
     "outDir": "dist",
 

@@ -1,6 +1,6 @@
 import { Response } from "express";
-import Ticket from "../models/Ticket";
-import { AuthRequest } from "../middlewares/auth.middleware";
+import Ticket from "../models/Ticket.js";
+import { AuthRequest } from "../middlewares/auth.middleware.js";
 
 /* ================= COMPRAR TIQUETE ================= */
 

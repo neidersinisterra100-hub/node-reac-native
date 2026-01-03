@@ -2,8 +2,8 @@ import express from "express";
 import cors from "cors";
 import "./config/mongo";
 
-import authRoutes from "./routes/auth.routes";
-import ticketRoutes from "./routes/ticket.routes";
+import authRoutes from "./routes/auth.routes.js";
+import ticketRoutes from "./routes/ticket.routes.js";
 
 const app = express();
 

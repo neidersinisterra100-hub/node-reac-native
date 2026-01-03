@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { ItemService } from "../services/item.service";
-import { handleHttp } from "../utils/error.handle";
+import { ItemService } from "../services/item.service.js";
+import { handleHttp } from "../utils/error.handle.js";
 
-import mpClient from "../config/mercadopago";
+import mpClient from "../config/mercadopago.js";
 import { Preference } from "mercadopago";
 
 /**

@@ -1,4 +1,4 @@
-import { ItemModel } from "../models/item.model";
+import { ItemModel } from "../models/item.model.js";
 
 export const ItemRepository = {
   getAll: () => ItemModel.find(),

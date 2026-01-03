@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import "./config/mongo";
-import app from "./app";
+import app from "./app.js";
 
 // 👇 CONVERTIMOS A NUMBER
 const PORT = Number(process.env.PORT) || 3000;

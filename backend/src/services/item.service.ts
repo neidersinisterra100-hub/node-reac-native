@@ -1,4 +1,4 @@
-import { ItemRepository } from "../repositories/item.repository";
+import { ItemRepository } from "../repositories/item.repository.js";
 
 export const ItemService = {
   getItems: () => ItemRepository.getAll(),

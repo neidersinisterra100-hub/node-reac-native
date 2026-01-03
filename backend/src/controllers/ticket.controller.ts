@@ -1,11 +1,10 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import Ticket from "../models/Ticket.js";
-import { AuthRequest } from "../middlewares/auth.middleware.js";
 
 /* ================= COMPRAR TIQUETE ================= */
 
 export const buyTicket = async (
-  req: AuthRequest,
+  req: Request,
   res: Response
 ) => {
   try {
@@ -47,7 +46,7 @@ export const buyTicket = async (
 /* ================= HISTORIAL ================= */
 
 export const getMyTickets = async (
-  req: AuthRequest,
+  req: Request,
   res: Response
 ) => {
   try {

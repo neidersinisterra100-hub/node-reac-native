@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+type UserRole = "user" | "admin" | "owner";
+
 export const requireAuth = (
   req: Request,
   res: Response,
@@ -22,7 +24,7 @@ export const requireAuth = (
       process.env.JWT_SECRET as string
     ) as {
       id: string;
-      role?: "user" | "admin" | "owner";
+      role: UserRole;
     };
 
     req.user = {
@@ -31,13 +33,12 @@ export const requireAuth = (
     };
 
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({
       message: "Token inválido",
     });
   }
 };
-
 
 
 // import { Request, Response, NextFunction } from "express";

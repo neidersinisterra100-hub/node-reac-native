@@ -1,7 +1,8 @@
 import axios from "axios";
 import { loadSession } from "../utils/authStorage";
- 
-const API_URL = "http://localhost:3000/api"
+ import Constants from "expo-constants";
+
+const API_URL = Constants.expoConfig?.extra?.API_URL ?? "http://localhost:3000/api";
 
 export const api = axios.create({
   baseURL: API_URL

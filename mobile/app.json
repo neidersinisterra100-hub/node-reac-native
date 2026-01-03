@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Transmilenio",
+    "slug": "transmilenio",
+    "splash": {
+      "backgroundColor": "#FFFFFF",
+      "resizeMode": "contain",
+      "image": "./assets/splash.png"
+    }
+  }
+}

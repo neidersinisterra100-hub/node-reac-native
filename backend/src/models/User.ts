@@ -1,8 +1,9 @@
 import { Schema, model } from "mongoose";
 
 export enum UserRole {
-  OWNER = "OWNER",
-  DRIVER = "DRIVER",
+  OWNER = "owner",
+  USER = "user",
+  ADMIN = "admin",
 }
 
 const UserSchema = new Schema(
@@ -18,7 +19,7 @@ const UserSchema = new Schema(
     role: {
       type: String,
       enum: Object.values(UserRole),
-      default: UserRole.OWNER,
+      default: UserRole.USER,
     },
   },
   { timestamps: true }

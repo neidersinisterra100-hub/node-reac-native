@@ -15,7 +15,7 @@ import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { typography } from "../theme/typography";
 import { useAuth } from "../context/AuthContext";
-import { UserRole } from "../types/user";
+import { isAdminOrOwner } from "../utils/roles";
 
 export default function SettingsScreen() {
   const { user } = useAuth();
@@ -33,18 +33,17 @@ export default function SettingsScreen() {
           "hardwareBackPress",
           () => {
             handleClose();
-            return true; // ⛔ bloquea comportamiento por defecto
+            return true;
           }
         );
 
-      return () => {
-        subscription.remove(); // ✅ API correcta
-      };
+      return () => subscription.remove();
     }, [])
   );
 
-  // 🔐 Seguridad extra
-  if (!user || user.role !== UserRole.OWNER) {
+  /* ================= ACCESS CONTROL ================= */
+
+  if (!isAdminOrOwner(user)) {
     return (
       <AppContainer>
         <Appbar.Header style={styles.header}>
@@ -68,9 +67,10 @@ export default function SettingsScreen() {
     );
   }
 
+  /* ================= RENDER ================= */
+
   return (
     <AppContainer>
-      {/* HEADER DEL MODAL */}
       <Appbar.Header style={styles.header}>
         <Appbar.Content
           title="Configuración"
@@ -103,38 +103,34 @@ export default function SettingsScreen() {
   );
 }
 
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-
   headerTitle: {
     color: colors.textPrimary,
     fontWeight: "700",
   },
-
   container: {
     padding: spacing.lg,
   },
-
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.lg,
   },
-
   sectionTitle: {
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
-
   bodyText: {
     color: colors.textPrimary,
   },
-
   card: {
     marginTop: spacing.md,
     backgroundColor: "#FFF",
@@ -143,13 +139,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-
   item: {
     marginTop: spacing.sm,
     color: colors.textPrimary,
     fontWeight: "500",
   },
 });
+
+
 
 // import { View, StyleSheet } from "react-native";
 // import { Text, Appbar } from "react-native-paper";

@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View, } from "react-native";
+import { ScrollView, StyleSheet, View, Alert, } from "react-native";
 import { Text } from "react-native-paper";
 import { useNavigation, useFocusEffect, } from "@react-navigation/native";
 import { useCallback, useState } from "react";
@@ -16,6 +16,7 @@ import { getTrips } from "../../services/trip.service";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { colors } from "../../theme/colors";
+import { usePermissions } from "../../hooks/usePermissions";
 
 export default function HomeScreen() {
   // ✅ dominio owner
@@ -64,6 +65,36 @@ export default function HomeScreen() {
       });
   };
 
+  const { isAdminOrOwner } = usePermissions();
+
+
+  const handleCreateTrip = () => {
+    if (!isAdminOrOwner) {
+      Alert.alert(
+        "Acceso restringido",
+        "Solo administradores u owners"
+      );
+      return;
+    }
+
+    navigation.navigate("CreateTrip");
+  };
+  // const handleCreateTrip = () => {
+  //   if (
+  //     !user ||
+  //     !["admin", "owner"].includes(user.role)
+  //   ) {
+  //     Alert.alert(
+  //       "Acceso restringido",
+  //       "Solo administradores u owners"
+  //     );
+  //     return;
+  //   }
+
+  //   navigation.navigate("CreateTrip");
+  // };
+
+
   /* ================= RENDER ================= */
 
   return (
@@ -90,14 +121,22 @@ export default function HomeScreen() {
             </View>
 
             {/* ===== Acción principal owner ===== */}
-            {!canCreate && (
+            {/* {!canCreate && (
               <PrimaryButton
                 label="Crear nuevo viaje"
                 onPress={() =>
                   navigation.navigate("CreateTrip")
                 }
               />
-            )}
+            )} */}
+            {user &&
+              ["admin", "owner"].includes(user.role) && (
+                <PrimaryButton
+                  label="Crear nuevo viaje"
+                  onPress={handleCreateTrip}
+                />
+              )}
+
 
             {!canCreate && (
               <Text style={styles.infoText}>

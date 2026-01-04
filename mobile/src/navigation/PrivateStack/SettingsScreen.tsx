@@ -14,54 +14,41 @@ import AppContainer from "../../components/ui/AppContainer";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
-import { useAuth } from "../../context/AuthContext";
-import { UserRole } from "../../types/user";
+import { usePermissions } from "../../hooks/usePermissions";
 
 export default function SettingsScreen() {
-  const { user } = useAuth();
   const navigation = useNavigation();
+  const { isAdminOrOwner } = usePermissions();
 
   const handleClose = () => {
     navigation.goBack();
   };
 
-  /* ================= ANDROID BACK HANDLER ================= */
   useFocusEffect(
     useCallback(() => {
-      const subscription =
-        BackHandler.addEventListener(
-          "hardwareBackPress",
-          () => {
-            handleClose();
-            return true; // ⛔ bloquea comportamiento por defecto
-          }
-        );
+      const sub = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          handleClose();
+          return true;
+        }
+      );
 
-      return () => {
-        subscription.remove(); // ✅ API correcta
-      };
+      return () => sub.remove();
     }, [])
   );
 
-  // 🔐 Seguridad extra
-  if (!user || user.role !== UserRole.OWNER) {
+  if (!isAdminOrOwner) {
     return (
       <AppContainer>
         <Appbar.Header style={styles.header}>
-          <Appbar.Content
-            title="Configuración"
-            titleStyle={styles.headerTitle}
-          />
-          <Appbar.Action
-            icon="close"
-            onPress={handleClose}
-            color={colors.textPrimary}
-          />
+          <Appbar.Content title="Configuración" />
+          <Appbar.Action icon="close" onPress={handleClose} />
         </Appbar.Header>
 
         <View style={styles.center}>
-          <Text style={[typography.body, styles.bodyText]}>
-            No tienes permisos para acceder a esta sección.
+          <Text style={styles.text}>
+            No tienes permisos para acceder a esta sección
           </Text>
         </View>
       </AppContainer>
@@ -70,33 +57,19 @@ export default function SettingsScreen() {
 
   return (
     <AppContainer>
-      {/* HEADER DEL MODAL */}
       <Appbar.Header style={styles.header}>
-        <Appbar.Content
-          title="Configuración"
-          titleStyle={styles.headerTitle}
-        />
-        <Appbar.Action
-          icon="close"
-          onPress={handleClose}
-          color={colors.textPrimary}
-        />
+        <Appbar.Content title="Configuración" />
+        <Appbar.Action icon="close" onPress={handleClose} />
       </Appbar.Header>
 
       <View style={styles.container}>
-        <Text style={[typography.title, styles.sectionTitle]}>
-          General
-        </Text>
+        <Text style={styles.title}>General</Text>
 
         <View style={styles.card}>
-          <Text style={[typography.body, styles.bodyText]}>
-            Aquí podrás configurar:
-          </Text>
-
-          <Text style={styles.item}>• Empresa</Text>
-          <Text style={styles.item}>• Rutas</Text>
-          <Text style={styles.item}>• Vehículos</Text>
-          <Text style={styles.item}>• Usuarios</Text>
+          <Text style={styles.text}>• Empresa</Text>
+          <Text style={styles.text}>• Rutas</Text>
+          <Text style={styles.text}>• Viajes</Text>
+          <Text style={styles.text}>• Usuarios</Text>
         </View>
       </View>
     </AppContainer>
@@ -106,48 +79,27 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
-
-  headerTitle: {
-    color: colors.textPrimary,
-    fontWeight: "700",
-  },
-
   container: {
     padding: spacing.lg,
   },
-
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: spacing.lg,
   },
-
-  sectionTitle: {
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
+  title: {
+    ...typography.title,
+    marginBottom: spacing.md,
   },
-
-  bodyText: {
-    color: colors.textPrimary,
-  },
-
   card: {
-    marginTop: spacing.md,
-    backgroundColor: "#FFF",
-    borderRadius: 16,
+    backgroundColor: "#fff",
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 16,
   },
-
-  item: {
-    marginTop: spacing.sm,
-    color: colors.textPrimary,
-    fontWeight: "500",
+  text: {
+    ...typography.body,
+    marginBottom: spacing.sm,
   },
 });
 

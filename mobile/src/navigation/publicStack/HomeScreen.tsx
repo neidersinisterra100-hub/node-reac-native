@@ -1,13 +1,6 @@
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, View, } from "react-native";
 import { Text } from "react-native-paper";
-import {
-  useNavigation,
-  useFocusEffect,
-} from "@react-navigation/native";
+import { useNavigation, useFocusEffect, } from "@react-navigation/native";
 import { useCallback, useState } from "react";
 
 import AppContainer from "../../components/ui/AppContainer";

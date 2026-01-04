@@ -11,7 +11,7 @@ import { typography } from "../../theme/typography";
 import { colors } from "../../theme/colors";
 
 import { Ticket } from "../../types/ticket";
-import { getMyTicketsRequest } from "../../services/ticket.service";
+import { getMyTickets } from "../../services/ticket.service";
 
 export default function HistoryScreen() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -23,7 +23,7 @@ export default function HistoryScreen() {
 
   const loadHistory = async () => {
     try {
-      const data = await getMyTicketsRequest();
+      const data = await getMyTickets();
 
       // 🛡️ SIEMPRE ARRAY
       setTickets(Array.isArray(data) ? data : []);

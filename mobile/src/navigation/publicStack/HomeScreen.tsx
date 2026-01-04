@@ -69,31 +69,16 @@ export default function HomeScreen() {
 
 
   const handleCreateTrip = () => {
-    if (!isAdminOrOwner) {
+    if (!isOwner) {
       Alert.alert(
         "Acceso restringido",
-        "Solo administradores u owners"
+        "Solo owners pueden crear viajes"
       );
       return;
     }
 
     navigation.navigate("CreateTrip");
   };
-  // const handleCreateTrip = () => {
-  //   if (
-  //     !user ||
-  //     !["admin", "owner"].includes(user.role)
-  //   ) {
-  //     Alert.alert(
-  //       "Acceso restringido",
-  //       "Solo administradores u owners"
-  //     );
-  //     return;
-  //   }
-
-  //   navigation.navigate("CreateTrip");
-  // };
-
 
   /* ================= RENDER ================= */
 
@@ -129,13 +114,19 @@ export default function HomeScreen() {
                 }
               />
             )} */}
-            {user &&
+            {isOwner && (
+              <PrimaryButton
+                label="Crear nuevo viaje"
+                onPress={handleCreateTrip}
+              />
+            )}
+            {/* {user &&
               ["admin", "owner"].includes(user.role) && (
                 <PrimaryButton
                   label="Crear nuevo viaje"
                   onPress={handleCreateTrip}
                 />
-              )}
+              )} */}
 
 
             {!canCreate && (

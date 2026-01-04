@@ -23,6 +23,7 @@ import {
 type AuthContextType = {
   user: User | null;
   loading: boolean;
+  // token: string | null;
   error: string | null;
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
@@ -111,7 +112,12 @@ export function AuthProvider({
         });
 
       await saveSession(user, token);
-      setUser(user);
+      setUser({
+        ...user,
+        role: user.role.toLowerCase(),
+      });
+
+      // setUser(user);
     } catch (err: any) {
       const message =
         typeof err?.response?.data?.message === "string"

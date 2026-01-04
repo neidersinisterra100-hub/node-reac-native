@@ -2,6 +2,13 @@ import { Schema, model, Types } from "mongoose";
 
 const TicketSchema = new Schema(
   {
+    trip: {
+      type: Types.ObjectId,
+      ref: "Trip"
+    },
+    company: {
+      type: Types.ObjectId, ref: "Company"
+    },
     user: {
       type: Types.ObjectId,
       ref: "User",
@@ -37,4 +44,4 @@ const TicketSchema = new Schema(
   { timestamps: true }
 );
 
-export default model("Ticket", TicketSchema);
+export default model("TicketModel", TicketSchema);

@@ -97,7 +97,7 @@ export default function HomeScreen() {
             </View>
 
             {/* ===== Acción principal owner ===== */}
-            {canCreate && (
+            {!canCreate && (
               <PrimaryButton
                 label="Crear nuevo viaje"
                 onPress={() =>

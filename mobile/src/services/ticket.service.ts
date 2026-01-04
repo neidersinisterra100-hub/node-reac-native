@@ -23,7 +23,7 @@ export async function buyTicketRequest(
 
 /* ================= HISTORIAL ================= */
 
-export async function getMyTicketsRequest(): Promise<Ticket[]> {
+export async function getMyTickets(): Promise<Ticket[]> {
   const response = await api.get<Ticket[]>(
     "/tickets/my"
   );

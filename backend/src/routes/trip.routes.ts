@@ -1,18 +1,18 @@
 import { Router } from "express";
-import { createTrip, getTrips, } from "../controllers/trip.controller.js";
+import { createTrip, getTrips } from "../controllers/trip.controller.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
-import { requireAdmin } from "../middlewares/requireAdmin.js";
+import { requireRole } from "../middlewares/requireRole.js";
 
 const router = Router();
 
-// LISTAR VIAJES (PÚBLICO)
+// /* ================= PUBLIC ================= */
 router.get("/", getTrips);
 
-// CREAR VIAJE (ADMIN)
+// /* ================= PROTECTED ================= */
 router.post(
   "/",
   requireAuth,
-  requireAdmin,
+  requireRole("admin", "owner"),
   createTrip
 );
 

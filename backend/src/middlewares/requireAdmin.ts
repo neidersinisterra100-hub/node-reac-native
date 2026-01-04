@@ -1,13 +1,21 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, Request, NextFunction } from "express";
 
+
+/**
+ * Permite acceso SOLO a usuarios con rol:
+ * - admin
+ * - owner
+ */
 export const requireAdmin = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  if (req.user?.role !== "admin") {
+  const role = req.user?.role;
+
+  if (role !== "admin" && role !== "owner") {
     return res.status(403).json({
-      message: "Acceso solo para administradores",
+      message: "Acceso solo para administradores u owners",
     });
   }
 
@@ -15,17 +23,20 @@ export const requireAdmin = (
 };
 
 
+
 // import { Request, Response, NextFunction } from "express";
 
-// export function requireAdmin(
+// export const requireAdmin = (
 //   req: Request,
 //   res: Response,
 //   next: NextFunction
-// ) {
+// ) => {
 //   if (req.user?.role !== "admin") {
-//     return res
-//       .status(403)
-//       .json({ message: "Acceso restringido" });
+//     return res.status(403).json({
+//       message: "Acceso solo para administradores",
+//     });
 //   }
+
 //   next();
-// }
+// };
+

@@ -7,18 +7,19 @@ export default function ScheduleScreen() {
 
   const { user } = useAuth();
 
-  const handleCreateRoute = () => {
-    // 🔐 AQUÍ VA
-    if (!user || user.role !== "OWNER") {
-      Alert.alert(
-        "Acceso restringido",
-        "Solo administradores pueden crear rutas"
-      );
-      return;
-    }
+const handleCreateRoute = () => {
+  // 🔐 Permitir OWNER o ADMIN
+  if (!user || (user.role !== "owner" && user.role !== "admin")) {
+    Alert.alert(
+      "Acceso restringido",
+      "Solo administradores u owners pueden crear rutas"
+    );
+    return;
+  }
 
-    navigation.navigate("CreateRoute");
-  };
+  navigation.navigate("CreateRoute");
+};
+
 
   return (
     <View style={styles.container}>

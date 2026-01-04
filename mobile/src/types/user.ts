@@ -1,8 +1,9 @@
 export enum UserRole {
   // USER = "user",
   // ADMIN = "admin",
-  OWNER = "OWNER",
-  DRIVER = "DRIVER",
+  USER = "user",
+  ADMIN = "admin",
+  OWNER = "owner",
 }
 
 export type User = {

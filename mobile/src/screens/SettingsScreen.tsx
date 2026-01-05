@@ -1,163 +1,23 @@
-import {
-  View,
-  StyleSheet,
-  BackHandler,
-} from "react-native";
-import { Text, Appbar } from "react-native-paper";
-import {
-  useNavigation,
-  useFocusEffect,
-} from "@react-navigation/native";
-import { useCallback } from "react";
-
-import AppContainer from "../components/ui/AppContainer";
-import { colors } from "../theme/colors";
-import { spacing } from "../theme/spacing";
-import { typography } from "../theme/typography";
-import { useAuth } from "../context/AuthContext";
-import { isAdminOrOwner } from "../utils/roles";
-
-export default function SettingsScreen() {
-  const { user } = useAuth();
-  const navigation = useNavigation();
-
-  const handleClose = () => {
-    navigation.goBack();
-  };
-
-  /* ================= ANDROID BACK HANDLER ================= */
-  useFocusEffect(
-    useCallback(() => {
-      const subscription =
-        BackHandler.addEventListener(
-          "hardwareBackPress",
-          () => {
-            handleClose();
-            return true;
-          }
-        );
-
-      return () => subscription.remove();
-    }, [])
-  );
-
-  /* ================= ACCESS CONTROL ================= */
-
-  if (!isAdminOrOwner(user)) {
-    return (
-      <AppContainer>
-        <Appbar.Header style={styles.header}>
-          <Appbar.Content
-            title="Configuración"
-            titleStyle={styles.headerTitle}
-          />
-          <Appbar.Action
-            icon="close"
-            onPress={handleClose}
-            color={colors.textPrimary}
-          />
-        </Appbar.Header>
-
-        <View style={styles.center}>
-          <Text style={[typography.body, styles.bodyText]}>
-            No tienes permisos para acceder a esta sección.
-          </Text>
-        </View>
-      </AppContainer>
-    );
-  }
-
-  /* ================= RENDER ================= */
-
-  return (
-    <AppContainer>
-      <Appbar.Header style={styles.header}>
-        <Appbar.Content
-          title="Configuración"
-          titleStyle={styles.headerTitle}
-        />
-        <Appbar.Action
-          icon="close"
-          onPress={handleClose}
-          color={colors.textPrimary}
-        />
-      </Appbar.Header>
-
-      <View style={styles.container}>
-        <Text style={[typography.title, styles.sectionTitle]}>
-          General
-        </Text>
-
-        <View style={styles.card}>
-          <Text style={[typography.body, styles.bodyText]}>
-            Aquí podrás configurar:
-          </Text>
-
-          <Text style={styles.item}>• Empresa</Text>
-          <Text style={styles.item}>• Rutas</Text>
-          <Text style={styles.item}>• Vehículos</Text>
-          <Text style={styles.item}>• Usuarios</Text>
-        </View>
-      </View>
-    </AppContainer>
-  );
-}
-
-/* ================= STYLES ================= */
-
-const styles = StyleSheet.create({
-  header: {
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerTitle: {
-    color: colors.textPrimary,
-    fontWeight: "700",
-  },
-  container: {
-    padding: spacing.lg,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.lg,
-  },
-  sectionTitle: {
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  bodyText: {
-    color: colors.textPrimary,
-  },
-  card: {
-    marginTop: spacing.md,
-    backgroundColor: "#FFF",
-    borderRadius: 16,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  item: {
-    marginTop: spacing.sm,
-    color: colors.textPrimary,
-    fontWeight: "500",
-  },
-});
-
-
-
-// import { View, StyleSheet } from "react-native";
+// import {
+//   View,
+//   StyleSheet,
+//   BackHandler,
+// } from "react-native";
 // import { Text, Appbar } from "react-native-paper";
-// import { useNavigation } from "@react-navigation/native";
+// import {
+//   useNavigation,
+//   useFocusEffect,
+// } from "@react-navigation/native";
+// import { useCallback } from "react";
 
 // import AppContainer from "../components/ui/AppContainer";
 // import { colors } from "../theme/colors";
 // import { spacing } from "../theme/spacing";
 // import { typography } from "../theme/typography";
 // import { useAuth } from "../context/AuthContext";
-// import { UserRole } from "../types/user";
+// import { isAdminOrOwner } from "../utils/roles";
+
+// import { webTextFix } from "../theme/webTextFix";
 
 // export default function SettingsScreen() {
 //   const { user } = useAuth();
@@ -167,11 +27,27 @@ const styles = StyleSheet.create({
 //     navigation.goBack();
 //   };
 
-//   // 🔐 Seguridad extra
-//   if (!user || user.role !== UserRole.OWNER) {
+//   /* ================= ANDROID BACK HANDLER ================= */
+//   useFocusEffect(
+//     useCallback(() => {
+//       const subscription =
+//         BackHandler.addEventListener(
+//           "hardwareBackPress",
+//           () => {
+//             handleClose();
+//             return true;
+//           }
+//         );
+
+//       return () => subscription.remove();
+//     }, [])
+//   );
+
+//   /* ================= ACCESS CONTROL ================= */
+
+//   if (!isAdminOrOwner(user)) {
 //     return (
 //       <AppContainer>
-//         {/* HEADER DEL MODAL */}
 //         <Appbar.Header style={styles.header}>
 //           <Appbar.Content
 //             title="Configuración"
@@ -180,7 +56,7 @@ const styles = StyleSheet.create({
 //           <Appbar.Action
 //             icon="close"
 //             onPress={handleClose}
-//             color={colors.textPrimary} // 👈 FORZADO
+//             color={colors.textPrimary}
 //           />
 //         </Appbar.Header>
 
@@ -193,9 +69,10 @@ const styles = StyleSheet.create({
 //     );
 //   }
 
+//   /* ================= RENDER ================= */
+
 //   return (
 //     <AppContainer>
-//       {/* HEADER DEL MODAL */}
 //       <Appbar.Header style={styles.header}>
 //         <Appbar.Content
 //           title="Configuración"
@@ -204,7 +81,7 @@ const styles = StyleSheet.create({
 //         <Appbar.Action
 //           icon="close"
 //           onPress={handleClose}
-//           color={colors.textPrimary} // 👈 FORZADO
+//           color={colors.textPrimary}
 //         />
 //       </Appbar.Header>
 
@@ -228,38 +105,36 @@ const styles = StyleSheet.create({
 //   );
 // }
 
+// /* ================= STYLES ================= */
+
 // const styles = StyleSheet.create({
 //   header: {
 //     backgroundColor: colors.surface,
 //     borderBottomWidth: 1,
 //     borderBottomColor: colors.border,
 //   },
-
 //   headerTitle: {
 //     color: colors.textPrimary,
 //     fontWeight: "700",
 //   },
-
 //   container: {
 //     padding: spacing.lg,
 //   },
-
 //   center: {
 //     flex: 1,
 //     alignItems: "center",
 //     justifyContent: "center",
 //     padding: spacing.lg,
 //   },
-
 //   sectionTitle: {
 //     color: colors.textPrimary,
 //     marginBottom: spacing.sm,
+//     ...webTextFix,
 //   },
-
 //   bodyText: {
 //     color: colors.textPrimary,
+//     ...webTextFix,
 //   },
-
 //   card: {
 //     marginTop: spacing.md,
 //     backgroundColor: "#FFF",
@@ -268,10 +143,140 @@ const styles = StyleSheet.create({
 //     borderWidth: 1,
 //     borderColor: colors.border,
 //   },
-
 //   item: {
 //     marginTop: spacing.sm,
 //     color: colors.textPrimary,
 //     fontWeight: "500",
+//     ...webTextFix,
 //   },
 // });
+
+
+
+// // import { View, StyleSheet } from "react-native";
+// // import { Text, Appbar } from "react-native-paper";
+// // import { useNavigation } from "@react-navigation/native";
+
+// // import AppContainer from "../components/ui/AppContainer";
+// // import { colors } from "../theme/colors";
+// // import { spacing } from "../theme/spacing";
+// // import { typography } from "../theme/typography";
+// // import { useAuth } from "../context/AuthContext";
+// // import { UserRole } from "../types/user";
+
+// // export default function SettingsScreen() {
+// //   const { user } = useAuth();
+// //   const navigation = useNavigation();
+
+// //   const handleClose = () => {
+// //     navigation.goBack();
+// //   };
+
+// //   // 🔐 Seguridad extra
+// //   if (!user || user.role !== UserRole.OWNER) {
+// //     return (
+// //       <AppContainer>
+// //         {/* HEADER DEL MODAL */}
+// //         <Appbar.Header style={styles.header}>
+// //           <Appbar.Content
+// //             title="Configuración"
+// //             titleStyle={styles.headerTitle}
+// //           />
+// //           <Appbar.Action
+// //             icon="close"
+// //             onPress={handleClose}
+// //             color={colors.textPrimary} // 👈 FORZADO
+// //           />
+// //         </Appbar.Header>
+
+// //         <View style={styles.center}>
+// //           <Text style={[typography.body, styles.bodyText]}>
+// //             No tienes permisos para acceder a esta sección.
+// //           </Text>
+// //         </View>
+// //       </AppContainer>
+// //     );
+// //   }
+
+// //   return (
+// //     <AppContainer>
+// //       {/* HEADER DEL MODAL */}
+// //       <Appbar.Header style={styles.header}>
+// //         <Appbar.Content
+// //           title="Configuración"
+// //           titleStyle={styles.headerTitle}
+// //         />
+// //         <Appbar.Action
+// //           icon="close"
+// //           onPress={handleClose}
+// //           color={colors.textPrimary} // 👈 FORZADO
+// //         />
+// //       </Appbar.Header>
+
+// //       <View style={styles.container}>
+// //         <Text style={[typography.title, styles.sectionTitle]}>
+// //           General
+// //         </Text>
+
+// //         <View style={styles.card}>
+// //           <Text style={[typography.body, styles.bodyText]}>
+// //             Aquí podrás configurar:
+// //           </Text>
+
+// //           <Text style={styles.item}>• Empresa</Text>
+// //           <Text style={styles.item}>• Rutas</Text>
+// //           <Text style={styles.item}>• Vehículos</Text>
+// //           <Text style={styles.item}>• Usuarios</Text>
+// //         </View>
+// //       </View>
+// //     </AppContainer>
+// //   );
+// // }
+
+// // const styles = StyleSheet.create({
+// //   header: {
+// //     backgroundColor: colors.surface,
+// //     borderBottomWidth: 1,
+// //     borderBottomColor: colors.border,
+// //   },
+
+// //   headerTitle: {
+// //     color: colors.textPrimary,
+// //     fontWeight: "700",
+// //   },
+
+// //   container: {
+// //     padding: spacing.lg,
+// //   },
+
+// //   center: {
+// //     flex: 1,
+// //     alignItems: "center",
+// //     justifyContent: "center",
+// //     padding: spacing.lg,
+// //   },
+
+// //   sectionTitle: {
+// //     color: colors.textPrimary,
+// //     marginBottom: spacing.sm,
+// //   },
+
+// //   bodyText: {
+// //     color: colors.textPrimary,
+// //   },
+
+// //   card: {
+// //     marginTop: spacing.md,
+// //     backgroundColor: "#FFF",
+// //     borderRadius: 16,
+// //     padding: spacing.lg,
+// //     borderWidth: 1,
+// //     borderColor: colors.border,
+// //   },
+
+// //   item: {
+// //     marginTop: spacing.sm,
+// //     color: colors.textPrimary,
+// //     fontWeight: "500",
+// //   },
+// // });

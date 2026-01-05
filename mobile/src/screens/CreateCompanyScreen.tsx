@@ -1,73 +1,41 @@
 import { View, StyleSheet, Alert } from "react-native";
 import { Text, TextInput } from "react-native-paper";
 import { useState } from "react";
-import {
-  useNavigation,
-  useRoute,
-  RouteProp,
-} from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
 import PrimaryButton from "../components/ui/PrimaryButton";
 
-import { createRoute } from "../services/route.service";
-import { useAuth } from "../context/AuthContext";
-
+import { createCompany } from "../services/company.service";
 import { spacing } from "../theme/spacing";
 import { colors } from "../theme/colors";
 import { typography } from "../theme/typography";
+import { useAuth } from "../context/AuthContext";
 
-/* ================= TYPES ================= */
-
-type CreateRouteParams = {
-  companyId: string;
-};
-
-type RouteParams = RouteProp<
-  { CreateRoute: CreateRouteParams },
-  "CreateRoute"
->;
-
-/* ================= SCREEN ================= */
-
-export default function CreateRouteScreen() {
+export default function CreateCompanyScreen() {
   const navigation = useNavigation<any>();
-  const route = useRoute<RouteParams>();
   const { user } = useAuth();
 
-  const { companyId } = route.params ?? {};
-
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
-
-  /* ================= GUARD ================= */
-
-  if (!companyId) {
-    Alert.alert(
-      "Error",
-      "No se recibió la empresa"
-    );
-    navigation.goBack();
-    return null;
-  }
 
   /* ================= SUBMIT ================= */
 
-  const handleCreateRoute = async () => {
-    if (!origin.trim() || !destination.trim()) {
+  const handleCreate = async () => {
+    if (!name.trim()) {
       Alert.alert(
-        "Campos requeridos",
-        "Origen y destino son obligatorios"
+        "Nombre requerido",
+        "Ingresa el nombre de la empresa"
       );
       return;
     }
 
-    if (!user || user.role !== "owner") {
+    // 🔐 Seguridad extra (normalizado)
+    if (!user || user.role.toLowerCase() !== "owner") {
       Alert.alert(
         "Acceso restringido",
-        "Solo los owners pueden crear rutas"
+        "Solo los owners pueden crear empresas"
       );
       return;
     }
@@ -75,15 +43,11 @@ export default function CreateRouteScreen() {
     setLoading(true);
 
     try {
-      await createRoute({
-        origin: origin.trim(),
-        destination: destination.trim(),
-        companyId,
-      });
+      await createCompany(name.trim());
 
       Alert.alert(
-        "Ruta creada",
-        "La ruta se creó correctamente"
+        "Empresa creada",
+        "La empresa se creó correctamente"
       );
 
       navigation.goBack();
@@ -91,7 +55,7 @@ export default function CreateRouteScreen() {
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
-          "No se pudo crear la ruta"
+          "No se pudo crear la empresa"
       );
     } finally {
       setLoading(false);
@@ -102,38 +66,25 @@ export default function CreateRouteScreen() {
 
   return (
     <AppContainer>
-      <AppHeader title="Crear ruta" />
+      <AppHeader title="Crear empresa" />
 
       <View style={styles.container}>
         <Text style={[typography.label, styles.label]}>
-          Origen
+          Nombre de la empresa
         </Text>
 
         <TextInput
           mode="outlined"
-          placeholder="Ej: Timbiquí"
-          value={origin}
-          onChangeText={setOrigin}
-          style={styles.input}
-          activeOutlineColor={colors.primary}
-        />
-
-        <Text style={[typography.label, styles.label]}>
-          Destino
-        </Text>
-
-        <TextInput
-          mode="outlined"
-          placeholder="Ej: Buenaventura"
-          value={destination}
-          onChangeText={setDestination}
+          placeholder="Ej: Transportes Pacífico"
+          value={name}
+          onChangeText={setName}
           style={styles.input}
           activeOutlineColor={colors.primary}
         />
 
         <PrimaryButton
-          label={loading ? "Creando..." : "Crear ruta"}
-          onPress={handleCreateRoute}
+          label={loading ? "Creando..." : "Crear empresa"}
+          onPress={handleCreate}
           disabled={loading}
         />
       </View>
@@ -152,7 +103,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   input: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
     backgroundColor: "#FFF",
   },
 });
@@ -162,39 +113,32 @@ const styles = StyleSheet.create({
 // import { View, StyleSheet, Alert } from "react-native";
 // import { Text, TextInput } from "react-native-paper";
 // import { useState } from "react";
-// import { useNavigation, useRoute } from "@react-navigation/native";
+// import { useNavigation } from "@react-navigation/native";
 
 // import AppContainer from "../components/ui/AppContainer";
 // import AppHeader from "../components/ui/AppHeader";
 // import PrimaryButton from "../components/ui/PrimaryButton";
 
-// import { createRoute } from "../services/route.service";
-// import { useAuth } from "../context/AuthContext";
-
+// import { createCompany } from "../services/company.service";
 // import { spacing } from "../theme/spacing";
 // import { colors } from "../theme/colors";
 // import { typography } from "../theme/typography";
+// import { useAuth } from "../context/AuthContext";
 
-// /* ================= SCREEN ================= */
-
-// export default function CreateRouteScreen() {
+// export default function CreateCompanyScreen() {
 //   const navigation = useNavigation<any>();
-//   const route = useRoute<any>();
 //   const { user } = useAuth();
 
-//   const { companyId } = route.params;
-
-//   const [origin, setOrigin] = useState("");
-//   const [destination, setDestination] = useState("");
+//   const [name, setName] = useState("");
 //   const [loading, setLoading] = useState(false);
 
 //   /* ================= SUBMIT ================= */
 
-//   const handleCreateRoute = async () => {
-//     if (!origin.trim() || !destination.trim()) {
+//   const handleCreate = async () => {
+//     if (!name.trim()) {
 //       Alert.alert(
-//         "Campos requeridos",
-//         "Origen y destino son obligatorios"
+//         "Nombre requerido",
+//         "Ingresa el nombre de la empresa"
 //       );
 //       return;
 //     }
@@ -203,7 +147,7 @@ const styles = StyleSheet.create({
 //     if (!user || user.role !== "owner") {
 //       Alert.alert(
 //         "Acceso restringido",
-//         "Solo los owners pueden crear rutas"
+//         "Solo los owners pueden crear empresas"
 //       );
 //       return;
 //     }
@@ -211,23 +155,19 @@ const styles = StyleSheet.create({
 //     setLoading(true);
 
 //     try {
-//       await createRoute({
-//         origin: origin.trim(),
-//         destination: destination.trim(),
-//         companyId,
-//       });
+//       await createCompany(name.trim());
 
 //       Alert.alert(
-//         "Ruta creada",
-//         "La ruta se creó correctamente"
+//         "Empresa creada",
+//         "La empresa se creó correctamente"
 //       );
 
-//       navigation.goBack(); // 👈 vuelve a CompanyRoutes
+//       navigation.goBack();
 //     } catch (error: any) {
 //       Alert.alert(
 //         "Error",
 //         error?.response?.data?.message ||
-//           "No se pudo crear la ruta"
+//           "No se pudo crear la empresa"
 //       );
 //     } finally {
 //       setLoading(false);
@@ -238,38 +178,25 @@ const styles = StyleSheet.create({
 
 //   return (
 //     <AppContainer>
-//       <AppHeader title="Crear ruta" />
+//       <AppHeader title="Crear empresa" />
 
 //       <View style={styles.container}>
 //         <Text style={[typography.label, styles.label]}>
-//           Origen
+//           Nombre de la empresa
 //         </Text>
 
 //         <TextInput
 //           mode="outlined"
-//           placeholder="Ej: Timbiquí"
-//           value={origin}
-//           onChangeText={setOrigin}
-//           style={styles.input}
-//           activeOutlineColor={colors.primary}
-//         />
-
-//         <Text style={[typography.label, styles.label]}>
-//           Destino
-//         </Text>
-
-//         <TextInput
-//           mode="outlined"
-//           placeholder="Ej: Buenaventura"
-//           value={destination}
-//           onChangeText={setDestination}
+//           placeholder="Ej: Transportes Pacífico"
+//           value={name}
+//           onChangeText={setName}
 //           style={styles.input}
 //           activeOutlineColor={colors.primary}
 //         />
 
 //         <PrimaryButton
-//           label={loading ? "Creando..." : "Crear ruta"}
-//           onPress={handleCreateRoute}
+//           label={loading ? "Creando..." : "Crear empresa"}
+//           onPress={handleCreate}
 //           disabled={loading}
 //         />
 //       </View>
@@ -288,7 +215,7 @@ const styles = StyleSheet.create({
 //     marginBottom: spacing.xs,
 //   },
 //   input: {
-//     marginBottom: spacing.md,
+//     marginBottom: spacing.lg,
 //     backgroundColor: "#FFF",
 //   },
 // });

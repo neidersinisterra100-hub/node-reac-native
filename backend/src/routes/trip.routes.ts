@@ -10,7 +10,7 @@ const router = Router();
 
 /* ================= PUBLIC ================= */
 
-// LISTAR VIAJES
+// LISTAR VIAJES (PÚBLICO)
 router.get("/", getTrips);
 
 /* ================= PROTECTED ================= */
@@ -18,31 +18,38 @@ router.get("/", getTrips);
 // CREAR VIAJE → SOLO OWNER
 router.post(
   "/",
-  requireAuth,
-  requireOwner,
-  createTrip
+  requireAuth,   // 🔐 usuario autenticado
+  requireOwner,  // 🔐 solo owner
+  createTrip     // 🧠 lógica de negocio
 );
 
 export default router;
 
 
-
 // import { Router } from "express";
-// import { createTrip, getTrips } from "../controllers/trip.controller.js";
+// import {
+//   getTrips,
+//   createTrip,
+// } from "../controllers/trip.controller.js";
 // import { requireAuth } from "../middlewares/requireAuth.js";
-// import { requireRole } from "../middlewares/requireRole.js";
+// import { requireOwner } from "../middlewares/requireOwner.js";
 
 // const router = Router();
 
-// // /* ================= PUBLIC ================= */
+// /* ================= PUBLIC ================= */
+
+// // LISTAR VIAJES
 // router.get("/", getTrips);
 
-// // /* ================= PROTECTED ================= */
+// /* ================= PROTECTED ================= */
+
+// // CREAR VIAJE → SOLO OWNER
 // router.post(
 //   "/",
 //   requireAuth,
-//   requireRole("admin", "owner"),
+//   requireOwner,
 //   createTrip
 // );
 
 // export default router;
+

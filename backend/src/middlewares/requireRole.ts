@@ -2,19 +2,31 @@ import { RequestHandler } from "express";
 import { AuthRequest } from "./requireAuth.js";
 import { UserRole } from "../types/auth.js";
 
+/**
+ * Middleware para permitir acceso solo a ciertos roles
+ * Ej: requireRole("owner"), requireRole("admin", "owner")
+ */
 export const requireRole =
   (...allowedRoles: UserRole[]): RequestHandler =>
   (req, res, next) => {
     const authReq = req as AuthRequest;
 
     if (!authReq.user) {
-      return res.status(401).json({ message: "No autenticado" });
+      return res.status(401).json({
+        message: "No autenticado",
+      });
     }
 
-    if (!allowedRoles.includes(authReq.user.role)) {
-      return res
-        .status(403)
-        .json({ message: "Permisos insuficientes" });
+    /**
+     * 🔒 Normalizamos por seguridad
+     * (por si el token viene en MAYÚSCULAS)
+     */
+    const role = authReq.user.role.toLowerCase() as UserRole;
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(403).json({
+        message: "Permisos insuficientes",
+      });
     }
 
     next();
@@ -22,27 +34,23 @@ export const requireRole =
 
 
 
-
 // import { RequestHandler } from "express";
 // import { AuthRequest } from "./requireAuth.js";
-// import { UserRole } from "../@types/express/auth.js";
+// import { UserRole } from "../types/auth.js";
 
 // export const requireRole =
-//   (...roles: UserRole[]): RequestHandler =>
+//   (...allowedRoles: UserRole[]): RequestHandler =>
 //   (req, res, next) => {
 //     const authReq = req as AuthRequest;
 
 //     if (!authReq.user) {
-//       return res.status(401).json({
-//         message: "No autenticado",
-//       });
+//       return res.status(401).json({ message: "No autenticado" });
 //     }
 
-//     if (!roles.includes(authReq.user.role)) {
-//       return res.status(403).json({
-//         message:
-//           "Acceso solo para administradores u owners",
-//       });
+//     if (!allowedRoles.includes(authReq.user.role)) {
+//       return res
+//         .status(403)
+//         .json({ message: "Permisos insuficientes" });
 //     }
 
 //     next();

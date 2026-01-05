@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import Ticket from "../models/ticket.model.js";
+import { TicketModel } from "../models/ticket.model.js";
 import { TripModel } from "../models/trip.model.js";
 import { CompanyModel } from "../models/company.model.js";
 import { AuthRequest } from "../middlewares/requireAuth.js";
@@ -27,7 +27,8 @@ export const buyTicket: RequestHandler = async (
       });
     }
 
-    // 1️⃣ Buscar viaje + ruta + empresa
+    /* ================= TRIP + ROUTE + COMPANY ================= */
+
     const trip = await TripModel.findById(tripId).populate({
       path: "route",
       populate: { path: "company" },
@@ -39,13 +40,20 @@ export const buyTicket: RequestHandler = async (
       });
     }
 
-    const companyId = (trip.route as any).company;
+    const route: any = trip.route;
+    const companyId =
+      typeof route.company === "object"
+        ? route.company._id
+        : route.company;
 
-    // 2️⃣ Crear ticket
-    const ticket = await Ticket.create({
+    /* ================= CREATE TICKET ================= */
+
+    const ticket = await TicketModel.create({
       user: authReq.user.id,
       trip: trip._id,
       company: companyId,
+      routeName: `${route.origin} → ${route.destination}`,
+      transport: "lancha",
       price: trip.price,
       code: Math.random()
         .toString(36)
@@ -53,15 +61,16 @@ export const buyTicket: RequestHandler = async (
         .toUpperCase(),
     });
 
-    // 3️⃣ 💰 Sumar dinero a la empresa
+    /* ================= UPDATE COMPANY BALANCE ================= */
+
     await CompanyModel.findByIdAndUpdate(companyId, {
       $inc: { balance: trip.price },
     });
 
-    res.status(201).json(ticket);
+    return res.status(201).json(ticket);
   } catch (error) {
     console.error("❌ Error buyTicket:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Error al comprar el tiquete",
     });
   }
@@ -82,7 +91,7 @@ export const getMyTickets: RequestHandler = async (
       });
     }
 
-    const tickets = await Ticket.find({
+    const tickets = await TicketModel.find({
       user: authReq.user.id,
     })
       .populate({
@@ -95,10 +104,10 @@ export const getMyTickets: RequestHandler = async (
       .sort({ createdAt: -1 })
       .limit(20);
 
-    res.json(tickets);
+    return res.json(tickets);
   } catch (error) {
     console.error("❌ Error getMyTickets:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Error al obtener historial",
     });
   }
@@ -106,40 +115,64 @@ export const getMyTickets: RequestHandler = async (
 
 
 
-// import { Request, Response } from "express";
-// import Ticket from "../models/Ticket.js";
+// import { RequestHandler } from "express";
+// import Ticket from "../models/ticket.model.js";
+// import { TripModel } from "../models/trip.model.js";
+// import { CompanyModel } from "../models/company.model.js";
+// import { AuthRequest } from "../middlewares/requireAuth.js";
 
 // /* ================= COMPRAR TIQUETE ================= */
 
-// export const buyTicket = async (
-//   req: Request,
-//   res: Response
+// export const buyTicket: RequestHandler = async (
+//   req,
+//   res
 // ) => {
 //   try {
-//     const { routeName, price } = req.body;
+//     const authReq = req as AuthRequest;
 
-//     // 🔒 Validación de payload
-//     if (!routeName || !price) {
-//       return res.status(400).json({
-//         message: "routeName y price son obligatorios",
-//       });
-//     }
-
-//     // 🔒 Validación de auth
-//     if (!req.user?.id) {
+//     if (!authReq.user) {
 //       return res.status(401).json({
 //         message: "Usuario no autenticado",
 //       });
 //     }
 
+//     const { tripId } = req.body;
+
+//     if (!tripId) {
+//       return res.status(400).json({
+//         message: "tripId es obligatorio",
+//       });
+//     }
+
+//     // 1️⃣ Buscar viaje + ruta + empresa
+//     const trip = await TripModel.findById(tripId).populate({
+//       path: "route",
+//       populate: { path: "company" },
+//     });
+
+//     if (!trip || !trip.route) {
+//       return res.status(404).json({
+//         message: "Viaje no encontrado",
+//       });
+//     }
+
+//     const companyId = (trip.route as any).company;
+
+//     // 2️⃣ Crear ticket
 //     const ticket = await Ticket.create({
-//       user: req.user.id,
-//       routeName,
-//       price,
+//       user: authReq.user.id,
+//       trip: trip._id,
+//       company: companyId,
+//       price: trip.price,
 //       code: Math.random()
 //         .toString(36)
 //         .substring(2, 8)
 //         .toUpperCase(),
+//     });
+
+//     // 3️⃣ 💰 Sumar dinero a la empresa
+//     await CompanyModel.findByIdAndUpdate(companyId, {
+//       $inc: { balance: trip.price },
 //     });
 
 //     res.status(201).json(ticket);
@@ -151,22 +184,31 @@ export const getMyTickets: RequestHandler = async (
 //   }
 // };
 
-// /* ================= HISTORIAL ================= */
+// /* ================= HISTORIAL DEL USUARIO ================= */
 
-// export const getMyTickets = async (
-//   req: Request,
-//   res: Response
+// export const getMyTickets: RequestHandler = async (
+//   req,
+//   res
 // ) => {
 //   try {
-//     if (!req.user?.id) {
+//     const authReq = req as AuthRequest;
+
+//     if (!authReq.user) {
 //       return res.status(401).json({
 //         message: "Usuario no autenticado",
 //       });
 //     }
 
 //     const tickets = await Ticket.find({
-//       user: req.user.id,
+//       user: authReq.user.id,
 //     })
+//       .populate({
+//         path: "trip",
+//         populate: {
+//           path: "route",
+//           populate: { path: "company" },
+//         },
+//       })
 //       .sort({ createdAt: -1 })
 //       .limit(20);
 
@@ -178,3 +220,5 @@ export const getMyTickets: RequestHandler = async (
 //     });
 //   }
 // };
+
+

@@ -11,10 +11,16 @@ import {
 import { useState } from "react";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { createTrip } from "../services/trip.service";
+import { useRoute } from "@react-navigation/native";
+
+type RouteParams = {
+  routeId: string;
+};
 
 export default function CreateTripScreen() {
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
+  const route = useRoute();
+  const { routeId } = route.params as RouteParams;
+
   const [price, setPrice] = useState("");
 
   // 🔹 para web
@@ -40,13 +46,7 @@ export default function CreateTripScreen() {
         ? timeText
         : time?.toTimeString().slice(0, 5);
 
-    if (
-      !origin ||
-      !destination ||
-      !price ||
-      !finalDate ||
-      !finalTime
-    ) {
+    if (!price || !finalDate || !finalTime) {
       Alert.alert("Error", "Completa todos los campos");
       return;
     }
@@ -55,8 +55,7 @@ export default function CreateTripScreen() {
 
     try {
       await createTrip({
-        origin,
-        destination,
+        routeId,
         date: finalDate,
         departureTime: finalTime,
         price: Number(price),
@@ -64,8 +63,6 @@ export default function CreateTripScreen() {
 
       Alert.alert("Éxito", "Viaje creado correctamente");
 
-      setOrigin("");
-      setDestination("");
       setPrice("");
       setDateText("");
       setTimeText("");
@@ -84,22 +81,6 @@ export default function CreateTripScreen() {
 
   return (
     <View style={styles.container}>
-      {/* ===== ORIGEN ===== */}
-      <TextInput
-        placeholder="Origen"
-        value={origin}
-        onChangeText={setOrigin}
-        style={styles.input}
-      />
-
-      {/* ===== DESTINO ===== */}
-      <TextInput
-        placeholder="Destino"
-        value={destination}
-        onChangeText={setDestination}
-        style={styles.input}
-      />
-
       {/* ===== FECHA ===== */}
       {Platform.OS === "web" ? (
         <TextInput
@@ -202,40 +183,57 @@ const styles = StyleSheet.create({
 });
 
 
+
 // import {
 //   View,
+//   Text,
 //   TextInput,
 //   Button,
 //   Alert,
 //   StyleSheet,
+//   Pressable,
+//   Platform,
 // } from "react-native";
 // import { useState } from "react";
+// import DateTimePicker from "@react-native-community/datetimepicker";
 // import { createTrip } from "../services/trip.service";
-// import { useNavigation } from "@react-navigation/native";
 
 // export default function CreateTripScreen() {
 //   const [origin, setOrigin] = useState("");
 //   const [destination, setDestination] = useState("");
-//   const [date, setDate] = useState("");
-//   const [departureTime, setDepartureTime] = useState("");
 //   const [price, setPrice] = useState("");
+
+//   // 🔹 para web
+//   const [dateText, setDateText] = useState("");
+//   const [timeText, setTimeText] = useState("");
+
+//   // 🔹 para mobile
+//   const [date, setDate] = useState<Date | null>(null);
+//   const [time, setTime] = useState<Date | null>(null);
+//   const [showDate, setShowDate] = useState(false);
+//   const [showTime, setShowTime] = useState(false);
+
 //   const [loading, setLoading] = useState(false);
 
-//   const navigation = useNavigation();
-
 //   const handleSubmit = async () => {
-//     // 🔒 Validación básica
+//     const finalDate =
+//       Platform.OS === "web"
+//         ? dateText
+//         : date?.toISOString().split("T")[0];
+
+//     const finalTime =
+//       Platform.OS === "web"
+//         ? timeText
+//         : time?.toTimeString().slice(0, 5);
+
 //     if (
 //       !origin ||
 //       !destination ||
-//       !date ||
-//       !departureTime ||
-//       !price
+//       !price ||
+//       !finalDate ||
+//       !finalTime
 //     ) {
-//       Alert.alert(
-//         "Campos requeridos",
-//         "Completa todos los campos"
-//       );
+//       Alert.alert("Error", "Completa todos los campos");
 //       return;
 //     }
 
@@ -245,19 +243,20 @@ const styles = StyleSheet.create({
 //       await createTrip({
 //         origin,
 //         destination,
-//         date,
-//         departureTime,
+//         date: finalDate,
+//         departureTime: finalTime,
 //         price: Number(price),
 //       });
 
 //       Alert.alert("Éxito", "Viaje creado correctamente");
 
-//       // 🧹 Limpiar formulario
 //       setOrigin("");
 //       setDestination("");
-//       setDate("");
-//       setDepartureTime("");
 //       setPrice("");
+//       setDateText("");
+//       setTimeText("");
+//       setDate(null);
+//       setTime(null);
 //     } catch (error: any) {
 //       Alert.alert(
 //         "Error",
@@ -271,6 +270,7 @@ const styles = StyleSheet.create({
 
 //   return (
 //     <View style={styles.container}>
+//       {/* ===== ORIGEN ===== */}
 //       <TextInput
 //         placeholder="Origen"
 //         value={origin}
@@ -278,6 +278,7 @@ const styles = StyleSheet.create({
 //         style={styles.input}
 //       />
 
+//       {/* ===== DESTINO ===== */}
 //       <TextInput
 //         placeholder="Destino"
 //         value={destination}
@@ -285,20 +286,75 @@ const styles = StyleSheet.create({
 //         style={styles.input}
 //       />
 
-//       <TextInput
-//         placeholder="Fecha (YYYY-MM-DD)"
-//         value={date}
-//         onChangeText={setDate}
-//         style={styles.input}
-//       />
+//       {/* ===== FECHA ===== */}
+//       {Platform.OS === "web" ? (
+//         <TextInput
+//           placeholder="Fecha (YYYY-MM-DD)"
+//           value={dateText}
+//           onChangeText={setDateText}
+//           style={styles.input}
+//         />
+//       ) : (
+//         <>
+//           <Pressable
+//             style={styles.input}
+//             onPress={() => setShowDate(true)}
+//           >
+//             <Text>
+//               {date
+//                 ? date.toISOString().split("T")[0]
+//                 : "Seleccionar fecha"}
+//             </Text>
+//           </Pressable>
 
-//       <TextInput
-//         placeholder="Hora salida (HH:mm)"
-//         value={departureTime}
-//         onChangeText={setDepartureTime}
-//         style={styles.input}
-//       />
+//           {showDate && (
+//             <DateTimePicker
+//               value={date ?? new Date()}
+//               mode="date"
+//               onChange={(_, selected) => {
+//                 setShowDate(false);
+//                 if (selected) setDate(selected);
+//               }}
+//             />
+//           )}
+//         </>
+//       )}
 
+//       {/* ===== HORA ===== */}
+//       {Platform.OS === "web" ? (
+//         <TextInput
+//           placeholder="Hora (HH:mm)"
+//           value={timeText}
+//           onChangeText={setTimeText}
+//           style={styles.input}
+//         />
+//       ) : (
+//         <>
+//           <Pressable
+//             style={styles.input}
+//             onPress={() => setShowTime(true)}
+//           >
+//             <Text>
+//               {time
+//                 ? time.toTimeString().slice(0, 5)
+//                 : "Seleccionar hora"}
+//             </Text>
+//           </Pressable>
+
+//           {showTime && (
+//             <DateTimePicker
+//               value={time ?? new Date()}
+//               mode="time"
+//               onChange={(_, selected) => {
+//                 setShowTime(false);
+//                 if (selected) setTime(selected);
+//               }}
+//             />
+//           )}
+//         </>
+//       )}
+
+//       {/* ===== PRECIO ===== */}
 //       <TextInput
 //         placeholder="Precio"
 //         value={price}
@@ -331,44 +387,3 @@ const styles = StyleSheet.create({
 //   },
 // });
 
-
-
-// // import { View, TextInput, Button, Alert } from "react-native";
-// // import { useState } from "react";
-// // // import { createTrip } from "../services/trip.service";
-
-// // export default function CreateTripScreen() {
-// //   const [origin, setOrigin] = useState("");
-// //   const [destination, setDestination] = useState("");
-// //   const [date, setDate] = useState("");
-// //   const [departureTime, setDepartureTime] = useState("");
-// //   const [price, setPrice] = useState("");
-
-// //   const handleSubmit = async () => {
-// //     try {
-// //       await createTrip({
-// //         origin, 
-// //         destination,
-// //         date,
-// //         departureTime,
-// //         price: Number(price),
-// //       });
-
-// //       Alert.alert("Éxito", "Viaje creado correctamente");
-// //     } catch {
-// //       Alert.alert("Error", "No se pudo crear el viaje");
-// //     }
-// //   };
-
-// //   return (
-// //     <View>
-// //       <TextInput placeholder="Origen" onChangeText={setOrigin} />
-// //       <TextInput placeholder="Destino" onChangeText={setDestination} />
-// //       <TextInput placeholder="Fecha (YYYY-MM-DD)" onChangeText={setDate} />
-// //       <TextInput placeholder="Hora salida (HH:mm)" onChangeText={setDepartureTime} />
-// //       <TextInput placeholder="Precio" keyboardType="numeric" onChangeText={setPrice} />
-
-// //       <Button title="Crear viaje" onPress={handleSubmit} />
-// //     </View>
-// //   );
-// // }

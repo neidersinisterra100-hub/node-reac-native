@@ -19,12 +19,22 @@ export async function getTrips() {
 /**
  * Crear viaje (SOLO OWNER)
  */
-export async function createTrip(
-  payload: CreateTripPayload
-) {
-  const response = await api.post("/trips", payload);
+export async function createTrip(data: {
+  routeId: string;
+  date: string;
+  departureTime: string;
+  price: number;
+}) {
+  const response = await api.post("/trips", data);
   return response.data;
 }
+
+// export async function createTrip(
+//   payload: CreateTripPayload
+// ) {
+//   const response = await api.post("/trips", payload);
+//   return response.data;
+// }
 
 
 

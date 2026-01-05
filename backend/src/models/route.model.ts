@@ -38,26 +38,3 @@ export const RouteModel = model(
   "Route",
   RouteSchema
 );
-
-
-// import { Schema, model, Types } from "mongoose";
-
-// const RouteSchema = new Schema(
-//   {
-//     origin: String,
-//     destination: String,
-//     company: {
-//       type: Types.ObjectId,
-//       ref: "Company",
-//       required: true,
-//     },
-//   },
-//   { timestamps: true }
-// );
-
-// export const RouteModel = model(
-//   "Route",
-//   RouteSchema
-// );
-
-

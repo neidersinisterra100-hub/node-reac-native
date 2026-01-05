@@ -7,20 +7,20 @@ import { AuthRequest } from "../middlewares/requireAuth.js";
 /* ================= LIST TRIPS (PUBLIC) ================= */
 /**
  * Solo muestra viajes:
+ * - activos
  * - cuya ruta esté activa
- * - y cuya empresa esté activa (si luego agregas ese flag)
  */
 export const getTrips: RequestHandler = async (_req, res) => {
   try {
-    const trips = await TripModel.find()
+    const trips = await TripModel.find({ active: true })
       .populate({
         path: "route",
-        match: { active: true }, // 👈 solo rutas activas
+        match: { active: true },
         populate: { path: "company" },
       })
       .sort({ createdAt: -1 });
 
-    // ⚠️ Cuando usas match, los que no cumplen quedan con route = null
+    // cuando usamos match, los que no cumplen quedan con route = null
     const filtered = trips.filter((t) => t.route);
 
     res.json(filtered);
@@ -34,7 +34,6 @@ export const getTrips: RequestHandler = async (_req, res) => {
 
 /* ================= CREATE TRIP (OWNER ONLY) ================= */
 /**
- * Crea un viaje SOBRE UNA RUTA EXISTENTE
  * body:
  * {
  *   routeId: string,
@@ -108,9 +107,12 @@ export const createTrip: RequestHandler = async (req, res) => {
 
     const trip = await TripModel.create({
       route: route._id,
+      company: company._id,        // ✅ OBLIGATORIO
+      createdBy: authReq.user.id,  // ✅ OBLIGATORIO
       date,
       departureTime,
       price,
+      active: true,
     });
 
     return res.status(201).json(trip);

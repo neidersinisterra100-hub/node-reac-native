@@ -9,53 +9,35 @@ export const createRoute: RequestHandler = async (req, res) => {
   try {
     const authReq = req as AuthRequest;
 
-    /* 🔒 AUTH */
     if (!authReq.user) {
-      return res.status(401).json({
-        message: "No autenticado",
-      });
+      return res.status(401).json({ message: "No autenticado" });
     }
 
-    /* 🔒 ROLE */
     if (authReq.user.role !== "owner") {
-      return res.status(403).json({
-        message: "Solo los owners pueden crear rutas",
-      });
+      return res
+        .status(403)
+        .json({ message: "Solo los owners pueden crear rutas" });
     }
 
     const { origin, destination, companyId } = req.body;
 
-    /* 🔒 VALIDACIÓN */
-    if (
-      !origin ||
-      !destination ||
-      !companyId ||
-      typeof origin !== "string" ||
-      typeof destination !== "string"
-    ) {
+    if (!origin || !destination || !companyId) {
       return res.status(400).json({
         message: "origin, destination y companyId son obligatorios",
       });
     }
 
-    /* ================= COMPANY ================= */
-
     const company = await CompanyModel.findById(companyId);
 
     if (!company) {
-      return res.status(404).json({
-        message: "Empresa no encontrada",
-      });
+      return res.status(404).json({ message: "Empresa no encontrada" });
     }
 
-    /* 🔒 OWNER DE LA EMPRESA */
     if (company.owner.toString() !== authReq.user.id) {
       return res.status(403).json({
         message: "No eres owner de esta empresa",
       });
     }
-
-    /* ================= DUPLICATE CHECK ================= */
 
     const exists = await RouteModel.findOne({
       origin: origin.trim(),
@@ -69,13 +51,11 @@ export const createRoute: RequestHandler = async (req, res) => {
       });
     }
 
-    /* ================= CREATE ROUTE ================= */
-
     const route = await RouteModel.create({
       origin: origin.trim(),
       destination: destination.trim(),
       company: companyId,
-      createdBy: authReq.user.id, // ✅ CLAVE
+      createdBy: authReq.user.id,
       active: true,
     });
 
@@ -94,12 +74,6 @@ export const getCompanyRoutes: RequestHandler = async (req, res) => {
   try {
     const { companyId } = req.params;
 
-    if (!companyId) {
-      return res.status(400).json({
-        message: "companyId es requerido",
-      });
-    }
-
     const routes = await RouteModel.find({
       company: companyId,
     }).sort({ createdAt: -1 });
@@ -113,6 +87,42 @@ export const getCompanyRoutes: RequestHandler = async (req, res) => {
   }
 };
 
+/* ================= TOGGLE ROUTE ACTIVE ================= */
+
+export const toggleRouteActive: RequestHandler = async (req, res) => {
+  try {
+    const authReq = req as AuthRequest;
+    const { routeId } = req.params;
+
+    if (!authReq.user) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
+
+    const route = await RouteModel.findById(routeId).populate("company");
+
+    if (!route) {
+      return res.status(404).json({ message: "Ruta no encontrada" });
+    }
+
+    const company: any = route.company;
+
+    if (company.owner.toString() !== authReq.user.id) {
+      return res.status(403).json({
+        message: "No autorizado para modificar esta ruta",
+      });
+    }
+
+    route.active = !route.active;
+    await route.save();
+
+    res.json(route);
+  } catch (error) {
+    console.error("❌ Error toggleRouteActive:", error);
+    res.status(500).json({
+      message: "Error al cambiar estado de la ruta",
+    });
+  }
+};
 
 
 

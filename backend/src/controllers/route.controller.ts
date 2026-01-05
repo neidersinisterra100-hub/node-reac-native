@@ -77,6 +77,7 @@ export const createRoute: RequestHandler = async (
       origin: origin.trim(),
       destination: destination.trim(),
       company: companyId,
+       createdBy: authReq.user.id, // ✅ Faltaba esto
     });
 
     return res.status(201).json(route);

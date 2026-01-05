@@ -142,7 +142,29 @@ export default function HomeScreen() {
           Rutas disponibles
         </Text>
 
-        {trips.map((trip) => (
+        {trips.map((trip) => {
+          if (!trip.route) return null;
+
+          return (
+            <View
+              key={trip._id}
+              style={styles.routeCard}
+            >
+              <ListItem
+                title={`${trip.route.origin} → ${trip.route.destination}`}
+                subtitle={`Salida: ${trip.departureTime}`}
+                trailing={`$${trip.price}`}
+              />
+
+              <PrimaryButton
+                label="Comprar tiquete"
+                onPress={() => handleBuyTicket(trip)}
+              />
+            </View>
+          );
+        })}
+
+        {/* {trips.map((trip) => (
           <View
             key={trip._id}
             style={styles.routeCard}
@@ -158,7 +180,7 @@ export default function HomeScreen() {
               onPress={() => handleBuyTicket(trip)}
             />
           </View>
-        ))}
+        ))} */}
 
         {!loading && trips.length === 0 && (
           <Text style={styles.infoText}>

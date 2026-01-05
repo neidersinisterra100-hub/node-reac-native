@@ -9,7 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import ConfirmTicketModal from "./PrivateStack/ConfirmTicketModal";
 import TicketReceiptModal from "./PrivateStack/TicketReceiptModal";
 
-import HomeScreen from "../screens/HomeScreen";
+import HomeScreen from "./publicStack/HomeScreen";
 import CreateTripScreen from "../screens/CreateTripScreen";
 import CreateRouteScreen from "../screens/CreateRouteScreen";
 import CreateCompanyScreen from "../screens/CreateCompanyScreen";

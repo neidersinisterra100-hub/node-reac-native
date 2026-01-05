@@ -25,6 +25,11 @@ const RouteSchema = new Schema(
       ref: "User",
       required: true,
     },
+    
+    active: {
+      type: Boolean,
+      default: true, // 👈 visible por defecto
+    },
   },
   { timestamps: true }
 );

@@ -77,7 +77,7 @@ export const createRoute: RequestHandler = async (
       origin: origin.trim(),
       destination: destination.trim(),
       company: companyId,
-       createdBy: authReq.user.id, // ✅ Faltaba esto
+      active: true, // 👈 explícito
     });
 
     return res.status(201).json(route);
@@ -106,129 +106,69 @@ export const getCompanyRoutes: RequestHandler = async (
 
     const routes = await RouteModel.find({
       company: companyId,
-    })
-      .sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 });
 
-    res.json(routes);
+    return res.json(routes);
   } catch (error) {
     console.error("❌ Error getCompanyRoutes:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Error al obtener rutas",
     });
   }
 };
 
+/* ================= TOGGLE ROUTE ACTIVE (OWNER ONLY) ================= */
 
+export const toggleRouteActive: RequestHandler = async (
+  req,
+  res
+) => {
+  try {
+    const authReq = req as AuthRequest;
+    const { routeId } = req.params;
 
+    if (!authReq.user) {
+      return res.status(401).json({
+        message: "No autenticado",
+      });
+    }
 
-// import { RequestHandler } from "express";
-// import { RouteModel } from "../models/route.model.js";
-// import { CompanyModel } from "../models/company.model.js";
-// import { AuthRequest } from "../middlewares/requireAuth.js";
+    if (authReq.user.role !== "owner") {
+      return res.status(403).json({
+        message: "Solo owners pueden modificar rutas",
+      });
+    }
 
-// /* ================= CREATE ROUTE (OWNER ONLY) ================= */
+    const route = await RouteModel.findById(routeId).populate(
+      "company"
+    );
 
-// export const createRoute: RequestHandler = async (
-//   req,
-//   res
-// ) => {
-//   try {
-//     const authReq = req as AuthRequest;
+    if (!route) {
+      return res.status(404).json({
+        message: "Ruta no encontrada",
+      });
+    }
 
-//     /* 🔒 AUTH */
-//     if (!authReq.user) {
-//       return res.status(401).json({
-//         message: "No autenticado",
-//       });
-//     }
+    // 👇 TIPADO CONTROLADO
+    const company = route.company as any;
 
-//     /* 🔒 ROLE */
-//     if (authReq.user.role !== "owner") {
-//       return res.status(403).json({
-//         message: "Solo los owners pueden crear rutas",
-//       });
-//     }
+    if (company.owner.toString() !== authReq.user.id) {
+      return res.status(403).json({
+        message: "No eres owner de esta empresa",
+      });
+    }
 
-//     const { origin, destination, companyId } = req.body;
+    route.active = !route.active;
+    await route.save();
 
-//     /* 🔒 VALIDACIÓN */
-//     if (!origin || !destination || !companyId) {
-//       return res.status(400).json({
-//         message: "origin, destination y companyId son obligatorios",
-//       });
-//     }
-
-//     /* ================= COMPANY ================= */
-
-//     const company = await CompanyModel.findById(companyId);
-
-//     if (!company) {
-//       return res.status(404).json({
-//         message: "Empresa no encontrada",
-//       });
-//     }
-
-//     /* 🔒 OWNER DE LA EMPRESA */
-//     if (company.owner.toString() !== authReq.user.id) {
-//       return res.status(403).json({
-//         message: "No eres owner de esta empresa",
-//       });
-//     }
-
-//     /* ================= ROUTE ================= */
-
-//     // Evitar rutas duplicadas en la misma empresa
-//     const exists = await RouteModel.findOne({
-//       origin,
-//       destination,
-//       company: companyId,
-//     });
-
-//     if (exists) {
-//       return res.status(409).json({
-//         message: "La ruta ya existe para esta empresa",
-//       });
-//     }
-
-//     const route = await RouteModel.create({
-//       origin,
-//       destination,
-//       company: companyId,
-//     });
-
-//     return res.status(201).json(route);
-//   } catch (error) {
-//     console.error("❌ Error createRoute:", error);
-//     return res.status(500).json({
-//       message: "Error al crear la ruta",
-//     });
-//   }
-// };
-
-// /* ================= LIST ROUTES BY COMPANY ================= */
-
-// export const getCompanyRoutes: RequestHandler = async (
-//   req,
-//   res
-// ) => {
-//   try {
-//     const { companyId } = req.params;
-
-//     if (!companyId) {
-//       return res.status(400).json({
-//         message: "companyId es requerido",
-//       });
-//     }
-
-//     const routes = await RouteModel.find({
-//       company: companyId,
-//     }).sort({ createdAt: -1 });
-
-//     res.json(routes);
-//   } catch (error) {
-//     console.error("❌ Error getCompanyRoutes:", error);
-//     res.status(500).json({
-//       message: "Error al obtener rutas",
-//     });
-//   }
-// };
+    return res.json({
+      routeId: route._id,
+      active: route.active,
+    });
+  } catch (error) {
+    console.error("❌ Error toggleRouteActive:", error);
+    return res.status(500).json({
+      message: "Error al cambiar estado de la ruta",
+    });
+  }
+};

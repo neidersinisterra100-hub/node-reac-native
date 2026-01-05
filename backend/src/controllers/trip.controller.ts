@@ -5,7 +5,11 @@ import { AuthRequest } from "../middlewares/requireAuth.js";
 import { Types } from "mongoose";
 
 /* ================= LIST TRIPS (PUBLIC) ================= */
-
+/**
+ * 🔓 Público
+ * ✅ Solo rutas activas
+ * ✅ Con empresa
+ */
 export const getTrips: RequestHandler = async (
   _req,
   res
@@ -14,11 +18,17 @@ export const getTrips: RequestHandler = async (
     const trips = await TripModel.find()
       .populate({
         path: "route",
+        match: { active: true }, // 👈 CLAVE
         populate: { path: "company" },
       })
       .sort({ createdAt: -1 });
 
-    res.json(trips);
+    // ⚠️ populate + match deja null las rutas no activas
+    const activeTrips = trips.filter(
+      (trip) => trip.route !== null
+    );
+
+    res.json(activeTrips);
   } catch (error) {
     console.error("❌ Error getTrips:", error);
     res.status(500).json({
@@ -26,6 +36,43 @@ export const getTrips: RequestHandler = async (
     });
   }
 };
+
+/* ================= LIST TRIPS (PUBLIC) ================= */
+/**
+ * Devuelve SOLO viajes activos
+ * con su ruta y empresa
+ */
+// export const getTrips: RequestHandler = async (
+//   _req,
+//   res
+// ) => {
+//   try {
+//     const trips = await TripModel.find({
+//       active: true, // 👈 SOLO VIAJES ACTIVOS
+//     })
+//       .populate({
+//         path: "route",
+//         match: { active: true }, // 👈 SOLO RUTAS ACTIVAS
+//         populate: {
+//           path: "company",
+//           match: { active: true }, // 👈 SOLO EMPRESAS ACTIVAS
+//         },
+//       })
+//       .sort({ createdAt: -1 });
+
+//     // 🔒 Limpia viajes cuya ruta fue filtrada por inactive
+//     const filteredTrips = trips.filter(
+//       (trip) => trip.route !== null
+//     );
+
+//     res.json(filteredTrips);
+//   } catch (error) {
+//     console.error("❌ Error getTrips:", error);
+//     res.status(500).json({
+//       message: "Error al obtener viajes",
+//     });
+//   }
+// };
 
 /* ================= CREATE TRIP (OWNER ONLY) ================= */
 

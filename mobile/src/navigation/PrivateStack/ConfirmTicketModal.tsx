@@ -6,7 +6,7 @@ import AppContainer from "../../components/ui/AppContainer";
 import AppHeader from "../../components/ui/AppHeader";
 import PrimaryButton from "../../components/ui/PrimaryButton";
 
-import { spacing } from "../../theme/spacing";
+import { spacing } from "../../theme/spacing"; 
 import { typography } from "../../theme/typography";
 import { colors } from "../../theme/colors";
 

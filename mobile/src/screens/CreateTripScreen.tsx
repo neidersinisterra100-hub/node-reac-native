@@ -12,6 +12,7 @@ import { useState } from "react";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { createTrip } from "../services/trip.service";
 import { useRoute } from "@react-navigation/native";
+import FormField from "../components/ui/FormField";
 
 type RouteParams = {
   routeId: string;
@@ -72,7 +73,7 @@ export default function CreateTripScreen() {
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
-          "No se pudo crear el viaje"
+        "No se pudo crear el viaje"
       );
     } finally {
       setLoading(false);
@@ -150,13 +151,22 @@ export default function CreateTripScreen() {
       )}
 
       {/* ===== PRECIO ===== */}
-      <TextInput
+
+      <FormField
+        label="Precio"
+        value={price}
+        onChangeText={setPrice}
+        placeholder="Ej: 45000"
+        keyboardType="numeric"
+      />
+
+      {/* <TextInput
         placeholder="Precio"
         value={price}
         onChangeText={setPrice}
         keyboardType="numeric"
         style={styles.input}
-      />
+      /> */}
 
       <Button
         title={loading ? "Creando..." : "Crear viaje"}

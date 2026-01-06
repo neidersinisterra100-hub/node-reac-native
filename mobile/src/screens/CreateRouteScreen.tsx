@@ -17,6 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import { spacing } from "../theme/spacing";
 import { colors } from "../theme/colors";
 import { typography } from "../theme/typography";
+import FormField from "../components/ui/FormField";
 
 /* ================= TYPES ================= */
 
@@ -91,7 +92,7 @@ export default function CreateRouteScreen() {
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
-          "No se pudo crear la ruta"
+        "No se pudo crear la ruta"
       );
     } finally {
       setLoading(false);
@@ -109,27 +110,42 @@ export default function CreateRouteScreen() {
           Origen
         </Text>
 
-        <TextInput
+        <FormField
+          label="Origen"
+          value={origin}
+          onChangeText={setOrigin}
+          placeholder="Ej: Timbiquí"
+        />
+
+        <FormField
+          label="Destino"
+          value={destination}
+          onChangeText={setDestination}
+          placeholder="Ej: Buenaventura"
+        />
+
+
+        {/* <TextInput
           mode="outlined"
           placeholder="Ej: Timbiquí"
           value={origin}
           onChangeText={setOrigin}
           style={styles.input}
           activeOutlineColor={colors.primary}
-        />
+        /> */}
 
         <Text style={[typography.label, styles.label]}>
           Destino
         </Text>
 
-        <TextInput
+        {/* <TextInput
           mode="outlined"
           placeholder="Ej: Buenaventura"
           value={destination}
           onChangeText={setDestination}
           style={styles.input}
           activeOutlineColor={colors.primary}
-        />
+        /> */}
 
         <PrimaryButton
           label={loading ? "Creando..." : "Crear ruta"}

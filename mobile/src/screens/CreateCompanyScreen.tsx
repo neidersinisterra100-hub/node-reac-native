@@ -12,6 +12,7 @@ import { spacing } from "../theme/spacing";
 import { colors } from "../theme/colors";
 import { typography } from "../theme/typography";
 import { useAuth } from "../context/AuthContext";
+import FormField from "../components/ui/FormField";
 
 export default function CreateCompanyScreen() {
   const navigation = useNavigation<any>();
@@ -55,7 +56,7 @@ export default function CreateCompanyScreen() {
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
-          "No se pudo crear la empresa"
+        "No se pudo crear la empresa"
       );
     } finally {
       setLoading(false);
@@ -73,14 +74,22 @@ export default function CreateCompanyScreen() {
           Nombre de la empresa
         </Text>
 
-        <TextInput
+        <FormField
+          label="Nombre de la empresa"
+          value={name}
+          onChangeText={setName}
+          placeholder="Ej: Transportes Pacífico"
+        />
+
+
+        {/* <TextInput
           mode="outlined"
           placeholder="Ej: Transportes Pacífico"
           value={name}
           onChangeText={setName}
           style={styles.input}
           activeOutlineColor={colors.primary}
-        />
+        /> */}
 
         <PrimaryButton
           label={loading ? "Creando..." : "Crear empresa"}

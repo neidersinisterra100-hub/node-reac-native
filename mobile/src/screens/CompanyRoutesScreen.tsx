@@ -7,10 +7,7 @@ import {
 } from "react-native";
 import { Text } from "react-native-paper";
 import { useEffect, useState } from "react";
-import {
-  useNavigation,
-  useRoute,
-} from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
@@ -21,13 +18,11 @@ import {
   getCompanyRoutes,
   toggleRouteActive,
 } from "../services/route.service";
-import { useAuth } from "../context/AuthContext";
 
+import { useAuth } from "../context/AuthContext";
 import { spacing } from "../theme/spacing";
 import { colors } from "../theme/colors";
 import { typography } from "../theme/typography";
-
-/* ================= TYPES ================= */
 
 type RouteItem = {
   _id: string;
@@ -46,19 +41,13 @@ export default function CompanyRoutesScreen() {
   const [routes, setRoutes] = useState<RouteItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  /* ================= LOAD ROUTES ================= */
-
   const loadRoutes = async () => {
     try {
       setLoading(true);
       const data = await getCompanyRoutes(companyId);
       setRoutes(data);
-    } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message ||
-          "No se pudieron cargar las rutas"
-      );
+    } catch {
+      Alert.alert("Error", "No se pudieron cargar las rutas");
     } finally {
       setLoading(false);
     }
@@ -68,47 +57,25 @@ export default function CompanyRoutesScreen() {
     loadRoutes();
   }, []);
 
-  /* ================= GUARD ================= */
-
   if (!user || user.role !== "owner") {
     return (
       <AppContainer>
         <AppHeader title="Rutas" />
         <View style={styles.center}>
-          <Text style={typography.body}>
-            No tienes permisos para ver esta sección
-          </Text>
+          <Text>No tienes permisos</Text>
         </View>
       </AppContainer>
     );
   }
 
-  /* ================= ACTIONS ================= */
-
-  const handleCreateRoute = () => {
-    navigation.navigate("CreateRoute", { companyId });
-  };
-
-  const handleCreateTrip = (routeId: string) => {
-    navigation.navigate("CreateTrip", { routeId });
-  };
-
-  const handleToggleRoute = async (
-    routeId: string
-  ) => {
+  const handleToggle = async (routeId: string) => {
     try {
       await toggleRouteActive(routeId);
-      loadRoutes(); // 🔄 refrescar
-    } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message ||
-          "No se pudo cambiar el estado"
-      );
+      loadRoutes();
+    } catch {
+      Alert.alert("Error", "No se pudo cambiar el estado");
     }
   };
-
-  /* ================= RENDER ================= */
 
   return (
     <AppContainer>
@@ -117,7 +84,11 @@ export default function CompanyRoutesScreen() {
       <View style={styles.container}>
         <PrimaryButton
           label="Crear nueva ruta"
-          onPress={handleCreateRoute}
+          onPress={() =>
+            navigation.navigate("CreateRoute", {
+              companyId,
+            })
+          }
         />
 
         <FlatList
@@ -128,56 +99,35 @@ export default function CompanyRoutesScreen() {
           contentContainerStyle={{
             marginTop: spacing.lg,
           }}
-          ListEmptyComponent={
-            !loading ? (
-              <Text style={styles.emptyText}>
-                Esta empresa aún no tiene rutas
-              </Text>
-            ) : null
-          }
           renderItem={({ item }) => (
             <View style={styles.card}>
               <ListItem
                 title={`${item.origin} → ${item.destination}`}
                 subtitle={
                   item.active
-                    ? "Activa"
-                    : "Inactiva"
+                    ? "Ruta activa"
+                    : "Ruta inactiva"
                 }
               />
 
-              <View style={styles.row}>
-                <Text
-                  style={[
-                    typography.body,
-                    {
-                      color: item.active
-                        ? colors.success
-                        : colors.textSecondary,
-                    },
-                  ]}
-                >
-                  {item.active
-                    ? "Visible"
-                    : "Oculta"}
-                </Text>
-
+              <View style={styles.actions}>
                 <Switch
                   value={item.active}
                   onValueChange={() =>
-                    handleToggleRoute(item._id)
+                    handleToggle(item._id)
+                  }
+                />
+
+                <PrimaryButton
+                  label="Crear viaje"
+                  disabled={!item.active}
+                  onPress={() =>
+                    navigation.navigate("CreateTrip", {
+                      routeId: item._id,
+                    })
                   }
                 />
               </View>
-
-              {item.active && (
-                <PrimaryButton
-                  label="Crear viaje"
-                  onPress={() =>
-                    handleCreateTrip(item._id)
-                  }
-                />
-              )}
             </View>
           )}
         />
@@ -185,8 +135,6 @@ export default function CompanyRoutesScreen() {
     </AppContainer>
   );
 }
-
-/* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
   container: {
@@ -196,12 +144,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.lg,
-  },
-  emptyText: {
-    marginTop: spacing.lg,
-    color: colors.textSecondary,
-    textAlign: "center",
   },
   card: {
     backgroundColor: "#FFF",
@@ -211,21 +153,29 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: spacing.md,
   },
-  row: {
+  actions: {
     marginTop: spacing.sm,
-    marginBottom: spacing.sm,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
   },
 });
 
 
 
-// import { View, StyleSheet, FlatList, Alert } from "react-native";
+// import {
+//   View,
+//   StyleSheet,
+//   FlatList,
+//   Alert,
+//   Switch,
+// } from "react-native";
 // import { Text } from "react-native-paper";
 // import { useEffect, useState } from "react";
-// import { useNavigation, useRoute } from "@react-navigation/native";
+// import {
+//   useNavigation,
+//   useRoute,
+// } from "@react-navigation/native";
 
 // import AppContainer from "../components/ui/AppContainer";
 // import AppHeader from "../components/ui/AppHeader";
@@ -235,13 +185,21 @@ const styles = StyleSheet.create({
 // import {
 //   getCompanyRoutes,
 //   toggleRouteActive,
-//   Route,
 // } from "../services/route.service";
 // import { useAuth } from "../context/AuthContext";
 
 // import { spacing } from "../theme/spacing";
 // import { colors } from "../theme/colors";
 // import { typography } from "../theme/typography";
+
+// /* ================= TYPES ================= */
+
+// type RouteItem = {
+//   _id: string;
+//   origin: string;
+//   destination: string;
+//   active: boolean;
+// };
 
 // export default function CompanyRoutesScreen() {
 //   const navigation = useNavigation<any>();
@@ -250,10 +208,10 @@ const styles = StyleSheet.create({
 
 //   const { companyId, companyName } = route.params;
 
-//   const [routes, setRoutes] = useState<Route[]>([]);
+//   const [routes, setRoutes] = useState<RouteItem[]>([]);
 //   const [loading, setLoading] = useState(false);
 
-//   /* ================= LOAD ================= */
+//   /* ================= LOAD ROUTES ================= */
 
 //   const loadRoutes = async () => {
 //     try {
@@ -275,29 +233,6 @@ const styles = StyleSheet.create({
 //     loadRoutes();
 //   }, []);
 
-//   /* ================= ACTIONS ================= */
-
-//   const handleCreateRoute = () => {
-//     navigation.navigate("CreateRoute", { companyId });
-//   };
-
-//   const handleCreateTrip = (routeId: string) => {
-//     navigation.navigate("CreateTrip", { routeId });
-//   };
-
-//   const handleToggleRoute = async (routeId: string) => {
-//     try {
-//       await toggleRouteActive(routeId);
-//       loadRoutes(); // 🔄 refresca estado
-//     } catch (error: any) {
-//       Alert.alert(
-//         "Error",
-//         error?.response?.data?.message ||
-//           "No se pudo cambiar el estado"
-//       );
-//     }
-//   };
-
 //   /* ================= GUARD ================= */
 
 //   if (!user || user.role !== "owner") {
@@ -312,6 +247,31 @@ const styles = StyleSheet.create({
 //       </AppContainer>
 //     );
 //   }
+
+//   /* ================= ACTIONS ================= */
+
+//   const handleCreateRoute = () => {
+//     navigation.navigate("CreateRoute", { companyId });
+//   };
+
+//   const handleCreateTrip = (routeId: string) => {
+//     navigation.navigate("CreateTrip", { routeId });
+//   };
+
+//   const handleToggleRoute = async (
+//     routeId: string
+//   ) => {
+//     try {
+//       await toggleRouteActive(routeId);
+//       loadRoutes(); // 🔄 refrescar
+//     } catch (error: any) {
+//       Alert.alert(
+//         "Error",
+//         error?.response?.data?.message ||
+//           "No se pudo cambiar el estado"
+//       );
+//     }
+//   };
 
 //   /* ================= RENDER ================= */
 
@@ -330,7 +290,9 @@ const styles = StyleSheet.create({
 //           keyExtractor={(item) => item._id}
 //           refreshing={loading}
 //           onRefresh={loadRoutes}
-//           contentContainerStyle={{ marginTop: spacing.lg }}
+//           contentContainerStyle={{
+//             marginTop: spacing.lg,
+//           }}
 //           ListEmptyComponent={
 //             !loading ? (
 //               <Text style={styles.emptyText}>
@@ -344,21 +306,34 @@ const styles = StyleSheet.create({
 //                 title={`${item.origin} → ${item.destination}`}
 //                 subtitle={
 //                   item.active
-//                     ? "Estado: ACTIVA"
-//                     : "Estado: INACTIVA"
+//                     ? "Activa"
+//                     : "Inactiva"
 //                 }
 //               />
 
-//               <PrimaryButton
-//                 label={
-//                   item.active
-//                     ? "Desactivar ruta"
-//                     : "Activar ruta"
-//                 }
-//                 onPress={() =>
-//                   handleToggleRoute(item._id)
-//                 }
-//               />
+//               <View style={styles.row}>
+//                 <Text
+//                   style={[
+//                     typography.body,
+//                     {
+//                       color: item.active
+//                         ? colors.success
+//                         : colors.textSecondary,
+//                     },
+//                   ]}
+//                 >
+//                   {item.active
+//                     ? "Visible"
+//                     : "Oculta"}
+//                 </Text>
+
+//                 <Switch
+//                   value={item.active}
+//                   onValueChange={() =>
+//                     handleToggleRoute(item._id)
+//                   }
+//                 />
+//               </View>
 
 //               {item.active && (
 //                 <PrimaryButton
@@ -401,5 +376,11 @@ const styles = StyleSheet.create({
 //     borderColor: colors.border,
 //     marginBottom: spacing.md,
 //   },
+//   row: {
+//     marginTop: spacing.sm,
+//     marginBottom: spacing.sm,
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "space-between",
+//   },
 // });
-

@@ -13,11 +13,9 @@ import { useCallback, useState } from "react";
 
 import AppContainer from "../../components/ui/AppContainer";
 import AppHeader from "../../components/ui/AppHeader";
-import StatCard from "../../components/ui/StatCard";
 import PrimaryButton from "../../components/ui/PrimaryButton";
-import ListItem from "../../components/ui/ListItem";
+import StatCard from "../../components/ui/StatCard";
 
-import { useOwnerActions } from "../../hooks/useOwnerActions";
 import { useAuth } from "../../context/AuthContext";
 import { getTrips } from "../../services/trip.service";
 
@@ -25,27 +23,25 @@ import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { colors } from "../../theme/colors";
 
-/* ================= TYPES ================= */
-
 type TripItem = {
   _id: string;
   price: number;
   departureTime: string;
+  date: string;
   route: {
     origin: string;
     destination: string;
-  } | null;
+  };
 };
 
 export default function HomeScreen() {
-  const { isOwner } = useOwnerActions();
-  const { user } = useAuth();
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
 
   const [trips, setTrips] = useState<TripItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  /* ================= LOAD TRIPS ================= */
+  /* ================= LOAD ================= */
 
   const loadTrips = async () => {
     try {
@@ -65,15 +61,13 @@ export default function HomeScreen() {
     }, [])
   );
 
-  /* ================= ACTIONS ================= */
+  /* ================= ACTION ================= */
 
   const handleBuyTicket = (trip: TripItem) => {
     if (!user) {
       navigation.navigate("Login");
       return;
     }
-
-    if (!trip.route) return;
 
     navigation
       .getParent()
@@ -84,79 +78,58 @@ export default function HomeScreen() {
       });
   };
 
-  const handleCreateTrip = () => {
-    if (!isOwner) {
-      Alert.alert(
-        "Acceso restringido",
-        "Solo owners pueden crear viajes"
-      );
-      return;
-    }
-
-    navigation.navigate("CreateTrip");
-  };
-
   /* ================= RENDER ================= */
 
   return (
     <AppContainer>
       <AppHeader
         showGreeting
-        subtitle="Aquí tienes un resumen de hoy"
+        subtitle="Viajes disponibles hoy"
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* ===== OWNER DASHBOARD ===== */}
-        {isOwner && (
-          <>
-            <Text style={styles.sectionTitle}>
-              Resumen general
+        {/* ===== STATS ===== */}
+        <View style={styles.statsRow}>
+          <StatCard
+            label="Viajes activos"
+            value={String(trips.length)}
+          />
+        </View>
+
+        {/* ===== LISTADO ===== */}
+        {trips.map((trip) => (
+          <View key={trip._id} style={styles.card}>
+            {/* ORIGEN → DESTINO */}
+            <Text style={styles.routeText}>
+              {trip.route.origin}{" "}
+              <Text style={styles.arrow}>→</Text>{" "}
+              {trip.route.destination}
             </Text>
 
-            <View style={styles.row}>
-              <StatCard
-                label="Viajes activos"
-                value={String(trips.length)}
-              />
-              <StatCard label="Rutas" value="—" />
+            {/* INFO */}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoText}>
+                🕒 {trip.departureTime}
+              </Text>
+              <Text style={styles.infoText}>
+                📅 {trip.date}
+              </Text>
             </View>
+
+            {/* PRICE */}
+            <Text style={styles.price}>
+              ${trip.price.toLocaleString()}
+            </Text>
 
             <PrimaryButton
-              label="Crear nuevo viaje"
-              onPress={handleCreateTrip}
+              label="Comprar tiquete"
+              onPress={() => handleBuyTicket(trip)}
             />
-          </>
-        )}
-
-        {/* ===== VIAJES DISPONIBLES ===== */}
-        <Text style={styles.sectionTitle}>
-          Rutas disponibles
-        </Text>
-
-        {trips.map((trip) => {
-          if (!trip.route) return null;
-
-          return (
-            <View
-              key={trip._id}
-              style={styles.routeCard}
-            >
-              <ListItem
-                title={`${trip.route.origin} → ${trip.route.destination}`}
-                subtitle={`Salida: ${trip.departureTime}`}
-                trailing={`$${trip.price}`}
-              />
-
-              <PrimaryButton
-                label="Comprar tiquete"
-                onPress={() => handleBuyTicket(trip)}
-              />
-            </View>
-          );
-        })}
+          </View>
+        ))}
 
         {!loading && trips.length === 0 && (
-          <Text style={styles.infoText}>
+          <Text style={styles.empty}>
             No hay viajes disponibles
           </Text>
         )}
@@ -171,37 +144,70 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
   },
-  sectionTitle: {
-    ...typography.label,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    marginTop: spacing.lg,
+
+  statsRow: {
+    marginBottom: spacing.lg,
   },
-  infoText: {
-    marginTop: spacing.sm,
-    color: colors.textSecondary,
-  },
-  row: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  routeCard: {
+
+  card: {
     backgroundColor: "#FFF",
-    borderRadius: 16,
-    padding: spacing.md,
+    borderRadius: 18,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: spacing.lg,
+  },
+
+  routeText: {
+    ...typography.title,
+    fontWeight: "700",
+    marginBottom: spacing.sm,
+    color: colors.textPrimary,
+  },
+
+  arrow: {
+    color: colors.primary,
+  },
+
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+  },
+
+  infoText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
+
+  price: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: colors.primary,
     marginBottom: spacing.md,
+  },
+
+  empty: {
+    textAlign: "center",
+    color: colors.textSecondary,
+    marginTop: spacing.lg,
   },
 });
 
 
 
 
-// import { ScrollView, StyleSheet, View, Alert, } from "react-native";
+// import {
+//   ScrollView,
+//   StyleSheet,
+//   View,
+//   Alert,
+// } from "react-native";
 // import { Text } from "react-native-paper";
-// import { useNavigation, useFocusEffect, } from "@react-navigation/native";
+// import {
+//   useNavigation,
+//   useFocusEffect,
+// } from "@react-navigation/native";
 // import { useCallback, useState } from "react";
 
 // import AppContainer from "../../components/ui/AppContainer";
@@ -217,8 +223,8 @@ const styles = StyleSheet.create({
 // import { spacing } from "../../theme/spacing";
 // import { typography } from "../../theme/typography";
 // import { colors } from "../../theme/colors";
-// import { usePermissions } from "../../hooks/usePermissions";
 
+// /* ================= TYPES ================= */
 
 // type TripItem = {
 //   _id: string;
@@ -227,16 +233,15 @@ const styles = StyleSheet.create({
 //   route: {
 //     origin: string;
 //     destination: string;
-//   };
+//   } | null;
 // };
 
 // export default function HomeScreen() {
-//   // ✅ dominio owner
-//   const { isOwner, canCreate } = useOwnerActions();
+//   const { isOwner } = useOwnerActions();
 //   const { user } = useAuth();
 //   const navigation = useNavigation<any>();
 
-//   const [trips, setTrips] = useState<any[]>([]);
+//   const [trips, setTrips] = useState<TripItem[]>([]);
 //   const [loading, setLoading] = useState(false);
 
 //   /* ================= LOAD TRIPS ================= */
@@ -253,7 +258,6 @@ const styles = StyleSheet.create({
 //     }
 //   };
 
-//   // 🔄 Se ejecuta cada vez que vuelves a Home
 //   useFocusEffect(
 //     useCallback(() => {
 //       loadTrips();
@@ -262,11 +266,13 @@ const styles = StyleSheet.create({
 
 //   /* ================= ACTIONS ================= */
 
-//   const handleBuyTicket = (trip: any) => {
+//   const handleBuyTicket = (trip: TripItem) => {
 //     if (!user) {
 //       navigation.navigate("Login");
 //       return;
 //     }
+
+//     if (!trip.route) return;
 
 //     navigation
 //       .getParent()
@@ -276,9 +282,6 @@ const styles = StyleSheet.create({
 //         tripId: trip._id,
 //       });
 //   };
-
-//   const { isAdminOrOwner } = usePermissions();
-
 
 //   const handleCreateTrip = () => {
 //     if (!isOwner) {
@@ -302,7 +305,7 @@ const styles = StyleSheet.create({
 //       />
 
 //       <ScrollView contentContainerStyle={styles.content}>
-//         {/* ===== Resumen (solo owners) ===== */}
+//         {/* ===== OWNER DASHBOARD ===== */}
 //         {isOwner && (
 //           <>
 //             <Text style={styles.sectionTitle}>
@@ -317,39 +320,14 @@ const styles = StyleSheet.create({
 //               <StatCard label="Rutas" value="—" />
 //             </View>
 
-//             {/* ===== Acción principal owner ===== */}
-//             {/* {!canCreate && (
-//               <PrimaryButton
-//                 label="Crear nuevo viaje"
-//                 onPress={() =>
-//                   navigation.navigate("CreateTrip")
-//                 }
-//               />
-//             )} */}
-//             {isOwner && (
-//               <PrimaryButton
-//                 label="Crear nuevo viaje"
-//                 onPress={handleCreateTrip}
-//               />
-//             )}
-//             {/* {user &&
-//               ["admin", "owner"].includes(user.role) && (
-//                 <PrimaryButton
-//                   label="Crear nuevo viaje"
-//                   onPress={handleCreateTrip}
-//                 />
-//               )} */}
-
-
-//             {!canCreate && (
-//               <Text style={styles.infoText}>
-//                 No tienes viajes habilitados hoy
-//               </Text>
-//             )}
+//             <PrimaryButton
+//               label="Crear nuevo viaje"
+//               onPress={handleCreateTrip}
+//             />
 //           </>
 //         )}
 
-//         {/* ===== RUTAS DISPONIBLES ===== */}
+//         {/* ===== VIAJES DISPONIBLES ===== */}
 //         <Text style={styles.sectionTitle}>
 //           Rutas disponibles
 //         </Text>
@@ -376,24 +354,6 @@ const styles = StyleSheet.create({
 //           );
 //         })}
 
-//         {/* {trips.map((trip) => (
-//           <View
-//             key={trip._id}
-//             style={styles.routeCard}
-//           >
-//             <ListItem
-//               title={`${trip.route.origin} → ${trip.route.destination}`}
-//               subtitle={`Salida: ${trip.departureTime}`}
-//               trailing={`$${trip.price}`}
-//             />
-
-//             <PrimaryButton
-//               label="Comprar tiquete"
-//               onPress={() => handleBuyTicket(trip)}
-//             />
-//           </View>
-//         ))} */}
-
 //         {!loading && trips.length === 0 && (
 //           <Text style={styles.infoText}>
 //             No hay viajes disponibles
@@ -410,25 +370,21 @@ const styles = StyleSheet.create({
 //   content: {
 //     padding: spacing.lg,
 //   },
-
 //   sectionTitle: {
 //     ...typography.label,
 //     color: colors.textSecondary,
 //     marginBottom: spacing.sm,
 //     marginTop: spacing.lg,
 //   },
-
 //   infoText: {
 //     marginTop: spacing.sm,
 //     color: colors.textSecondary,
 //   },
-
 //   row: {
 //     flexDirection: "row",
 //     gap: spacing.sm,
 //     marginBottom: spacing.sm,
 //   },
-
 //   routeCard: {
 //     backgroundColor: "#FFF",
 //     borderRadius: 16,

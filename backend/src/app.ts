@@ -8,7 +8,7 @@ import ticketRoutes from "./routes/ticket.routes.js";
 import tripRoutes from "./routes/trip.routes.js";
 import companyRoutes from "./routes/company.routes.js";
 import routeRoutes from "./routes/route.routes.js";
-import statsRoutes from "./routes/stats.routes.js";
+// import { statsRouter } from "./routes/stats.routes.js";
 
 const app = express();
 
@@ -63,7 +63,7 @@ app.use("/api/trips", tripRoutes);
 app.use("/api/tickets", ticketRoutes);
 
 // Stats
-app.use("/api/stats", statsRoutes);
+app.use("/api/stats", statsRouter);
 
 /* ================= 404 HANDLER ================= */
 

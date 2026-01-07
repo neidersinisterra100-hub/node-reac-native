@@ -63,7 +63,7 @@ app.use("/api/trips", tripRoutes);
 app.use("/api/tickets", ticketRoutes);
 
 // Stats
-app.use("/api/stats", statsRouter);
+// app.use("/api/stats", statsRouter);
 
 /* ================= 404 HANDLER ================= */
 

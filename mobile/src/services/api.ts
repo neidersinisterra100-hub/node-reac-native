@@ -5,19 +5,23 @@ import Constants from "expo-constants";
 /**
  * Prioridad:
  * 1. Variable definida en app.config / app.json (Render)
- * 2. Fallback local
+ * 2. Fallback local (TU IP LOCAL)
  */
-const API_URL =
-  Constants.expoConfig?.extra?.API_URL ??
-  process.env.EXPO_PUBLIC_API_URL ??
-  "https://node-reac-native.onrender.com/api"; 
-  // "https://fast-windows-stay.loca.lt/api"; // URL pública temporal
+// CAMBIAR A TU IP LOCAL SI USAS DISPOSITIVO FISICO O EMULADOR EXTERNO
+// Android Emulator usa 10.0.2.2, Genymotion 10.0.3.2, Fisico TU_IP
+const LOCAL_IP = "192.168.1.40"; 
+const API_URL = `http://${LOCAL_IP}:3000/api`;
+
+// const API_URL =
+//   Constants.expoConfig?.extra?.API_URL ??
+//   process.env.EXPO_PUBLIC_API_URL ??
+//   "https://node-reac-native.onrender.com/api";
 
 export const api = axios.create({
   baseURL: API_URL,
   timeout: 10000,
   headers: {
-    "bypass-tunnel-reminder": "true", // Necesario para evitar la pantalla de espera de localtunnel
+    "bypass-tunnel-reminder": "true",
   },
 });
 

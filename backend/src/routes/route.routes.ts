@@ -12,7 +12,8 @@ const router = Router();
 
 /* ================= PROTECTED ================= */
 
-// LISTAR RUTAS DE UNA EMPRESA (OWNER & ADMIN)
+// LISTAR RUTAS DE UNA EMPRESA (OWNER & ADMIN & USER)
+// Eliminamos requireOwner para que los usuarios puedan ver las rutas
 router.get(
   "/company/:companyId",
   requireAuth,

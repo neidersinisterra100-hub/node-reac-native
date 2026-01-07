@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 
 import HomeScreen from "./publicStack/HomeScreen";
-import DashboardScreen from "../screens/DashboardScreen";
+import MyCompaniesScreen from "../screens/MyCompaniesScreen"; // 👈 Usamos esto como Dashboard
 import HistoryScreen from "../screens/HistoryScreen";
 import ProfileStack from "./ProfileStack";
 
@@ -14,10 +14,11 @@ import { useAuth } from "../context/AuthContext";
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
-// Componente Wrapper para evitar errores de tipado JSX
+// Componente Wrapper
 const HomeWrapper = () => {
   const { user } = useAuth();
-  return user ? <DashboardScreen /> : <HomeScreen />;
+  // Si está logueado, mostramos la lista de empresas (igual que en Web)
+  return user ? <MyCompaniesScreen /> : <HomeScreen />;
 };
 
 export default function TabNavigator() {
@@ -41,7 +42,8 @@ export default function TabNavigator() {
 
           switch (route.name) {
             case "Home":
-              iconName = user ? "view-dashboard-outline" : "home-outline";
+              // Icono de edificio si es dashboard de empresas
+              iconName = user ? "domain" : "home-outline";
               break;
             case "History":
               iconName = "history";
@@ -67,7 +69,7 @@ export default function TabNavigator() {
       <Tab.Screen
         name="Home"
         component={HomeWrapper}
-        options={{ title: user ? "Dashboard" : "Inicio" }}
+        options={{ title: user ? "Empresas" : "Inicio" }}
       />
 
       {/* 🔒 HISTORY – REQUIERE LOGIN */}

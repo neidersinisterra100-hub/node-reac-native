@@ -1,8 +1,10 @@
 import { Router } from "express";
-import {
-  createCompany,
+import { 
+  createCompany, 
   getMyCompanies,
+  toggleCompanyActive 
 } from "../controllers/company.controller.js";
+import { getCompanyRoutes } from "../controllers/route.controller.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { requireOwner } from "../middlewares/requireOwner.js";
 
@@ -18,12 +20,25 @@ router.post(
   createCompany
 );
 
-// Listar mis empresas (solo OWNER)
+// Listar empresas (OWNER & ADMIN)
 router.get(
   "/my",
   requireAuth,
-  requireOwner,
   getMyCompanies
+);
+
+// Toggle Activo (OWNER & ADMIN)
+router.patch(
+  "/:companyId",
+  requireAuth,
+  toggleCompanyActive
+);
+
+// Nested Routes: Get routes for a company (OWNER & ADMIN)
+router.get(
+  "/:companyId/routes",
+  requireAuth,
+  getCompanyRoutes
 );
 
 export default router;

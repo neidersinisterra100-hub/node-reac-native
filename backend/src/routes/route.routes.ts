@@ -11,11 +11,10 @@ const router = Router();
 
 /* ================= PROTECTED ================= */
 
-// LISTAR RUTAS DE UNA EMPRESA (OWNER)
+// LISTAR RUTAS DE UNA EMPRESA (OWNER & ADMIN)
 router.get(
   "/company/:companyId",
   requireAuth,
-  requireOwner,
   getCompanyRoutes
 );
 
@@ -27,10 +26,10 @@ router.post(
   createRoute
 );
 
+// TOGGLE RUTA (OWNER & ADMIN)
 router.patch(
-  "/:routeId/toggle",
+  "/:routeId",
   requireAuth,
-  requireOwner,
   toggleRouteActive
 );
 

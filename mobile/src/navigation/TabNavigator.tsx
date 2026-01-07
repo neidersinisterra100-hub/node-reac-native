@@ -1,8 +1,10 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import React from "react";
 
 import HomeScreen from "./publicStack/HomeScreen";
+import DashboardScreen from "../screens/DashboardScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import ProfileStack from "./ProfileStack";
 
@@ -11,6 +13,12 @@ import { RootTabParamList } from "./types";
 import { useAuth } from "../context/AuthContext";
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
+
+// Componente Wrapper para evitar errores de tipado JSX
+const HomeWrapper = () => {
+  const { user } = useAuth();
+  return user ? <DashboardScreen /> : <HomeScreen />;
+};
 
 export default function TabNavigator() {
   const { user } = useAuth();
@@ -33,7 +41,7 @@ export default function TabNavigator() {
 
           switch (route.name) {
             case "Home":
-              iconName = "home-outline";
+              iconName = user ? "view-dashboard-outline" : "home-outline";
               break;
             case "History":
               iconName = "history";
@@ -55,11 +63,11 @@ export default function TabNavigator() {
         },
       })}
     >
-      {/* 🌍 HOME – PÚBLICO */}
+      {/* 🌍 DASHBOARD / HOME */}
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
-        options={{ title: "Inicio" }}
+        component={HomeWrapper}
+        options={{ title: user ? "Dashboard" : "Inicio" }}
       />
 
       {/* 🔒 HISTORY – REQUIERE LOGIN */}

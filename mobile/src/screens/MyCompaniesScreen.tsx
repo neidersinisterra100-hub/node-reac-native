@@ -70,8 +70,53 @@ export default function MyCompaniesScreen() {
           label="Crear empresa"
           onPress={() => navigation.navigate("CreateCompany")}
         />
-
         <FlatList
+  data={companies}
+  keyExtractor={(item) => item._id}
+  refreshing={loading}
+  onRefresh={loadCompanies}
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={{
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl * 2, // ✅ CLAVE
+  }}
+  ListHeaderComponent={
+    <PrimaryButton
+      label="Crear empresa"
+      onPress={() =>
+        navigation.navigate("CreateCompany")
+      }
+    />
+  }
+  ListEmptyComponent={
+    !loading ? (
+      <Text style={styles.emptyText}>
+        Aún no tienes empresas creadas
+      </Text>
+    ) : null
+  }
+  renderItem={({ item }) => (
+    <View style={styles.card}>
+      <ListItem
+        title={item.name}
+        subtitle={`Balance: $${item.balance}`}
+      />
+
+      <PrimaryButton
+        label="Gestionar rutas"
+        onPress={() =>
+          navigation.navigate("CompanyRoutes", {
+            companyId: item._id,
+            companyName: item.name,
+          })
+        }
+      />
+    </View>
+  )}
+/>
+
+
+        {/* <FlatList
           data={companies}
           keyExtractor={(item) => item._id}
           refreshing={loading}
@@ -102,7 +147,7 @@ export default function MyCompaniesScreen() {
               />
             </View>
           )}
-        />
+        /> */}
       </View>
     </AppContainer>
   );
@@ -112,19 +157,23 @@ export default function MyCompaniesScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,                // ✅ CLAVE
     padding: spacing.lg,
   },
+
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.lg,
   },
+
   emptyText: {
     marginTop: spacing.lg,
     color: colors.textSecondary,
     textAlign: "center",
   },
+
   card: {
     backgroundColor: "#FFF",
     borderRadius: 16,
@@ -134,3 +183,28 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
 });
+
+// const styles = StyleSheet.create({
+//   container: {
+//     padding: spacing.lg,
+//   },
+//   center: {
+//     flex: 1,
+//     justifyContent: "center",
+//     alignItems: "center",
+//     padding: spacing.lg,
+//   },
+//   emptyText: {
+//     marginTop: spacing.lg,
+//     color: colors.textSecondary,
+//     textAlign: "center",
+//   },
+//   card: {
+//     backgroundColor: "#FFF",
+//     borderRadius: 16,
+//     padding: spacing.md,
+//     borderWidth: 1,
+//     borderColor: colors.border,
+//     marginBottom: spacing.md,
+//   },
+// });

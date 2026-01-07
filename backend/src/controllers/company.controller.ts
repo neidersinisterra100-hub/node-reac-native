@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 import { CompanyModel } from "../models/company.model.js";
 import { AuthRequest } from "../middlewares/requireAuth.js";
 
-/* ================= CREATE COMPANY (OWNER ONLY) ================= */
+/* ... existing code ... */
 
 export const createCompany: RequestHandler = async (
   req,
@@ -11,14 +11,12 @@ export const createCompany: RequestHandler = async (
   try {
     const authReq = req as AuthRequest;
 
-    /* 🔒 AUTH */
     if (!authReq.user) {
       return res.status(401).json({
         message: "No autenticado",
       });
     }
 
-    /* 🔒 ROLE → SOLO OWNER (normalizado) */
     if (authReq.user.role.toLowerCase() !== "owner") {
       return res.status(403).json({
         message: "Solo los owners pueden crear empresas",
@@ -27,14 +25,11 @@ export const createCompany: RequestHandler = async (
 
     const { name } = req.body;
 
-    /* 🔒 VALIDACIÓN */
     if (!name || typeof name !== "string") {
       return res.status(400).json({
         message: "El nombre de la empresa es obligatorio",
       });
     }
-
-    /* ================= CREATE ================= */
 
     const company = await CompanyModel.create({
       name: name.trim(),
@@ -51,8 +46,6 @@ export const createCompany: RequestHandler = async (
   }
 };
 
-/* ================= GET MY COMPANIES (OWNER & ADMIN) ================= */
-
 export const getMyCompanies: RequestHandler = async (
   req,
   res
@@ -60,7 +53,6 @@ export const getMyCompanies: RequestHandler = async (
   try {
     const authReq = req as AuthRequest;
 
-    /* 🔒 AUTH */
     if (!authReq.user) {
       return res.status(401).json({
         message: "No autenticado",
@@ -69,19 +61,14 @@ export const getMyCompanies: RequestHandler = async (
 
     const userRole = authReq.user.role.toLowerCase();
 
-    /* 🔒 ROLE → OWNER O ADMIN */
     if (userRole !== "owner" && userRole !== "admin") {
       return res.status(403).json({
         message: "No tienes permisos para ver esta información",
       });
     }
 
-    /* ================= QUERY ================= */
-
     let query = {};
     
-    // Si es owner, solo ve las suyas.
-    // Si es admin, ve todas (query vacío).
     if (userRole === "owner") {
       query = { owner: authReq.user.id };
     }
@@ -97,14 +84,10 @@ export const getMyCompanies: RequestHandler = async (
   }
 };
 
-/* ================= TOGGLE COMPANY ACTIVE (OWNER & ADMIN) ================= */
-
 export const toggleCompanyActive: RequestHandler = async (req, res) => {
   try {
-    console.log("👉 PATCH toggleCompanyActive llamado"); // LOG 1
     const authReq = req as AuthRequest;
     const { companyId } = req.params;
-    console.log("👉 companyId recibido:", companyId); // LOG 2
 
     if (!authReq.user) {
       return res.status(401).json({ message: "No autenticado" });
@@ -113,13 +96,11 @@ export const toggleCompanyActive: RequestHandler = async (req, res) => {
     const company = await CompanyModel.findById(companyId);
 
     if (!company) {
-      console.log("👉 Empresa no encontrada en DB"); // LOG 3
       return res.status(404).json({ message: "Empresa no encontrada" });
     }
 
     const userRole = authReq.user.role.toLowerCase();
 
-    // Permitir si es Admin O si es el Owner de la empresa
     const isOwner = company.owner.toString() === authReq.user.id;
     const isAdmin = userRole === "admin";
 
@@ -140,3 +121,36 @@ export const toggleCompanyActive: RequestHandler = async (req, res) => {
     });
   }
 };
+
+/* ================= DELETE COMPANY (OWNER ONLY) ================= */
+export const deleteCompany: RequestHandler = async (req, res) => {
+    try {
+      const authReq = req as AuthRequest;
+      const { companyId } = req.params;
+  
+      if (!authReq.user) {
+        return res.status(401).json({ message: "No autenticado" });
+      }
+  
+      const company = await CompanyModel.findById(companyId);
+  
+      if (!company) {
+        return res.status(404).json({ message: "Empresa no encontrada" });
+      }
+  
+      if (company.owner.toString() !== authReq.user.id) {
+        return res.status(403).json({
+          message: "No autorizado para eliminar esta empresa",
+        });
+      }
+  
+      await CompanyModel.findByIdAndDelete(companyId);
+  
+      res.json({ message: "Empresa eliminada correctamente" });
+    } catch (error) {
+      console.error("❌ Error deleteCompany:", error);
+      res.status(500).json({
+        message: "Error al eliminar empresa",
+      });
+    }
+  };

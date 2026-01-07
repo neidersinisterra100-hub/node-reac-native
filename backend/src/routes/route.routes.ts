@@ -3,6 +3,7 @@ import {
   createRoute,
   getCompanyRoutes,
   toggleRouteActive,
+  deleteRoute
 } from "../controllers/route.controller.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { requireOwner } from "../middlewares/requireOwner.js";
@@ -33,5 +34,12 @@ router.patch(
   toggleRouteActive
 );
 
+// ELIMINAR RUTA (OWNER)
+router.delete(
+  "/:routeId",
+  requireAuth,
+  requireOwner,
+  deleteRoute
+);
 
 export default router;

@@ -2,7 +2,8 @@ import { Router } from "express";
 import { 
   createCompany, 
   getMyCompanies,
-  toggleCompanyActive 
+  toggleCompanyActive,
+  deleteCompany
 } from "../controllers/company.controller.js";
 import { getCompanyRoutes } from "../controllers/route.controller.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
@@ -32,6 +33,14 @@ router.patch(
   "/:companyId",
   requireAuth,
   toggleCompanyActive
+);
+
+// ELIMINAR EMPRESA (OWNER)
+router.delete(
+  "/:companyId",
+  requireAuth,
+  requireOwner,
+  deleteCompany
 );
 
 // Nested Routes: Get routes for a company (OWNER & ADMIN)

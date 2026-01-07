@@ -3,7 +3,7 @@ import { RouteModel } from "../models/route.model.js";
 import { CompanyModel } from "../models/company.model.js";
 import { AuthRequest } from "../middlewares/requireAuth.js";
 
-/* ================= CREATE ROUTE (OWNER ONLY) ================= */
+/* ... existing code ... */
 
 export const createRoute: RequestHandler = async (req, res) => {
   try {
@@ -68,8 +68,6 @@ export const createRoute: RequestHandler = async (req, res) => {
   }
 };
 
-/* ================= LIST ROUTES BY COMPANY ================= */
-
 export const getCompanyRoutes: RequestHandler = async (req, res) => {
   try {
     const { companyId } = req.params;
@@ -86,8 +84,6 @@ export const getCompanyRoutes: RequestHandler = async (req, res) => {
     });
   }
 };
-
-/* ================= TOGGLE ROUTE ACTIVE (OWNER & ADMIN) ================= */
 
 export const toggleRouteActive: RequestHandler = async (req, res) => {
   try {
@@ -108,7 +104,6 @@ export const toggleRouteActive: RequestHandler = async (req, res) => {
 
     const userRole = authReq.user.role.toLowerCase();
 
-    // Permitir si es Admin O si es el Owner de la empresa
     const isOwner = company.owner.toString() === authReq.user.id;
     const isAdmin = userRole === "admin";
 
@@ -129,3 +124,38 @@ export const toggleRouteActive: RequestHandler = async (req, res) => {
     });
   }
 };
+
+/* ================= DELETE ROUTE (OWNER ONLY) ================= */
+export const deleteRoute: RequestHandler = async (req, res) => {
+    try {
+      const authReq = req as AuthRequest;
+      const { routeId } = req.params;
+  
+      if (!authReq.user) {
+        return res.status(401).json({ message: "No autenticado" });
+      }
+  
+      const route = await RouteModel.findById(routeId).populate("company");
+  
+      if (!route) {
+        return res.status(404).json({ message: "Ruta no encontrada" });
+      }
+  
+      const company: any = route.company;
+  
+      if (company.owner.toString() !== authReq.user.id) {
+        return res.status(403).json({
+          message: "No autorizado para eliminar esta ruta",
+        });
+      }
+  
+      await RouteModel.findByIdAndDelete(routeId);
+  
+      res.json({ message: "Ruta eliminada correctamente" });
+    } catch (error) {
+      console.error("❌ Error deleteRoute:", error);
+      res.status(500).json({
+        message: "Error al eliminar ruta",
+      });
+    }
+  };

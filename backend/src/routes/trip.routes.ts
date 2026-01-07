@@ -2,7 +2,8 @@ import { Router } from "express";
 import {
   getTrips,
   createTrip,
-  toggleTripActive
+  toggleTripActive,
+  deleteTrip
 } from "../controllers/trip.controller.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { requireOwner } from "../middlewares/requireOwner.js";
@@ -29,6 +30,14 @@ router.patch(
   "/:tripId",
   requireAuth,
   toggleTripActive
+);
+
+// ELIMINAR VIAJE (OWNER)
+router.delete(
+  "/:tripId",
+  requireAuth,
+  requireOwner,
+  deleteTrip
 );
 
 export default router;

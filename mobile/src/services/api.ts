@@ -10,7 +10,8 @@ import Constants from "expo-constants";
 const API_URL =
   Constants.expoConfig?.extra?.API_URL ??
   process.env.EXPO_PUBLIC_API_URL ??
-  "https://fast-windows-stay.loca.lt/api"; // URL pública temporal
+  "https://node-reac-native.onrender.com/api"; 
+  // "https://fast-windows-stay.loca.lt/api"; // URL pública temporal
 
 export const api = axios.create({
   baseURL: API_URL,

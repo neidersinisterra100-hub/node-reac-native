@@ -120,7 +120,8 @@ export default function CompanyRoutesScreen() {
 
   return (
     <AppContainer>
-      <AppHeader title={companyName || "Rutas"} />
+      {/* 🟢 HEADER CON NEÓN AQUÍ */}
+      <AppHeader title={companyName || "Rutas"} neon={true} />
 
       {loading ? (
            <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>

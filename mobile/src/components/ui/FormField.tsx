@@ -10,7 +10,8 @@ type Props = {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
-  keyboardType?: "default" | "numeric";
+  keyboardType?: "default" | "numeric" | "email-address" | "phone-pad";
+  secureTextEntry?: boolean;
   error?: string;
 };
 
@@ -20,6 +21,7 @@ export default function FormField({
   onChangeText,
   placeholder,
   keyboardType = "default",
+  secureTextEntry = false,
   error,
 }: Props) {
   return (
@@ -32,10 +34,16 @@ export default function FormField({
         onChangeText={onChangeText}
         placeholder={placeholder}
         keyboardType={keyboardType}
+        secureTextEntry={secureTextEntry}
         outlineColor={colors.border}
-        activeOutlineColor={colors.primary}
+        activeOutlineColor={colors.accent} // 👈 USAR ACENTO (CIAN)
         style={styles.input}
         error={!!error}
+        theme={{
+            colors: {
+                primary: colors.accent, // Para el cursor y label flotante
+            }
+        }}
       />
 
       {error && (
@@ -47,18 +55,19 @@ export default function FormField({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.md,
+    marginBottom: 16,
   },
   label: {
-    ...typography.label,
+    fontSize: 14,
+    fontWeight: '500',
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
+    marginBottom: 4,
   },
   input: {
     backgroundColor: "#FFF",
   },
   errorText: {
-    marginTop: spacing.xs,
+    marginTop: 4,
     color: colors.error,
     fontSize: 12,
   },

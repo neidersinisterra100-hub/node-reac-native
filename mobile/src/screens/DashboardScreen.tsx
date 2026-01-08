@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, View, StyleSheet, Dimensions, useWindowDimensions, TouchableOpacity } from 'react-native';
+import { ScrollView, View, StyleSheet, Dimensions, useWindowDimensions, TouchableOpacity, Alert } from 'react-native';
 import { Text, Avatar, Button, IconButton } from 'react-native-paper';
-import { BarChart, LineChart, ProgressChart } from 'react-native-chart-kit';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../theme/colors'; // Asegúrate de tener esto o usar constantes
-import AppContainer from '../components/ui/AppContainer';
+import { colors } from '../theme/colors'; 
 
 // Componente auxiliar para métricas
 const MetricCard = ({ title, value, icon, iconBackgroundColor, iconColor = "white" }: any) => (
@@ -25,40 +23,15 @@ const screenWidth = Dimensions.get("window").width;
 export default function DashboardScreen() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
-  const { width } = useWindowDimensions();
+  const isOwner = user?.role === 'owner' || user?.role === 'admin';
 
-  // Datos dummy o reales (podrías conectarlos a un servicio de stats)
+  // Datos dummy o reales
   const [stats, setStats] = useState({
     earnings: 628,
     share: 2434,
     likes: 1259,
     rating: 8.5
   });
-
-  const chartConfig = {
-    backgroundGradientFrom: "#fff",
-    backgroundGradientTo: "#fff",
-    color: (opacity = 1) => `rgba(26, 34, 54, ${opacity})`, // Navy
-    strokeWidth: 2,
-    barPercentage: 0.5,
-    useShadowColorFromDataset: false,
-    decimalPlaces: 0,
-    labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
-  };
-
-  const barData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-      {
-        data: [20, 45, 28, 80, 99, 43],
-        color: (opacity = 1) => '#1a2236', // Navy
-      },
-      {
-        data: [10, 30, 20, 60, 80, 30],
-        color: (opacity = 1) => '#ff6b00', // Orange
-      }
-    ]
-  };
 
   return (
     <View style={styles.container}>
@@ -68,74 +41,86 @@ export default function DashboardScreen() {
             <View style={styles.userInfo}>
                 <Avatar.Text 
                     size={45} 
-                    label={user?.name?.substring(0, 2).toUpperCase() || "JD"} 
+                    label={user?.name?.substring(0, 2).toUpperCase() || "CP"} 
                     style={{ backgroundColor: 'white' }} 
                     color="#1a2236" 
                 />
                 <View style={{ marginLeft: 12 }}>
-                    <Text style={styles.userName}>{user?.name?.toUpperCase() || "USUARIO"}</Text>
-                    <Text style={styles.userEmail}>{user?.email || "usuario@email.com"}</Text>
+                    <Text style={styles.userName}>{user?.name?.toUpperCase() || "CAPITÁN"}</Text>
+                    <Text style={styles.userEmail}>{user?.email || "capitan@maritimo.com"}</Text>
                 </View>
             </View>
+            
+            {/* 🔔 ICONOS HEADER */}
             <View style={styles.headerIcons}>
                 <IconButton icon="bell-outline" iconColor="white" size={24} onPress={() => {}} />
+                
+                {/* 🍔 MENU BUTTON (Abre MenuScreen) */}
+                <IconButton 
+                    icon="dots-vertical" 
+                    iconColor="white" 
+                    size={24} 
+                    onPress={() => navigation.navigate("Menu")} 
+                />
             </View>
         </View>
-        <Text style={styles.pageTitle}>Dashboard {user?.role === 'owner' ? 'Propietario' : 'Usuario'}</Text>
+        <Text style={styles.pageTitle}>Dashboard {isOwner ? 'Propietario' : 'Usuario'}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        {/* Accesos Directos (Navegación) */}
+        {/* Accesos Directos (Navegación Condicional - TEMA MARÍTIMO ⚓️) */}
         <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20}}>
-            <TouchableOpacity onPress={() => navigation.navigate("MyCompanies")} style={styles.shortcutBtn}>
-                 <MaterialCommunityIcons name="domain" size={24} color="#ff6b00" />
-                 <Text style={styles.shortcutText}>Empresas</Text>
-            </TouchableOpacity>
-            {/* Si quisieras ir directo a rutas de todas las empresas, necesitarías una pantalla especial, 
-                pero por ahora redirigimos a empresas que es el flujo correcto */}
-            <TouchableOpacity onPress={() => navigation.navigate("MyCompanies")} style={styles.shortcutBtn}>
-                 <MaterialCommunityIcons name="routes" size={24} color="#1a2236" />
-                 <Text style={styles.shortcutText}>Rutas</Text>
-            </TouchableOpacity>
-             <TouchableOpacity onPress={() => {}} style={styles.shortcutBtn}>
-                 <MaterialCommunityIcons name="ticket-confirmation-outline" size={24} color="#10b981" />
-                 <Text style={styles.shortcutText}>Tickets</Text>
-            </TouchableOpacity>
+            {isOwner ? (
+                <>
+                    {/* OWNER */}
+                    <TouchableOpacity onPress={() => navigation.navigate("MyCompanies")} style={styles.shortcutBtn}>
+                        <MaterialCommunityIcons name="ferry" size={32} color="#ff6b00" />
+                        <Text style={styles.shortcutText}>Empresas</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity onPress={() => navigation.navigate("AllRoutes")} style={styles.shortcutBtn}>
+                        <MaterialCommunityIcons name="compass-outline" size={32} color="#1a2236" />
+                        <Text style={styles.shortcutText}>Rutas</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => Alert.alert("Info", "Selecciona una ruta para ver sus viajes.")} style={styles.shortcutBtn}>
+                        <MaterialCommunityIcons name="anchor" size={32} color="#10b981" />
+                        <Text style={styles.shortcutText}>Viajes</Text>
+                    </TouchableOpacity>
+                </>
+            ) : (
+                <>
+                    {/* USER */}
+                    <TouchableOpacity onPress={() => navigation.navigate("AllRoutes")} style={styles.shortcutBtn}>
+                        <MaterialCommunityIcons name="compass-outline" size={32} color="#ff6b00" />
+                        <Text style={styles.shortcutText}>Rutas</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => navigation.navigate("AllTrips")} style={styles.shortcutBtn}>
+                        <MaterialCommunityIcons name="sail-boat" size={32} color="#1a2236" />
+                        <Text style={styles.shortcutText}>Viajes</Text>
+                    </TouchableOpacity>
+
+                    {/* BOTÓN TICKETS CONECTADO 🎟️ */}
+                    <TouchableOpacity onPress={() => navigation.navigate("MyTickets")} style={styles.shortcutBtn}>
+                        <MaterialCommunityIcons name="ticket-confirmation" size={32} color="#10b981" />
+                        <Text style={styles.shortcutText}>Tickets</Text>
+                    </TouchableOpacity>
+                </>
+            )}
         </View>
 
         {/* Metrics Grid */}
         <View style={styles.grid}>
             <View style={styles.col}>
-                <MetricCard title="Ganancias" value={`$ ${stats.earnings}`} icon="currency-usd" iconBackgroundColor="#1a2236" />
-                <MetricCard title="Me gusta" value={`${stats.likes}`} icon="thumb-up" iconBackgroundColor="#3b82f6" />
+                <MetricCard title="Ingresos" value={`$ ${stats.earnings}`} icon="currency-usd" iconBackgroundColor="#1a2236" />
+                <MetricCard title="Pasajeros" value={`${stats.likes}`} icon="account-group" iconBackgroundColor="#3b82f6" />
             </View>
             <View style={styles.col}>
-                <MetricCard title="Compartidos" value={`${stats.share}`} icon="share-variant" iconBackgroundColor="#8b5cf6" />
-                <MetricCard title="Calificación" value={`${stats.rating}`} icon="star" iconBackgroundColor="#f59e0b" />
+                <MetricCard title="Zarpes" value={`${stats.share}`} icon="anchor" iconBackgroundColor="#8b5cf6" />
+                <MetricCard title="Valoración" value={`${stats.rating}`} icon="star" iconBackgroundColor="#f59e0b" />
             </View>
-        </View>
-
-        {/* Bar Chart Section */}
-        <View style={styles.chartCard}>
-            <View style={styles.chartHeader}>
-                <Text style={styles.chartTitle}>Rendimiento Mensual</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <BarChart
-                    data={barData}
-                    width={screenWidth} 
-                    height={220}
-                    yAxisLabel=""
-                    yAxisSuffix=""
-                    chartConfig={chartConfig}
-                    verticalLabelRotation={0}
-                    fromZero
-                    showValuesOnTopOfBars={false}
-                    withInnerLines={true}
-                    style={{ paddingRight: 40 }}
-                />
-            </ScrollView>
         </View>
 
          <View style={{ height: 20 }} />
@@ -182,6 +167,7 @@ const styles = StyleSheet.create({
   },
   headerIcons: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   pageTitle: {
     color: 'white',
@@ -205,9 +191,9 @@ const styles = StyleSheet.create({
   },
   shortcutText: {
       fontSize: 12,
-      marginTop: 4,
+      marginTop: 8,
       color: '#4b5563',
-      fontWeight: '500'
+      fontWeight: '600'
   },
   grid: {
     flexDirection: 'row',
@@ -243,26 +229,5 @@ const styles = StyleSheet.create({
   metricTitle: {
       fontSize: 12,
       color: '#6b7280',
-  },
-  chartCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  chartHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  chartTitle: {
-    color: '#4b5563',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

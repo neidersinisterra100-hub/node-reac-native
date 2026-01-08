@@ -6,10 +6,11 @@ export interface Trip {
   _id: string;
   route: string | { _id: string, origin: string, destination: string }; // Populated or ID
   company: string | { _id: string, name: string };
-  date: string;          
-  departureTime: string; 
+  date: string;
+  departureTime: string;
   price: number;
   availableSeats: number;
+  transportType?: string; // Asegurar que exista
 }
 
 /* ================= API ================= */
@@ -24,6 +25,7 @@ export async function createTrip(data: {
   date: string;
   departureTime: string;
   price: number;
+  transportType: string;
 }) {
   const response = await api.post("/trips", data);
   return response.data;
@@ -33,3 +35,10 @@ export async function deleteTrip(id: string) {
     const response = await api.delete(`/trips/${id}`);
     return response.data;
 }
+
+// Objeto de compatibilidad
+export const tripService = {
+    getAll: getTrips,
+    create: createTrip,
+    delete: deleteTrip
+};

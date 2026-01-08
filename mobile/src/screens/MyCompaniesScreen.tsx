@@ -8,12 +8,12 @@ import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
 import PrimaryButton from "../components/ui/PrimaryButton";
 
-import { 
-  getMyCompanies, 
-  getAllCompanies, 
-  toggleCompanyActive, 
-  deleteCompany, 
-  Company 
+import {
+  getMyCompanies,
+  getAllCompanies,
+  toggleCompanyActive,
+  deleteCompany,
+  Company
 } from "../services/company.service";
 import { useAuth } from "../context/AuthContext";
 
@@ -31,7 +31,7 @@ export default function MyCompaniesScreen() {
       setLoading(true);
       setErrorMsg(null);
       let data: Company[] = [];
-      
+
       if (isOwner) {
           data = await getMyCompanies();
       } else {
@@ -61,8 +61,8 @@ export default function MyCompaniesScreen() {
   const handleDelete = async (id: string) => {
       Alert.alert("Eliminar Empresa", "¿Estás seguro?", [
           { text: "Cancelar", style: "cancel" },
-          { 
-              text: "Eliminar", 
+          {
+              text: "Eliminar",
               style: "destructive",
               onPress: async () => {
                   try {
@@ -77,7 +77,7 @@ export default function MyCompaniesScreen() {
   };
 
   const renderItem = ({ item }: { item: Company }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
         style={[styles.card, !item.active && isOwner && styles.cardInactive]}
         onPress={() => navigation.navigate("CompanyRoutes", {
             companyId: item._id,
@@ -86,31 +86,31 @@ export default function MyCompaniesScreen() {
     >
       <View style={styles.cardHeader}>
           <View style={styles.iconBox}>
-             <Building2 size={24} color="#1a2236" /> 
+             <Building2 size={24} color="#1a2236" />
           </View>
           <View style={{flex: 1}}>
               <Text style={styles.cardTitle}>{item.name}</Text>
               {isOwner && <Text style={styles.cardSubtitle}>Balance: ${item.balance}</Text>}
           </View>
-          
+
           {isOwner && (
               <View style={{flexDirection: 'row'}}>
-                  <IconButton 
-                      icon="power" 
-                      iconColor={item.active ? "#10b981" : "#9ca3af"} 
+                  <IconButton
+                      icon="power"
+                      iconColor={item.active ? "#10b981" : "#9ca3af"}
                       size={20}
                       onPress={() => handleToggle(item._id, !!item.active)}
                   />
-                  <IconButton 
-                      icon="delete-outline" 
-                      iconColor="#ef4444" 
+                  <IconButton
+                      icon="delete-outline"
+                      iconColor="#ef4444"
                       size={20}
                       onPress={() => handleDelete(item._id)}
                   />
               </View>
           )}
       </View>
-      
+
       {!item.active && !isOwner && (
           <Text style={styles.inactiveText}>Inactiva</Text>
       )}
@@ -136,7 +136,7 @@ export default function MyCompaniesScreen() {
           </View>
       ) : (
         <FlatList
-            data={companies}
+            data={isOwner ? companies : companies.filter(c => c.active)} // 👈 FILTRADO MANUAL PARA USER
             keyExtractor={(item) => item._id}
             refreshing={loading}
             onRefresh={loadCompanies}

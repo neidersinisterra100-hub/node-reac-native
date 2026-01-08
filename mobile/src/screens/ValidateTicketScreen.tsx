@@ -44,12 +44,18 @@ export default function ValidateTicketScreen() {
     }
   };
 
-  const handleBarCodeScanned = ({ data }: any) => {
+  const handleBarCodeScanned = ({ type, data }: any) => {
+      // Evitar lecturas múltiples rápidas
+      if (scanned) return;
+      
       setScanned(true);
       setShowCamera(false);
       setCode(data);
-      Alert.alert("Código Escaneado", data);
-      handleValidate(data);
+      
+      // Vibrar o feedback visual sería ideal aquí
+      Alert.alert("Código Detectado", `Código: ${data}`, [
+          { text: "Validar", onPress: () => handleValidate(data) }
+      ]);
   };
 
   const openCamera = async () => {
@@ -72,21 +78,32 @@ export default function ValidateTicketScreen() {
       <AppHeader title="Validar Ticket" />
 
       {/* MODAL CÁMARA */}
-      <Modal visible={showCamera} animationType="slide">
+      <Modal visible={showCamera} animationType="slide" onRequestClose={() => setShowCamera(false)}>
           <View style={{ flex: 1, backgroundColor: 'black' }}>
               <CameraView
                   style={StyleSheet.absoluteFillObject}
                   onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                  // Eliminamos settings restrictivos para probar detección general
+                  // O usamos "qr" explícitamente si funciona mejor
                   barcodeScannerSettings={{
-                      barcodeTypes: ["qr"],
+                      barcodeTypes: ["qr", "ean13", "code128"],
                   }}
               />
+              
+              {/* Overlay visual para guiar al usuario */}
               <View style={styles.cameraOverlay}>
                   <TouchableOpacity onPress={() => setShowCamera(false)} style={styles.closeCameraButton}>
-                      <Text style={{ color: 'white', fontWeight: 'bold' }}>Cerrar Cámara</Text>
+                      <MaterialCommunityIcons name="close" size={30} color="white" />
                   </TouchableOpacity>
-                  <View style={styles.scanFrame} />
-                  <Text style={styles.scanText}>Apunta al código QR del ticket</Text>
+                  
+                  <View style={styles.scanArea}>
+                      <View style={styles.cornerTL} />
+                      <View style={styles.cornerTR} />
+                      <View style={styles.cornerBL} />
+                      <View style={styles.cornerBR} />
+                  </View>
+                  
+                  <Text style={styles.scanText}>Centra el código QR en el cuadro</Text>
               </View>
           </View>
       </Modal>
@@ -273,6 +290,7 @@ const styles = StyleSheet.create({
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
+      position: 'relative',
   },
   closeCameraButton: {
       position: 'absolute',
@@ -280,21 +298,29 @@ const styles = StyleSheet.create({
       right: 20,
       padding: 10,
       backgroundColor: 'rgba(0,0,0,0.5)',
-      borderRadius: 8,
+      borderRadius: 20,
+      zIndex: 10,
   },
-  scanFrame: {
+  scanArea: {
       width: 250,
       height: 250,
-      borderWidth: 2,
-      borderColor: '#00bcd4', // Cian para el marco
-      backgroundColor: 'transparent',
+      justifyContent: 'center',
+      alignItems: 'center',
+      position: 'relative',
   },
   scanText: {
       color: 'white',
-      marginTop: 20,
+      marginTop: 40,
       fontSize: 16,
       backgroundColor: 'rgba(0,0,0,0.6)',
-      padding: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
       borderRadius: 8,
-  }
+      overflow: 'hidden',
+  },
+  // Esquinas del marco (Visual)
+  cornerTL: { position: 'absolute', top: 0, left: 0, width: 40, height: 40, borderTopWidth: 4, borderLeftWidth: 4, borderColor: '#00bcd4' },
+  cornerTR: { position: 'absolute', top: 0, right: 0, width: 40, height: 40, borderTopWidth: 4, borderRightWidth: 4, borderColor: '#00bcd4' },
+  cornerBL: { position: 'absolute', bottom: 0, left: 0, width: 40, height: 40, borderBottomWidth: 4, borderLeftWidth: 4, borderColor: '#00bcd4' },
+  cornerBR: { position: 'absolute', bottom: 0, right: 0, width: 40, height: 40, borderBottomWidth: 4, borderRightWidth: 4, borderColor: '#00bcd4' },
 });

@@ -1,59 +1,42 @@
-import { Pressable, Text, ActivityIndicator, StyleSheet } from "react-native";
-import { colors } from "../../theme/colors";
-import { spacing } from "../../theme/spacing";
-import { typography } from "../../theme/typography";
+import React from "react";
+import { TouchableOpacity, Text, ActivityIndicator } from "react-native";
 
-type Props = {
+interface PrimaryButtonProps {
   label: string;
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-};
+  variant?: "primary" | "secondary" | "danger";
+}
 
 export default function PrimaryButton({
   label,
   onPress,
   loading = false,
   disabled = false,
-}: Props) {
-  const isDisabled = disabled || loading;
+  variant = "primary",
+}: PrimaryButtonProps) {
+  
+  const baseStyle = "h-12 rounded-xl flex-row justify-center items-center shadow-sm active:opacity-80";
+  
+  let bgStyle = "bg-dashboard-orange"; // primary
+  if (variant === "secondary") bgStyle = "bg-white border border-gray-200";
+  if (variant === "danger") bgStyle = "bg-red-500";
+  if (disabled) bgStyle = "bg-gray-300";
+
+  const textStyle = variant === "secondary" ? "text-gray-700" : "text-white";
 
   return (
-    <Pressable
+    <TouchableOpacity
+      className={`${baseStyle} ${bgStyle}`}
       onPress={onPress}
-      disabled={isDisabled}
-      style={({ pressed }) => [
-        styles.button,
-        isDisabled && styles.disabled,
-        pressed && !isDisabled && styles.pressed,
-      ]}
+      disabled={disabled || loading}
     >
       {loading ? (
-        <ActivityIndicator color="#FFF" />
+        <ActivityIndicator color={variant === "secondary" ? "#374151" : "#FFF"} />
       ) : (
-        <Text style={styles.label}>{label}</Text>
+        <Text className={`font-semibold text-base ${textStyle}`}>{label}</Text>
       )}
-    </Pressable>
+    </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: spacing.md,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  disabled: {
-    backgroundColor: colors.border,
-  },
-  label: {
-    ...typography.body,
-    color: "#FFF",
-    fontWeight: "600",
-  },
-});

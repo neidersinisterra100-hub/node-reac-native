@@ -1,17 +1,19 @@
-import { SafeAreaView, StyleSheet } from "react-native";
-import { colors } from "../../theme/colors";
+import React from 'react';
+import { SafeAreaView, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
-export default function AppContainer({
-  children,
-}: {
+interface AppContainerProps {
   children: React.ReactNode;
-}) {
-  return <SafeAreaView style={styles.container}>{children}</SafeAreaView>;
+  noPadding?: boolean;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-});
+export default function AppContainer({ children, noPadding = false }: AppContainerProps) {
+  return (
+    <SafeAreaView className="flex-1 bg-dashboard-bg">
+      <StatusBar style="dark" backgroundColor="#f8fafc" />
+      <View className={`flex-1 ${noPadding ? '' : 'p-4'}`}>
+        {children}
+      </View>
+    </SafeAreaView>
+  );
+}

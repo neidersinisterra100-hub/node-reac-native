@@ -1,7 +1,8 @@
-import { View, StyleSheet, FlatList, Alert, TouchableOpacity } from "react-native";
-import { Text, IconButton } from "react-native-paper";
+import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { IconButton } from "react-native-paper";
 import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
+import { Building2 } from "lucide-react-native";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
@@ -10,16 +11,11 @@ import PrimaryButton from "../components/ui/PrimaryButton";
 import { 
   getMyCompanies, 
   getAllCompanies, 
-  createCompany, 
   toggleCompanyActive, 
   deleteCompany, 
   Company 
 } from "../services/company.service";
 import { useAuth } from "../context/AuthContext";
-
-import { spacing } from "../theme/spacing";
-import { colors } from "../theme/colors";
-import { typography } from "../theme/typography";
 
 export default function MyCompaniesScreen() {
   const navigation = useNavigation<any>();
@@ -28,24 +24,22 @@ export default function MyCompaniesScreen() {
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
-
-  /* ================= LOAD ================= */
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const loadCompanies = async () => {
     try {
       setLoading(true);
+      setErrorMsg(null);
       let data: Company[] = [];
       
       if (isOwner) {
           data = await getMyCompanies();
       } else {
-          // Si es user normal, intentamos traer publicas
           data = await getAllCompanies();
       }
       setCompanies(data);
     } catch (error: any) {
-      console.log("Error loading companies:", error);
-      // No mostramos alerta intrusiva si falla por 404 (endpoint no existe)
+      setErrorMsg("No se pudieron cargar las empresas.");
     } finally {
       setLoading(false);
     }
@@ -55,40 +49,32 @@ export default function MyCompaniesScreen() {
     loadCompanies();
   }, [user]);
 
-  /* ================= ACTIONS ================= */
-
   const handleToggle = async (id: string, currentStatus: boolean) => {
       try {
           await toggleCompanyActive(id, !currentStatus);
           setCompanies(prev => prev.map(c => c._id === id ? { ...c, active: !currentStatus } : c));
-      } catch (error) {
+      } catch {
           Alert.alert("Error", "No se pudo cambiar el estado");
       }
   };
 
   const handleDelete = async (id: string) => {
-      Alert.alert(
-          "Eliminar Empresa",
-          "¿Estás seguro? Se borrarán rutas y viajes asociados.",
-          [
-              { text: "Cancelar", style: "cancel" },
-              { 
-                  text: "Eliminar", 
-                  style: "destructive",
-                  onPress: async () => {
-                      try {
-                          await deleteCompany(id);
-                          setCompanies(prev => prev.filter(c => c._id !== id));
-                      } catch (error) {
-                          Alert.alert("Error", "No se pudo eliminar");
-                      }
+      Alert.alert("Eliminar Empresa", "¿Estás seguro?", [
+          { text: "Cancelar", style: "cancel" },
+          { 
+              text: "Eliminar", 
+              style: "destructive",
+              onPress: async () => {
+                  try {
+                      await deleteCompany(id);
+                      setCompanies(prev => prev.filter(c => c._id !== id));
+                  } catch {
+                      Alert.alert("Error", "No se pudo eliminar");
                   }
               }
-          ]
-      );
+          }
+      ]);
   };
-
-  /* ================= RENDER ITEM ================= */
 
   const renderItem = ({ item }: { item: Company }) => (
     <TouchableOpacity 
@@ -99,26 +85,25 @@ export default function MyCompaniesScreen() {
         })}
     >
       <View style={styles.cardHeader}>
-          <View style={styles.iconContainer}>
-             <IconButton icon="domain" iconColor={colors.primary} size={24} />
+          <View style={styles.iconBox}>
+             <Building2 size={24} color="#1a2236" /> 
           </View>
           <View style={{flex: 1}}>
               <Text style={styles.cardTitle}>{item.name}</Text>
-              <Text style={styles.cardSubtitle}>Balance: ${item.balance}</Text>
+              {isOwner && <Text style={styles.cardSubtitle}>Balance: ${item.balance}</Text>}
           </View>
           
-          {/* ACCIONES OWNER */}
           {isOwner && (
-              <View style={styles.actions}>
+              <View style={{flexDirection: 'row'}}>
                   <IconButton 
                       icon="power" 
-                      iconColor={item.active ? colors.success : colors.textSecondary} 
+                      iconColor={item.active ? "#10b981" : "#9ca3af"} 
                       size={20}
                       onPress={() => handleToggle(item._id, !!item.active)}
                   />
                   <IconButton 
                       icon="delete-outline" 
-                      iconColor={colors.error} 
+                      iconColor="#ef4444" 
                       size={20}
                       onPress={() => handleDelete(item._id)}
                   />
@@ -127,108 +112,107 @@ export default function MyCompaniesScreen() {
       </View>
       
       {!item.active && !isOwner && (
-          <Text style={styles.inactiveLabel}>Inactiva</Text>
+          <Text style={styles.inactiveText}>Inactiva</Text>
       )}
     </TouchableOpacity>
   );
 
   return (
     <AppContainer>
-      <AppHeader title={isOwner ? "Mis Empresas" : "Empresas Disponibles"} />
+      <AppHeader title={isOwner ? "Mis Empresas" : "Empresas Disponibles"} showBack={false} />
 
-      <View style={styles.container}>
+      {errorMsg && (
+          <View style={styles.errorBox}>
+              <Text style={{color: '#dc2626'}}>{errorMsg}</Text>
+              <TouchableOpacity onPress={loadCompanies}>
+                  <Text style={{color: '#b91c1c', fontWeight: 'bold', textDecorationLine: 'underline'}}>Reintentar</Text>
+              </TouchableOpacity>
+          </View>
+      )}
+
+      {loading ? (
+          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+              <ActivityIndicator size="large" color="#ff6b00" />
+          </View>
+      ) : (
         <FlatList
-          data={companies}
-          keyExtractor={(item) => item._id}
-          refreshing={loading}
-          onRefresh={loadCompanies}
-          contentContainerStyle={{ paddingBottom: spacing.xl * 2 }}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
+            data={companies}
+            keyExtractor={(item) => item._id}
+            refreshing={loading}
+            onRefresh={loadCompanies}
+            contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
             isOwner ? (
-                <View style={{ marginBottom: spacing.md }}>
+                <View style={{ marginBottom: 20 }}>
                     <PrimaryButton
-                    label="Nueva Empresa"
-                    onPress={() => navigation.navigate("CreateCompany")}
+                        label="Nueva Empresa"
+                        onPress={() => navigation.navigate("CreateCompany")}
                     />
                 </View>
             ) : null
-          }
-          ListEmptyComponent={
-            !loading ? (
-              <Text style={styles.emptyText}>
-                {isOwner ? "Comienza creando tu primera empresa." : "No hay empresas disponibles."}
-              </Text>
-            ) : null
-          }
-          renderItem={renderItem}
+            }
+            ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 40}}>
+                <Text style={{color: '#6b7280'}}>No hay empresas disponibles.</Text>
+            </View>
+            }
+            renderItem={renderItem}
         />
-      </View>
+      )}
     </AppContainer>
   );
 }
 
-/* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  card: {
-    backgroundColor: "#FFF",
-    borderRadius: 16,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  cardInactive: {
-      opacity: 0.7,
-      borderColor: colors.textSecondary,
-  },
-  cardHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.sm,
-  },
-  iconContainer: {
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      width: 48,
-      height: 48,
-      justifyContent: "center",
-      alignItems: "center",
-  },
-  cardTitle: {
-      ...typography.header,
-      fontSize: 18,
-      color: colors.textPrimary,
-  },
-  cardSubtitle: {
-      ...typography.body,
-      color: colors.textSecondary,
-      fontSize: 14,
-  },
-  actions: {
-      flexDirection: "row",
-  },
-  emptyText: {
-    marginTop: spacing.lg,
-    color: colors.textSecondary,
-    textAlign: "center",
-    ...typography.body,
-  },
-  inactiveLabel: {
-      color: colors.error,
-      fontSize: 12,
-      fontWeight: "bold",
-      marginTop: 8,
-      textAlign: "right"
-  }
+    card: {
+        backgroundColor: 'white',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#e5e7eb', // gray-200
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    cardInactive: {
+        opacity: 0.7,
+        borderColor: '#d1d5db',
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    iconBox: {
+        backgroundColor: '#eff6ff', // blue-50
+        padding: 12,
+        borderRadius: 12,
+    },
+    cardTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#1f2937', // gray-800
+    },
+    cardSubtitle: {
+        fontSize: 12,
+        color: '#6b7280', // gray-500
+    },
+    inactiveText: {
+        color: '#ef4444',
+        fontSize: 12,
+        fontWeight: 'bold',
+        marginTop: 8,
+        textAlign: 'right'
+    },
+    errorBox: {
+        backgroundColor: '#fef2f2',
+        padding: 16,
+        borderRadius: 8,
+        marginBottom: 16,
+        alignItems: 'center'
+    }
 });

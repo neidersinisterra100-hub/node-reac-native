@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { 
-  createCompany, 
+import {
+  createCompany,
   getMyCompanies,
+  getAllCompanies, // 👈 IMPORTADO
   toggleCompanyActive,
   deleteCompany
 } from "../controllers/company.controller.js";
@@ -10,6 +11,11 @@ import { requireAuth } from "../middlewares/requireAuth.js";
 import { requireOwner } from "../middlewares/requireOwner.js";
 
 const router = Router();
+
+/* ================= PUBLIC ================= */
+
+// Listar empresas PÚBLICAS (activas)
+router.get("/", getAllCompanies);
 
 /* ================= OWNER ================= */
 
@@ -21,7 +27,7 @@ router.post(
   createCompany
 );
 
-// Listar empresas (OWNER & ADMIN)
+// Listar mis empresas (OWNER & ADMIN)
 router.get(
   "/my",
   requireAuth,
@@ -44,9 +50,12 @@ router.delete(
 );
 
 // Nested Routes: Get routes for a company (OWNER & ADMIN)
+// Nota: Deberíamos tener un endpoint público para esto también si User va a ver rutas.
+// Pero getAllRoutes en frontend ya usa getCompanyRoutes, que actualmente requiereAuth.
+// Deberíamos hacer pública getCompanyRoutes o crear una versión pública.
 router.get(
   "/:companyId/routes",
-  requireAuth,
+  // requireAuth, // 👈 TEMPORAL: Comentar auth para que user pueda ver rutas de empresa pública
   getCompanyRoutes
 );
 

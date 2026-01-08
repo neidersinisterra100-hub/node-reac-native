@@ -45,6 +45,13 @@ const TicketSchema = new Schema(
       unique: true,
       index: true,
     },
+    
+    // 🟢 NUEVO: Estado del ticket
+    status: {
+        type: String,
+        enum: ['valid', 'used', 'expired', 'cancelled'],
+        default: 'valid'
+    },
 
     date: {
       type: Date,
@@ -57,53 +64,3 @@ const TicketSchema = new Schema(
 );
 
 export const TicketModel = model("Ticket", TicketSchema);
-
-
-
-// import { Schema, model, Types } from "mongoose";
-
-// const TicketSchema = new Schema(
-//   {
-//     trip: {
-//       type: Types.ObjectId,
-//       ref: "Trip"
-//     },
-//     company: {
-//       type: Types.ObjectId, ref: "Company"
-//     },
-//     user: {
-//       type: Types.ObjectId,
-//       ref: "User",
-//       required: true,
-//     },
-
-//     routeName: {
-//       type: String,
-//       required: true,
-//     },
-
-//     price: {
-//       type: Number,
-//       required: true,
-//     },
-
-//     transport: {
-//       type: String,
-//       default: "Lancha rápida",
-//     },
-
-//     code: {
-//       type: String,
-//       required: true,
-//       unique: true,
-//     },
-
-//     date: {
-//       type: Date,
-//       default: Date.now,
-//     },
-//   },
-//   { timestamps: true }
-// );
-
-// export default model("TicketModel", TicketSchema);

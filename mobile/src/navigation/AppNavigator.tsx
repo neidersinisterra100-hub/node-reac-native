@@ -34,7 +34,7 @@ export type RootStackParamList = {
   Login: undefined;
   Passengers: undefined;
   SettingsModal: undefined;
-  // Profile: undefined;      // Lo remplace por Passengers
+  Profile: undefined;      // Lo remplace por Passengers
   Menu: undefined;
   Balance: undefined;
   MyTickets: undefined;
@@ -108,7 +108,7 @@ export default function AppNavigator() {
 
         {/* 🔐 LOGIN / PROFILE / MENU / BALANCE / TICKETS */}
         <Stack.Screen name="Login" component={LoginScreen} options={{ presentation: "modal", animation: "slide_from_bottom" }} />
-        {/* <Stack.Screen name="Profile" component={ProfileScreen} /> */}
+        <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="Passengers" component={PassengersScreen}/>
 
         <Stack.Screen name="Menu" component={MenuScreen} options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }} />

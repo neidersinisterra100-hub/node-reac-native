@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { View, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { Text, Avatar, Divider } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -10,38 +10,39 @@ import { colors } from "../theme/colors";
 export default function MenuScreen() {
   const navigation = useNavigation<any>();
   const { user, logout } = useAuth();
-  
-  // const role = user?.role?.toLowerCase() || '';
-  // const isOwner = role === 'owner' || role === 'admin';
+
+  const isOwner = user?.role === 'owner' || user?.role === 'admin';
 
   const menuItems = [
-    { 
-        icon: "account-circle-outline", 
-        label: "Mi Perfil", 
-        onPress: () => navigation.navigate("Profile") 
-    },
-    
-    // 🔥 VISIBLE PARA TODOS (TEMPORAL)
     {
-        icon: "chart-bar", 
-        label: "Balance y Estadísticas", 
-        onPress: () => navigation.navigate("Balance") 
+        icon: "account-circle-outline",
+        label: "Mi Perfil",
+        onPress: () => navigation.navigate("Profile"),
+        show: true
     },
     {
-        icon: "qrcode-scan", 
-        label: "Validar Ticket", 
-        onPress: () => navigation.navigate("ValidateTicket") 
+        icon: "chart-bar",
+        label: "Balance y Estadísticas",
+        onPress: () => navigation.navigate("Balance"),
+        show: isOwner
     },
-
-    { 
-        icon: "history", 
-        label: "Historial de Viajes", 
-        onPress: () => navigation.navigate("History") 
+    {
+        icon: "qrcode-scan",
+        label: "Validar Ticket",
+        onPress: () => navigation.navigate("ValidateTicket"),
+        show: isOwner
     },
-    { 
-        icon: "theme-light-dark", 
-        label: "Cambiar Tema", 
-        onPress: () => alert("Próximamente") 
+    {
+        icon: "history",
+        label: "Historial de Viajes",
+        onPress: () => navigation.navigate("History"),
+        show: true
+    },
+    {
+        icon: "theme-light-dark",
+        label: "Cambiar Tema",
+        onPress: () => alert("Próximamente"),
+        show: true
     },
   ];
 
@@ -53,10 +54,10 @@ export default function MenuScreen() {
               <MaterialCommunityIcons name="close" size={28} color="white" />
           </TouchableOpacity>
           <View style={styles.userInfo}>
-             <Avatar.Text 
-                size={64} 
-                label={user?.name?.substring(0, 2).toUpperCase() || "US"} 
-                style={{ backgroundColor: 'white' }} 
+             <Avatar.Text
+                size={64}
+                label={user?.name?.substring(0, 2).toUpperCase() || "US"}
+                style={{ backgroundColor: 'white' }}
                 color={colors.primary}
             />
             <Text style={styles.userName}>{user?.name}</Text>
@@ -64,15 +65,15 @@ export default function MenuScreen() {
           </View>
       </View>
 
-      {/* Lista de Opciones */}
-      <View style={styles.content}>
-          {menuItems.map((item, index) => (
+      {/* Lista de Opciones - Ahora con ScrollView */}
+      <ScrollView contentContainerStyle={styles.content}>
+          {menuItems.filter(item => item.show).map((item, index) => (
               <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
                   <View style={styles.iconBox}>
                     <MaterialCommunityIcons name={item.icon as any} size={24} color={colors.primary} />
                   </View>
                   <Text style={styles.menuLabel}>{item.label}</Text>
-                  <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
+                  <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />   
               </TouchableOpacity>
           ))}
 
@@ -80,11 +81,14 @@ export default function MenuScreen() {
 
           <TouchableOpacity style={styles.menuItem} onPress={logout}>
               <View style={[styles.iconBox, { backgroundColor: '#fee2e2' }]}>
-                <MaterialCommunityIcons name="logout" size={24} color={colors.error} />
+                <MaterialCommunityIcons name="logout" size={24} color={colors.error} />    
               </View>
               <Text style={[styles.menuLabel, { color: colors.error }]}>Cerrar Sesión</Text>
           </TouchableOpacity>
-      </View>
+          
+          {/* Espacio extra al final para asegurar scroll cómodo */}
+          <View style={{ height: 40 }} />
+      </ScrollView>
     </View>
   );
 }
@@ -120,7 +124,7 @@ const styles = StyleSheet.create({
   },
   content: {
       padding: 20,
-      marginTop: 20,
+      paddingTop: 30, // Un poco más de espacio arriba
   },
   menuItem: {
       flexDirection: 'row',

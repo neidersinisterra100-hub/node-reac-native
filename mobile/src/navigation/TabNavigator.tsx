@@ -54,9 +54,9 @@ export default function TabNavigator() {
               iconName = "account-group-outline";
               break;
 
-            // case "Profile":
-            //   iconName = "account-outline";
-            //   break;
+            case "Profile":
+              iconName = "account-outline";
+              break;
             default:
               iconName = "circle";
           }
@@ -93,7 +93,7 @@ export default function TabNavigator() {
         }}
       />
 
-      {/* 🔒 PROFILE – REQUIERE LOGIN */}
+      {/* 🔒 PASAJEROS – REQUIERE LOGIN */}
       <Tab.Screen
         name="Passengers"
         component={PassengersScreen}
@@ -108,7 +108,8 @@ export default function TabNavigator() {
         }}
       />
 
-      {/* <Tab.Screen
+      {/* 🔒 PROFILE – REQUIERE LOGIN */}
+      <Tab.Screen
         name="Profile"
         component={ProfileStack}
         options={{ title: "Perfil" }}
@@ -120,7 +121,7 @@ export default function TabNavigator() {
             }
           },
         }}
-      /> */}
+      />
     </Tab.Navigator>
   );
 }

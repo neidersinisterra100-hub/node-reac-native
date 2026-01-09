@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../theme/colors'; 
+import { colors } from '../theme/colors';
 
 // Componente auxiliar para métricas
 const MetricCard = ({ title, value, icon, iconBackgroundColor, iconColor = "white" }: any) => (
@@ -39,28 +39,28 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
             <View style={styles.userInfo}>
-                <Avatar.Text 
-                    size={45} 
-                    label={user?.name?.substring(0, 2).toUpperCase() || "CP"} 
-                    style={{ backgroundColor: 'white' }} 
-                    color="#1a2236" 
+                <Avatar.Text
+                    size={45}
+                    label={user?.name?.substring(0, 2).toUpperCase() || "CP"}
+                    style={{ backgroundColor: 'white' }}
+                    color="#1a2236"
                 />
                 <View style={{ marginLeft: 12 }}>
                     <Text style={styles.userName}>{user?.name?.toUpperCase() || "CAPITÁN"}</Text>
                     <Text style={styles.userEmail}>{user?.email || "capitan@maritimo.com"}</Text>
                 </View>
             </View>
-            
+
             {/* 🔔 ICONOS HEADER */}
             <View style={styles.headerIcons}>
                 <IconButton icon="bell-outline" iconColor="white" size={24} onPress={() => {}} />
-                
+
                 {/* 🍔 MENU BUTTON (Abre MenuScreen) */}
-                <IconButton 
-                    icon="dots-vertical" 
-                    iconColor="white" 
-                    size={24} 
-                    onPress={() => navigation.navigate("Menu")} 
+                <IconButton
+                    icon="dots-vertical"
+                    iconColor="white"
+                    size={24}
+                    onPress={() => navigation.navigate("Menu")}
                 />
             </View>
         </View>
@@ -75,17 +75,17 @@ export default function DashboardScreen() {
                 <>
                     {/* OWNER */}
                     <TouchableOpacity onPress={() => navigation.navigate("MyCompanies")} style={styles.shortcutBtn}>
-                        <MaterialCommunityIcons name="ferry" size={32} color="#ff6b00" />
+                        <MaterialCommunityIcons name="ferry" size={32} color="#ff6b00" />  
                         <Text style={styles.shortcutText}>Empresas</Text>
                     </TouchableOpacity>
-                    
+
                     <TouchableOpacity onPress={() => navigation.navigate("AllRoutes")} style={styles.shortcutBtn}>
                         <MaterialCommunityIcons name="compass-outline" size={32} color="#1a2236" />
                         <Text style={styles.shortcutText}>Rutas</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={() => Alert.alert("Info", "Selecciona una ruta para ver sus viajes.")} style={styles.shortcutBtn}>
-                        <MaterialCommunityIcons name="anchor" size={32} color="#10b981" />
+                        <MaterialCommunityIcons name="anchor" size={32} color="#10b981" /> 
                         <Text style={styles.shortcutText}>Viajes</Text>
                     </TouchableOpacity>
                 </>
@@ -111,17 +111,19 @@ export default function DashboardScreen() {
             )}
         </View>
 
-        {/* Metrics Grid */}
-        <View style={styles.grid}>
-            <View style={styles.col}>
-                <MetricCard title="Ingresos" value={`$ ${stats.earnings}`} icon="currency-usd" iconBackgroundColor="#1a2236" />
-                <MetricCard title="Pasajeros" value={`${stats.likes}`} icon="account-group" iconBackgroundColor="#3b82f6" />
+        {/* Metrics Grid - Solo visible para Owners/Admins */}
+        {isOwner && (
+            <View style={styles.grid}>
+                <View style={styles.col}>
+                    <MetricCard title="Ingresos" value={`$ ${stats.earnings}`} icon="currency-usd" iconBackgroundColor="#1a2236" />
+                    <MetricCard title="Pasajeros" value={`${stats.likes}`} icon="account-group" iconBackgroundColor="#3b82f6" />
+                </View>
+                <View style={styles.col}>
+                    <MetricCard title="Zarpes" value={`${stats.share}`} icon="anchor" iconBackgroundColor="#8b5cf6" />
+                    <MetricCard title="Valoración" value={`${stats.rating}`} icon="star" iconBackgroundColor="#f59e0b" />
+                </View>
             </View>
-            <View style={styles.col}>
-                <MetricCard title="Zarpes" value={`${stats.share}`} icon="anchor" iconBackgroundColor="#8b5cf6" />
-                <MetricCard title="Valoración" value={`${stats.rating}`} icon="star" iconBackgroundColor="#f59e0b" />
-            </View>
-        </View>
+        )}
 
          <View style={{ height: 20 }} />
       </ScrollView>

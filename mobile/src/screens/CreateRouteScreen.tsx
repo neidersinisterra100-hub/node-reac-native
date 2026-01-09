@@ -106,10 +106,6 @@ export default function CreateRouteScreen() {
       <AppHeader title="Crear ruta" />
 
       <View style={styles.container}>
-        <Text style={[typography.label, styles.label]}>
-          Origen
-        </Text>
-
         <FormField
           label="Origen"
           value={origin}
@@ -123,29 +119,6 @@ export default function CreateRouteScreen() {
           onChangeText={setDestination}
           placeholder="Ej: Buenaventura"
         />
-
-
-        {/* <TextInput
-          mode="outlined"
-          placeholder="Ej: Timbiquí"
-          value={origin}
-          onChangeText={setOrigin}
-          style={styles.input}
-          activeOutlineColor={colors.primary}
-        /> */}
-
-        <Text style={[typography.label, styles.label]}>
-          Destino
-        </Text>
-
-        {/* <TextInput
-          mode="outlined"
-          placeholder="Ej: Buenaventura"
-          value={destination}
-          onChangeText={setDestination}
-          style={styles.input}
-          activeOutlineColor={colors.primary}
-        /> */}
 
         <PrimaryButton
           label={loading ? "Creando..." : "Crear ruta"}

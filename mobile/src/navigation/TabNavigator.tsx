@@ -5,13 +5,14 @@ import React from "react";
 
 import HomeScreen from "./publicStack/HomeScreen";
 import DashboardScreen from "../screens/DashboardScreen"; // 👈 Dashboard Real
-import MyCompaniesScreen from "../screens/MyCompaniesScreen"; 
+import MyCompaniesScreen from "../screens/MyCompaniesScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import ProfileStack from "./ProfileStack";
 
 import { colors } from "../theme/colors";
 import { RootTabParamList } from "./types";
 import { useAuth } from "../context/AuthContext";
+import PassengersScreen from "../screens/PassengersScreen";
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
@@ -49,9 +50,13 @@ export default function TabNavigator() {
             case "History":
               iconName = "history";
               break;
-            case "Profile":
-              iconName = "account-outline";
+            case "Passengers":
+              iconName = "account-group-outline";
               break;
+
+            // case "Profile":
+            //   iconName = "account-outline";
+            //   break;
             default:
               iconName = "circle";
           }
@@ -90,6 +95,20 @@ export default function TabNavigator() {
 
       {/* 🔒 PROFILE – REQUIERE LOGIN */}
       <Tab.Screen
+        name="Passengers"
+        component={PassengersScreen}
+        options={{ title: "Pasajeros" }}
+        listeners={{
+          tabPress: (e) => {
+            if (!user) {
+              e.preventDefault();
+              navigation.navigate("Login");
+            }
+          },
+        }}
+      />
+
+      {/* <Tab.Screen
         name="Profile"
         component={ProfileStack}
         options={{ title: "Perfil" }}
@@ -101,7 +120,7 @@ export default function TabNavigator() {
             }
           },
         }}
-      />
+      /> */}
     </Tab.Navigator>
   );
 }

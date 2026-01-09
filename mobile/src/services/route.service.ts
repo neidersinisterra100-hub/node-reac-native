@@ -1,5 +1,6 @@
 import { api } from "./api";
 import { loadSession } from "../utils/authStorage";
+import { Company } from "./company.service";
 
 /* ================= TYPES ================= */
 
@@ -7,7 +8,7 @@ export interface Route {
   _id: string;
   origin: string;
   destination: string;
-  company: string | { _id: string; name: string }; 
+  company: string | { _id: string; name: string };
   active: boolean;
 }
 
@@ -15,10 +16,10 @@ export interface Route {
 export async function getAllRoutes() {
   try {
     const session = await loadSession();
-    const isOwner = session?.user?.role === 'owner' || session?.user?.role === 'admin';
-    
-    let companies: any[] = [];
-    
+    const isOwner = session?.user?.role === 'owner' || session?.user?.role === 'admin';    
+
+    let companies: Company[] = [];
+
     // 1. Si es Owner, intentamos obtener sus empresas primero
     if (isOwner) {
         try {
@@ -34,8 +35,8 @@ export async function getAllRoutes() {
         try {
             const res = await api.get('/companies');
             companies = res.data;
-        } catch (e) { 
-            console.log("Error fetching public companies, trying /routes direct...");
+        } catch (e) {
+            console.log("Error fetching public companies, trying /routes direct...");      
             // PLAN B: Intentar obtener rutas directamente si /companies falla
             try {
                 const resRoutes = await api.get('/routes');
@@ -50,14 +51,19 @@ export async function getAllRoutes() {
     if (!companies || companies.length === 0) return [];
 
     // 3. Obtener rutas de cada empresa
-    const promises = companies.map((c: any) => 
+    const promises = companies.map((c) =>
       api.get(`/routes/company/${c._id}`)
-         .then(res => res.data.map((r: any) => ({...r, company: c}))) 
+         .then(res => res.data)
          .catch(() => [])
     );
 
     const results = await Promise.all(promises);
-    return results.flat() as Route[];
+    const allRoutes = results.flat() as Route[];
+
+    // 4. Deduplicación estricta por _id
+    const uniqueRoutes = Array.from(new Map(allRoutes.map((r) => [r._id, r])).values());
+
+    return uniqueRoutes;
   } catch (error) {
     console.error("Error in getAllRoutes:", error);
     return [];

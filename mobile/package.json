@@ -4,7 +4,7 @@
   "private": true,
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "start": "expo start --tunnel -c",
+    "start": "expo start --tunnel",
     "copiar-pegar": "npx expo start | npx expo start --web | npx expo start --android",
     "dev": "expo start --tunnel -c",
     "android": "expo start --android",

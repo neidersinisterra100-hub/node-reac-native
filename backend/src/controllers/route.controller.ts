@@ -3,8 +3,9 @@ import { RouteModel } from "../models/route.model.js";
 import { CompanyModel } from "../models/company.model.js";
 import { AuthRequest } from "../middlewares/requireAuth.js";
 
-/* ... existing code ... */
-
+/* =========================================================
+   CREAR RUTA (SOLO OWNER)
+   ========================================================= */
 export const createRoute: RequestHandler = async (req, res) => {
   try {
     const authReq = req as AuthRequest;
@@ -14,9 +15,9 @@ export const createRoute: RequestHandler = async (req, res) => {
     }
 
     if (authReq.user.role !== "owner") {
-      return res
-        .status(403)
-        .json({ message: "Solo los owners pueden crear rutas" });
+      return res.status(403).json({
+        message: "Solo los owners pueden crear rutas",
+      });
     }
 
     const { origin, destination, companyId } = req.body;
@@ -68,23 +69,100 @@ export const createRoute: RequestHandler = async (req, res) => {
   }
 };
 
-export const getCompanyRoutes: RequestHandler = async (req, res) => {
+/* =========================================================
+   LISTAR RUTAS POR ROL (ADMIN/OWNER Dashboard)
+   ========================================================= */
+export const getRoutesByRole: RequestHandler = async (req, res) => {
   try {
-    const { companyId } = req.params;
+    const authReq = req as AuthRequest;
+
+    if (!authReq.user) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
+
+    const { role, companyId, id: userId } = authReq.user;
+
+    let companyFilter: any = {};
+
+    if (role === "admin") {
+      if (!companyId) {
+        return res.status(403).json({
+          message: "Admin sin empresa asignada",
+        });
+      }
+      companyFilter._id = companyId;
+    }
+
+    if (role === "owner") {
+      companyFilter.owner = userId;
+    }
+
+    const companies = await CompanyModel.find(companyFilter).select("_id");
+    const companyIds = companies.map((c) => c._id);
 
     const routes = await RouteModel.find({
-      company: companyId,
+      company: { $in: companyIds },
     }).sort({ createdAt: -1 });
 
     res.json(routes);
   } catch (error) {
-    console.error("❌ Error getCompanyRoutes:", error);
+    console.error("❌ Error getRoutesByRole:", error);
     res.status(500).json({
       message: "Error al obtener rutas",
     });
   }
 };
 
+/* =========================================================
+   LISTAR RUTAS DE UNA EMPRESA (PÚBLICO/PRIVADO)
+   - Owner/Admin de la empresa: Ven todo
+   - Otros: Solo ven rutas activas de empresas activas
+   ========================================================= */
+export const getCompanyRoutes: RequestHandler = async (req, res) => {
+  try {
+    const authReq = req as AuthRequest;
+    const { companyId } = req.params;
+
+    if (!authReq.user) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
+
+    const company = await CompanyModel.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ message: "Empresa no encontrada" });
+    }
+
+    // Determinar si el usuario tiene privilegios sobre esta empresa
+    const isOwner = company.owner.toString() === authReq.user.id;
+    const isAdmin = authReq.user.role === 'admin' && authReq.user.companyId === companyId;
+    const hasPrivileges = isOwner || isAdmin;
+
+    // Construir filtro
+    let filter: any = { company: companyId };
+
+    // Si NO tiene privilegios, solo ver activas
+    if (!hasPrivileges) {
+        // Validar que la empresa esté activa también
+        if (!company.active) {
+             return res.status(403).json({ message: "Esta empresa no está disponible" });
+        }
+        filter.active = true;
+    }
+
+    const routes = await RouteModel.find(filter).sort({ createdAt: -1 });
+    res.json(routes);
+
+  } catch (error) {
+    console.error("❌ Error getCompanyRoutes:", error);
+    res.status(500).json({
+      message: "Error al obtener rutas de la empresa",
+    });
+  }
+};
+
+/* =========================================================
+   ACTIVAR / DESACTIVAR RUTA (OWNER / ADMIN)
+   ========================================================= */
 export const toggleRouteActive: RequestHandler = async (req, res) => {
   try {
     const authReq = req as AuthRequest;
@@ -102,10 +180,10 @@ export const toggleRouteActive: RequestHandler = async (req, res) => {
 
     const company: any = route.company;
 
-    const userRole = authReq.user.role.toLowerCase();
-
     const isOwner = company.owner.toString() === authReq.user.id;
-    const isAdmin = userRole === "admin";
+    const isAdmin =
+      authReq.user.role === "admin" &&
+      authReq.user.companyId === company._id.toString();
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
@@ -125,37 +203,39 @@ export const toggleRouteActive: RequestHandler = async (req, res) => {
   }
 };
 
-/* ================= DELETE ROUTE (OWNER ONLY) ================= */
+/* =========================================================
+   ELIMINAR RUTA (SOLO OWNER)
+   ========================================================= */
 export const deleteRoute: RequestHandler = async (req, res) => {
-    try {
-      const authReq = req as AuthRequest;
-      const { routeId } = req.params;
-  
-      if (!authReq.user) {
-        return res.status(401).json({ message: "No autenticado" });
-      }
-  
-      const route = await RouteModel.findById(routeId).populate("company");
-  
-      if (!route) {
-        return res.status(404).json({ message: "Ruta no encontrada" });
-      }
-  
-      const company: any = route.company;
-  
-      if (company.owner.toString() !== authReq.user.id) {
-        return res.status(403).json({
-          message: "No autorizado para eliminar esta ruta",
-        });
-      }
-  
-      await RouteModel.findByIdAndDelete(routeId);
-  
-      res.json({ message: "Ruta eliminada correctamente" });
-    } catch (error) {
-      console.error("❌ Error deleteRoute:", error);
-      res.status(500).json({
-        message: "Error al eliminar ruta",
+  try {
+    const authReq = req as AuthRequest;
+    const { routeId } = req.params;
+
+    if (!authReq.user) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
+
+    const route = await RouteModel.findById(routeId).populate("company");
+
+    if (!route) {
+      return res.status(404).json({ message: "Ruta no encontrada" });
+    }
+
+    const company: any = route.company;
+
+    if (company.owner.toString() !== authReq.user.id) {
+      return res.status(403).json({
+        message: "No autorizado para eliminar esta ruta",
       });
     }
-  };
+
+    await RouteModel.findByIdAndDelete(routeId);
+
+    res.json({ message: "Ruta eliminada correctamente" });
+  } catch (error) {
+    console.error("❌ Error deleteRoute:", error);
+    res.status(500).json({
+      message: "Error al eliminar ruta",
+    });
+  }
+};

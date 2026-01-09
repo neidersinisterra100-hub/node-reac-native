@@ -2,14 +2,12 @@ import { Request, Response } from "express";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { CompanyModel } from "../models/company.model.js";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 /* ================= REGISTER ================= */
-export async function register(
-  req: Request,
-  res: Response
-) {
+export async function register(req: Request, res: Response) {
   try {
     const { name, email, password } = req.body;
 
@@ -34,10 +32,12 @@ export async function register(
       password: hashedPassword,
     });
 
+    // 🔒 Registrar no tiene empresa todavía
     const token = jwt.sign(
       {
-        id: user._id,
+        id: user._id.toString(),
         role: user.role,
+        companyId: undefined,
       },
       JWT_SECRET,
       { expiresIn: "7d" }
@@ -61,12 +61,7 @@ export async function register(
 }
 
 /* ================= LOGIN ================= */
-export async function login(
-  req: Request,
-  res: Response
-) {
-  console.log("➡️ LOGIN HIT");
-  console.log("BODY:", req.body);
+export async function login(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
 
@@ -83,21 +78,29 @@ export async function login(
       });
     }
 
-    const isValid = await bcrypt.compare(
-      password,
-      user.password
-    );
-
+    const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
       return res.status(401).json({
         message: "Credenciales inválidas",
       });
     }
 
+    // 🔎 Buscar empresa asociada (owner / admin)
+    let companyId: string | undefined = undefined;
+
+    if (user.role === "owner" || user.role === "admin") {
+      const company = await CompanyModel.findOne({
+        owner: user._id, // ajusta si tu modelo usa otro campo
+      }).select("_id");
+
+      companyId = company?._id.toString();
+    }
+
     const token = jwt.sign(
       {
-        id: user._id,
+        id: user._id.toString(),
         role: user.role,
+        companyId,
       },
       JWT_SECRET,
       { expiresIn: "7d" }

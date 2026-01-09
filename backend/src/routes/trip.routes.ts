@@ -1,43 +1,26 @@
-import { Router } from "express";
+import { Router } from 'express';
+import { requireAuth } from '../middlewares/requireAuth.js';
 import {
-  getTrips,
   createTrip,
+  getTrips,
   toggleTripActive,
-  deleteTrip
-} from "../controllers/trip.controller.js";
-import { requireAuth } from "../middlewares/requireAuth.js";
-import { requireOwner } from "../middlewares/requireOwner.js";
+  deleteTrip,
+  getManageTrips,
+  getCompanyTrips,
+} from '../controllers/trip.controller.js';
 
 const router = Router();
 
-/* ================= PUBLIC ================= */
+// Rutas Públicas
+router.get('/', getTrips); // Listar viajes activos para pasajeros
 
-// LISTAR VIAJES (PÚBLICO)
-router.get("/", getTrips);
+// Rutas Privadas (Requieren Auth)
+router.use(requireAuth);
 
-/* ================= PROTECTED ================= */
-
-// CREAR VIAJE → SOLO OWNER
-router.post(
-  "/",
-  requireAuth,   // 🔐 usuario autenticado
-  requireOwner,  // 🔐 solo owner
-  createTrip     // 🧠 lógica de negocio
-);
-
-// TOGGLE VIAJE (OWNER & ADMIN)
-router.patch(
-  "/:tripId",
-  requireAuth,
-  toggleTripActive
-);
-
-// ELIMINAR VIAJE (OWNER)
-router.delete(
-  "/:tripId",
-  requireAuth,
-  requireOwner,
-  deleteTrip
-);
+router.post('/', createTrip); // Crear viaje
+router.get('/manage', getManageTrips); // Listar viajes para gestión (admin/owner)
+router.get('/company/:companyId', getCompanyTrips); // Listar viajes de una empresa ESPECÍFICA
+router.patch('/:tripId', toggleTripActive); // Activar/Desactivar
+router.delete('/:tripId', deleteTrip); // Eliminar
 
 export default router;

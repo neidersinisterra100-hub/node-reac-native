@@ -1,40 +1,35 @@
-import { Schema, model, Types } from "mongoose";
+import mongoose from 'mongoose';
 
-const RouteSchema = new Schema(
+const routeSchema = new mongoose.Schema(
   {
     origin: {
       type: String,
       required: true,
       trim: true,
     },
-
     destination: {
       type: String,
       required: true,
       trim: true,
     },
-
     company: {
-      type: Types.ObjectId,
-      ref: "Company",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
       required: true,
     },
-
     createdBy: {
-      type: Types.ObjectId,
-      ref: "User",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
     },
-    
     active: {
       type: Boolean,
-      default: true, // 👈 visible por defecto
+      default: false,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-export const RouteModel = model(
-  "Route",
-  RouteSchema
-);
+export const RouteModel = mongoose.model('Route', routeSchema);

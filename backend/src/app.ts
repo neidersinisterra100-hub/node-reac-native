@@ -8,30 +8,38 @@ import ticketRoutes from "./routes/ticket.routes.js";
 import tripRoutes from "./routes/trip.routes.js";
 import companyRoutes from "./routes/company.routes.js";
 import routeRoutes from "./routes/route.routes.js";
-// import { statsRouter } from "./routes/stats.routes.js";
 
 const app = express();
 
 /* ================= CORS ================= */
 /**
- * ✔️ Funciona en:
- * - Render
+ * ✔️ Compatible con:
+ * - Expo (exp.direct)
+ * - ngrok
  * - Web
- * - Expo móvil
  * - Postman
  */
 app.use(
   cors({
-    origin: "*",
+    origin: (origin, callback) => {
+      // Permite requests sin origin (Postman, mobile)
+      if (!origin) return callback(null, true);
+
+      return callback(null, origin);
+    },
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
-      "Content-Type", 
-      "Authorization", 
+      "Content-Type",
+      "Authorization",
+      "ngrok-skip-browser-warning",
       "bypass-tunnel-reminder",
-      "ngrok-skip-browser-warning"
     ],
   })
 );
+
+// 🔥 RESPONDER PRE-FLIGHT
+app.options("*", cors());
 
 /* ================= MIDDLEWARES ================= */
 
@@ -46,31 +54,13 @@ app.get("/", (_req, res) => {
 
 /* ================= API ROUTES ================= */
 
-// Auth (login / register)
 app.use("/api/auth", authRoutes);
-
-// Companies (OWNER)
-// crear empresa, listar empresas del owner (luego)
 app.use("/api/companies", companyRoutes);
-
-// Routes (OWNER / PUBLIC)
-// crear rutas, listar rutas por empresa
 app.use("/api/routes", routeRoutes);
-
-// Trips
-// listar viajes (public)
-// crear viaje (OWNER)
 app.use("/api/trips", tripRoutes);
-
-// Tickets
-// comprar ticket
-// historial usuario
 app.use("/api/tickets", ticketRoutes);
 
-// Stats
-// app.use("/api/stats", statsRouter);
-
-/* ================= 404 HANDLER ================= */
+/* ================= 404 ================= */
 
 app.use((_req, res) => {
   res.status(404).json({
@@ -79,3 +69,86 @@ app.use((_req, res) => {
 });
 
 export default app;
+
+
+// import express from "express";
+// import cors from "cors";
+// import "./config/mongo.js";
+
+// // ================= ROUTES =================
+// import authRoutes from "./routes/auth.routes.js";
+// import ticketRoutes from "./routes/ticket.routes.js";
+// import tripRoutes from "./routes/trip.routes.js";
+// import companyRoutes from "./routes/company.routes.js";
+// import routeRoutes from "./routes/route.routes.js";
+// // import { statsRouter } from "./routes/stats.routes.js";
+
+// const app = express();
+
+// /* ================= CORS ================= */
+// /**
+//  * ✔️ Funciona en:
+//  * - Render
+//  * - Web
+//  * - Expo móvil
+//  * - Postman
+//  */
+// app.use(
+//   cors({
+//     origin: "*",
+//     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+//     allowedHeaders: [
+//       "Content-Type", 
+//       "Authorization", 
+//       "bypass-tunnel-reminder",
+//       "ngrok-skip-browser-warning"
+//     ],
+//   })
+// );
+
+// /* ================= MIDDLEWARES ================= */
+
+// // JSON parser
+// app.use(express.json());
+
+// /* ================= HEALTH CHECK ================= */
+
+// app.get("/", (_req, res) => {
+//   res.status(200).send("API OK");
+// });
+
+// /* ================= API ROUTES ================= */
+
+// // Auth (login / register)
+// app.use("/api/auth", authRoutes);
+
+// // Companies (OWNER)
+// // crear empresa, listar empresas del owner (luego)
+// app.use("/api/companies", companyRoutes);
+
+// // Routes (OWNER / PUBLIC)
+// // crear rutas, listar rutas por empresa
+// app.use("/api/routes", routeRoutes);
+
+// // Trips
+// // listar viajes (public)
+// // crear viaje (OWNER)
+// app.use("/api/trips", tripRoutes);
+
+// // Tickets
+// // comprar ticket
+// // historial usuario
+// app.use("/api/tickets", ticketRoutes);
+
+// // Stats
+// // app.use("/api/stats", statsRouter);
+
+// /* ================= 404 HANDLER ================= */
+
+// app.use((_req, res) => {
+//   res.status(404).json({
+//     message: "Endpoint no encontrado",
+//   });
+// });
+
+// export default app;

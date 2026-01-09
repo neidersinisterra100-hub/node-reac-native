@@ -1,46 +1,31 @@
-import { Router } from "express";
+import { Router } from 'express';
+import { requireAuth } from '../middlewares/requireAuth.js';
 import {
   createRoute,
+  getRoutesByRole,
   getCompanyRoutes,
   toggleRouteActive,
-  deleteRoute
-} from "../controllers/route.controller.js";
-import { requireAuth } from "../middlewares/requireAuth.js";
-import { requireOwner } from "../middlewares/requireOwner.js";
+  deleteRoute,
+} from '../controllers/route.controller.js';
 
 const router = Router();
 
-/* ================= PROTECTED ================= */
+// Todas las rutas requieren autenticación
+router.use(requireAuth);
 
-// LISTAR RUTAS DE UNA EMPRESA (OWNER & ADMIN & USER)
-// Eliminamos requireOwner para que los usuarios puedan ver las rutas
-router.get(
-  "/company/:companyId",
-  requireAuth,
-  getCompanyRoutes
-);
+// Crear nueva ruta (Solo Owner)
+router.post('/', createRoute);
 
-// CREAR RUTA → SOLO OWNER
-router.post(
-  "/",
-  requireAuth,
-  requireOwner,
-  createRoute
-);
+// Listar rutas (Vista General)
+router.get('/', getRoutesByRole);
 
-// TOGGLE RUTA (OWNER & ADMIN)
-router.patch(
-  "/:routeId",
-  requireAuth,
-  toggleRouteActive
-);
+// Listar rutas de una empresa ESPECÍFICA (Ahora sí filtra de verdad)
+router.get('/company/:companyId', getCompanyRoutes);
 
-// ELIMINAR RUTA (OWNER)
-router.delete(
-  "/:routeId",
-  requireAuth,
-  requireOwner,
-  deleteRoute
-);
+// Activar/Desactivar ruta
+router.patch('/:routeId', toggleRouteActive);
+
+// Eliminar ruta
+router.delete('/:routeId', deleteRoute);
 
 export default router;

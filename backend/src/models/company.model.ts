@@ -1,4 +1,4 @@
-import { Schema, model, Types } from "mongoose";
+import { Schema, model, Types } from 'mongoose';
 
 const CompanySchema = new Schema(
   {
@@ -10,7 +10,7 @@ const CompanySchema = new Schema(
 
     owner: {
       type: Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       index: true,
     },
@@ -28,38 +28,28 @@ const CompanySchema = new Schema(
 
     transportTypes: {
       type: [String],
-      default: ["lancha"], // lancha | barco | metrera | bus | etc
+      default: ['lancha'], // lancha | barco | metrera | bus | etc
     },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
 
-export const CompanyModel = model(
-  "Company",
-  CompanySchema
-);
+// Virtual para obtener las rutas de la empresa
+CompanySchema.virtual('routes', {
+  ref: 'Route',
+  localField: '_id',
+  foreignField: 'company',
+});
 
+// Virtual para obtener los viajes de la empresa
+CompanySchema.virtual('trips', {
+  ref: 'Trip',
+  localField: '_id',
+  foreignField: 'company',
+});
 
-
-// import { Schema, model, Types } from "mongoose";
-
-// const CompanySchema = new Schema(
-//   {
-//     name: { type: String, required: true },
-//     owner: {
-//       type: Types.ObjectId,
-//       ref: "User",
-//       required: true,
-//     },
-//     balance: {
-//       type: Number,
-//       default: 0, // 💰 dinero acumulado
-//     },
-//   },
-//   { timestamps: true }
-// );
-
-// export const CompanyModel = model(
-//   "Company",
-//   CompanySchema
-// );
+export const CompanyModel = model('Company', CompanySchema);

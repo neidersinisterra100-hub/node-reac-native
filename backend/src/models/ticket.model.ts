@@ -2,6 +2,9 @@ import { Schema, model, Types } from "mongoose";
 
 const TicketSchema = new Schema(
   {
+    /* =====================================================
+       RELACIONES
+       ===================================================== */
     trip: {
       type: Types.ObjectId,
       ref: "Trip",
@@ -16,6 +19,7 @@ const TicketSchema = new Schema(
       index: true,
     },
 
+    // usuario que compró o registró el ticket
     user: {
       type: Types.ObjectId,
       ref: "User",
@@ -23,11 +27,33 @@ const TicketSchema = new Schema(
       index: true,
     },
 
+    /* =====================================================
+       DATOS DEL VIAJE (SNAPSHOT)
+       ===================================================== */
     routeName: {
       type: String,
       required: true,
     },
 
+    // fecha y hora REAL del viaje
+    departureAt: {
+      type: Date,
+      required: true,
+      index: true,
+    },
+
+    /* =====================================================
+       ASIENTO
+       ===================================================== */
+    // número de asiento asignado (1, 2, 3, ...)
+    seatNumber: {
+      type: Number,
+      default: null,
+    },
+
+    /* =====================================================
+       PAGO / TRANSPORTE
+       ===================================================== */
     price: {
       type: Number,
       required: true,
@@ -36,30 +62,59 @@ const TicketSchema = new Schema(
 
     transport: {
       type: String,
-      default: "lancha", // lancha | barco | metrera | bus
+      enum: ["lancha", "barco", "metrera", "bus"],
+      default: "lancha",
     },
 
+    /* =====================================================
+       ESTADO DEL TICKET
+       ===================================================== */
     code: {
       type: String,
       required: true,
       unique: true,
       index: true,
     },
-    
-    // 🟢 NUEVO: Estado del ticket
+
     status: {
-        type: String,
-        enum: ['valid', 'used', 'expired', 'cancelled'],
-        default: 'valid'
+      type: String,
+      enum: ["valid", "used", "expired", "cancelled"],
+      default: "valid",
+      index: true,
     },
 
-    date: {
+    usedAt: {
       type: Date,
-      default: Date.now,
+      default: null,
+    },
+
+    // fecha límite para usar el ticket
+    expiresAt: {
+      type: Date,
+      required: true,
+      index: true,
     },
   },
   {
     timestamps: true,
+  }
+);
+
+/* =====================================================
+   ÍNDICES DE SEGURIDAD
+   ===================================================== */
+
+// 🔒 un usuario no puede comprar dos veces el mismo viaje
+TicketSchema.index({ user: 1, trip: 1 }, { unique: true });
+
+// 🔒 un asiento no puede repetirse dentro del mismo viaje
+TicketSchema.index(
+  { trip: 1, seatNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      seatNumber: { $ne: null },
+    },
   }
 );
 

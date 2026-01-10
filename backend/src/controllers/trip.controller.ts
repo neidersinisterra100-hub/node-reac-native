@@ -314,7 +314,7 @@ export const getManageTrips: RequestHandler = async (req, res) => {
 };
 
 /* =========================================================
-   LISTAR VIAJES DE UNA EMPRESA ESPECÍFICA (OWNER)
+   LISTAR VIAJES DE UNA EMPRESA ESPECÍFICA (PÚBLICO/PRIVADO)
    ========================================================= */
 export const getCompanyTrips: RequestHandler = async (req, res) => {
   try {
@@ -325,20 +325,29 @@ export const getCompanyTrips: RequestHandler = async (req, res) => {
       return res.status(401).json({ message: "No autenticado" });
     }
 
-    // Validar que la empresa exista y pertenezca al usuario (o sea admin de ella)
+    // Validar que la empresa exista
     const company = await CompanyModel.findById(companyId);
     if (!company) {
         return res.status(404).json({ message: "Empresa no encontrada" });
     }
 
     const isOwner = company.owner.toString() === authReq.user.id;
-    // const isAdmin = authReq.user.role === 'admin' && authReq.user.companyId === companyId;
+    const isAdmin = authReq.user.role === 'admin' && authReq.user.companyId === companyId;
+    const hasPrivileges = isOwner || isAdmin;
 
-    if (!isOwner && authReq.user.role !== 'admin') {
-         return res.status(403).json({ message: "No tienes permiso para ver los viajes de esta empresa" });
+    // Construir filtro
+    let filter: any = { company: companyId };
+
+    // Si NO tiene privilegios (es usuario normal), solo ver viajes activos
+    if (!hasPrivileges) {
+         // Validar que la empresa esté activa también
+         if (!company.active) {
+             return res.status(403).json({ message: "Esta empresa no está disponible" });
+         }
+         filter.active = true;
     }
 
-    const trips = await TripModel.find({ company: companyId })
+    const trips = await TripModel.find(filter)
       .populate({
           path: "route",
           populate: { path: "company" }

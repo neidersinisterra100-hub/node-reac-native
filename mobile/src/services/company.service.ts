@@ -2,38 +2,53 @@ import { api } from "./api";
 
 /* ================= TYPES ================= */
 
+export interface CompanyCompliance {
+  hasLegalConstitution: boolean;
+  hasTransportLicense: boolean;
+  hasVesselRegistration: boolean;
+  hasCrewLicenses: boolean;
+  hasInsurance: boolean;
+  hasSafetyProtocols: boolean;
+}
+
 export interface Company {
   _id: string;
   name: string;
+  nit?: string;
+  legalRepresentative?: string;
+  licenseNumber?: string;
+  insurancePolicyNumber?: string;
   owner: string;      // userId (owner)
   balance: number;
-  active: boolean;    // ✅ Añadido
+  active: boolean;
+  isVerified?: boolean;
+  compliance?: CompanyCompliance;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface CreateCompanyInput {
+  name: string;
+  nit?: string;
+  legalRepresentative?: string;
+  licenseNumber?: string;
+  insurancePolicyNumber?: string;
+  compliance?: CompanyCompliance;
+}
+
 /* ================= CREATE COMPANY (OWNER) ================= */
-export async function createCompany(name: string) {
-  const response = await api.post("/companies", {
-    name,
-  });
+export async function createCompany(data: CreateCompanyInput) {
+  const response = await api.post("/companies", data);
   return response.data as Company;
 }
 
 /* ================= GET COMPANIES ================= */
-/**
- * Si es Owner/Admin -> /companies/my (sus empresas)
- * Si es User -> /companies (todas las públicas, si existe endpoint)
- * 
- * Por ahora, usaremos getMyCompanies para owner y simularemos publicas si falla.
- */
 export async function getMyCompanies() {
   const response = await api.get("/companies/my");
   return response.data as Company[];
 }
 
 export async function getAllCompanies() {
-  // Intentamos obtener públicas. Si falla, retornamos array vacío.
   try {
       const response = await api.get("/companies");
       return response.data as Company[];

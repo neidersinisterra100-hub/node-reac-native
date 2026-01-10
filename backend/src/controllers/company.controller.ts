@@ -21,7 +21,14 @@ export const createCompany: RequestHandler = async (
       });
     }
 
-    const { name } = req.body;
+    const { 
+        name, 
+        nit, 
+        legalRepresentative, 
+        licenseNumber,
+        insurancePolicyNumber,
+        compliance
+    } = req.body;
 
     if (!name || typeof name !== "string") {
       return res.status(400).json({
@@ -33,7 +40,21 @@ export const createCompany: RequestHandler = async (
       name: name.trim(),
       owner: authReq.user.id,
       balance: 0,
-      active: true // Por defecto activa
+      active: true,
+      
+      // Nuevos Campos de Compliance
+      nit: nit || '',
+      legalRepresentative: legalRepresentative || '',
+      licenseNumber: licenseNumber || '',
+      insurancePolicyNumber: insurancePolicyNumber || '',
+      compliance: {
+          hasLegalConstitution: compliance?.hasLegalConstitution || false,
+          hasTransportLicense: compliance?.hasTransportLicense || false,
+          hasVesselRegistration: compliance?.hasVesselRegistration || false,
+          hasCrewLicenses: compliance?.hasCrewLicenses || false,
+          hasInsurance: compliance?.hasInsurance || false,
+          hasSafetyProtocols: compliance?.hasSafetyProtocols || false
+      }
     });
 
     return res.status(201).json(company);
@@ -88,11 +109,11 @@ export const getMyCompanies: RequestHandler = async (
 export const getAllCompanies: RequestHandler = async (req, res) => {
   try {
     // Solo empresas ACTIVAS para el público
-    const companies = await CompanyModel.find({ active: true }).sort({ createdAt: -1 });
+    const companies = await CompanyModel.find({ active: true }).sort({ createdAt: -1 });   
     return res.json(companies);
   } catch (error) {
     console.error("❌ Error getAllCompanies:", error);
-    return res.status(500).json({ message: "Error al obtener empresas públicas" });
+    return res.status(500).json({ message: "Error al obtener empresas públicas" });        
   }
 };
 

@@ -37,6 +37,11 @@ const tripSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    capacity: {
+      type: Number,
+      required: true,
+      min: 1,
+    }
   },
   {
     timestamps: true,

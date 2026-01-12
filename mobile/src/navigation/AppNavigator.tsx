@@ -9,7 +9,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 import MenuScreen from "../screens/MenuScreen";
 import BalanceScreen from "../screens/BalanceScreen";
 import MyTicketsScreen from "../screens/MyTicketsScreen";
-import ValidateTicketScreen from "../screens/ValidateTicketScreen"; // 👈 Nueva pantalla
+import ValidateTicketScreen from "../screens/ValidateTicketScreen";
 import { useAuth } from "../context/AuthContext";
 import ConfirmTicketModal from "./PrivateStack/ConfirmTicketModal";
 import TicketReceiptModal from "./PrivateStack/TicketReceiptModal";
@@ -20,57 +20,13 @@ import CreateRouteScreen from "../screens/CreateRouteScreen";
 import CreateCompanyScreen from "../screens/CreateCompanyScreen";
 import MyCompaniesScreen from "../screens/MyCompaniesScreen";
 import CompanyRoutesScreen from "../screens/CompanyRoutesScreen";
+import CompanyLegalInfoScreen from "../screens/CompanyLegalInfoScreen"; 
+import TermsScreen from "../screens/TermsScreen"; // 👈 Importar
 import AllRoutesScreen from "../screens/AllRoutesScreen";
 import AllTripsScreen from "../screens/AllTripsScreen";
 import TripsScreen from "../screens/TripsScreen";
 import PassengersScreen from "../screens/PassengersScreen";
-
-/* ================= TYPES ================= */
-
-export type RootStackParamList = {
-  Tabs: undefined;
-
-  Home: undefined;
-  Login: undefined;
-  Passengers: undefined;
-  SettingsModal: undefined;
-  Profile: undefined;      // Lo remplace por Passengers
-  Menu: undefined;
-  Balance: undefined;
-  MyTickets: undefined;
-  ValidateTicket: undefined; // 👈 Nueva ruta
-
-  // 🏢 EMPRESAS
-  CreateCompany: undefined;
-  MyCompanies: undefined;
-  CompanyRoutes: {
-    companyId: string;
-    companyName: string;
-  };
-
-  // 🛣️ / 🚍
-  AllRoutes: undefined;
-  AllTrips: undefined;
-  CreateRoute: { companyId: string };
-  Trips: { routeId: string; routeName: string; companyName: string };
-  CreateTrip: { routeId?: string; routeName?: string };
-
-  // 🎟️ MODALES
-  ConfirmTicketModal: {
-    tripId: string;
-    routeName: string;
-    price: number;
-    date: string;
-    time: string;
-  };
-
-  TicketReceiptModal: {
-    routeName: string;
-    price: number;
-    date: string;
-    code: string;
-  };
-};
+import { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -98,6 +54,7 @@ export default function AppNavigator() {
         <Stack.Screen name="CreateCompany" component={CreateCompanyScreen} />
         <Stack.Screen name="MyCompanies" component={MyCompaniesScreen} />
         <Stack.Screen name="CompanyRoutes" component={CompanyRoutesScreen} />
+        <Stack.Screen name="CompanyLegalInfo" component={CompanyLegalInfoScreen} options={{ presentation: "modal" }} />
 
         {/* 🛣️ / 🚍 */}
         <Stack.Screen name="AllRoutes" component={AllRoutesScreen} />
@@ -106,7 +63,7 @@ export default function AppNavigator() {
         <Stack.Screen name="CreateRoute" component={CreateRouteScreen} />
         <Stack.Screen name="CreateTrip" component={CreateTripScreen} />
 
-        {/* 🔐 LOGIN / PROFILE / MENU / BALANCE / TICKETS */}
+        {/* 🔐 LOGIN / PROFILE / MENU / BALANCE / TICKETS / TERMS */}
         <Stack.Screen name="Login" component={LoginScreen} options={{ presentation: "modal", animation: "slide_from_bottom" }} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="Passengers" component={PassengersScreen}/>
@@ -115,6 +72,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Balance" component={BalanceScreen} />
         <Stack.Screen name="MyTickets" component={MyTicketsScreen} />
         <Stack.Screen name="ValidateTicket" component={ValidateTicketScreen} />
+        <Stack.Screen name="Terms" component={TermsScreen} options={{ presentation: "modal" }} /> 
 
         {/* ⚙️ SETTINGS */}
         <Stack.Screen name="SettingsModal" component={SettingsScreen} options={{ presentation: "modal", animation: "slide_from_bottom" }} />

@@ -39,6 +39,12 @@ export default function MenuScreen() {
         show: true
     },
     {
+        icon: "file-document-outline",
+        label: "Términos y Condiciones",
+        onPress: () => navigation.navigate("Terms"), // 👈 Nueva opción
+        show: true
+    },
+    {
         icon: "theme-light-dark",
         label: "Cambiar Tema",
         onPress: () => alert("Próximamente"),

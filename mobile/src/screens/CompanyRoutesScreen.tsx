@@ -1,8 +1,8 @@
 import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from "react-native";
-import { IconButton } from "react-native-paper";
+import { IconButton, Button } from "react-native-paper"; // Import Button
 import { useEffect, useState } from "react";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { MapPin, Navigation } from "lucide-react-native";
+import { MapPin, Navigation, ShieldCheck } from "lucide-react-native"; // Import ShieldCheck
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
@@ -14,6 +14,7 @@ import {
   deleteRoute,
   Route
 } from "../services/route.service";
+import { getMyCompanies } from "../services/company.service"; // Import para obtener datos frescos de la empresa
 
 import { useAuth } from "../context/AuthContext";
 
@@ -28,33 +29,60 @@ export default function CompanyRoutesScreen() {
 
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(false);
+  const [companyData, setCompanyData] = useState<any>(null); // Estado para guardar la info completa de la empresa
 
   /* ================= LOAD ================= */
 
-  const loadRoutes = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
 
-      const data = await getCompanyRoutes(companyId);
-
-      // 🔒 eliminar duplicados por _id
-      const unique = Array.from(
-        new Map(data.map(r => [r._id, r])).values()
+      // Cargar rutas
+      const routesData = await getCompanyRoutes(companyId);
+      
+      // Eliminar duplicados por _id
+      const uniqueRoutes = Array.from(
+        new Map(routesData.map(r => [r._id, r])).values()
       );
-      console.log("Unique routes:", unique);
-      setRoutes(unique);
+      setRoutes(uniqueRoutes);
 
-      // const data = await getCompanyRoutes(companyId);
-      // setRoutes(data);
+      // Cargar datos frescos de la empresa (para tener el objeto compliance actualizado)
+      // Nota: Idealmente deberíamos tener un endpoint getCompanyById, pero por ahora podemos
+      // buscar en la lista de companies o asumir que si venimos de MyCompanies ya tenemos datos,
+      // pero getCompanyRoutes no devuelve la info de la empresa.
+      // Solución rápida: Si es owner, usamos getMyCompanies y filtramos. Si es user, necesitariamos un endpoint publico de detalle.
+      // Por simplicidad, pasaremos el objeto company desde la pantalla anterior si es posible, 
+      // o agregaremos un fetch si es necesario. 
+      
+      // *MEJORA*: Para asegurar que el botón legal funcione, vamos a intentar obtener la info de la empresa.
+      // Como no tenemos un getCompanyById público implementado en este contexto exacto,
+      // vamos a asumir que si el usuario quiere ver legalidad, podemos navegar con un objeto parcial
+      // o implementar la llamada si es crítico.
+      // Para este paso, asumiremos que companyId es suficiente para futuras llamadas, 
+      // PERO para CompanyLegalInfoScreen necesitamos el objeto `company`.
+      // Vamos a simular obtenerlo o recuperarlo de la navegación si se pasó (que no se pasó antes).
+      
+      // *SOLUCIÓN*: Vamos a implementar un pequeño fetch auxiliar o pasar datos.
+      // Dado que getCompanyRoutes retorna rutas, y las rutas tienen populate('company'), 
+      // podemos sacar la info de la empresa del primer resultado de rutas!
+      
+      if (routesData.length > 0 && routesData[0].company) {
+          // routesData[0].company es un objeto poblado si el backend lo permite
+          setCompanyData(routesData[0].company);
+      } else {
+           // Fallback básico si no hay rutas o no está poblado
+           setCompanyData({ _id: companyId, name: companyName });
+      }
+
     } catch {
-      Alert.alert("Error", "No se pudieron cargar las rutas");
+      Alert.alert("Error", "No se pudieron cargar los datos");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadRoutes();
+    loadData();
   }, []);
 
   /* ================= ACTIONS ================= */
@@ -84,6 +112,14 @@ export default function CompanyRoutesScreen() {
         }
       }
     ]);
+  };
+
+  const handleOpenLegal = () => {
+      if (!companyData) {
+          Alert.alert("Info", "Cargando información de la empresa...");
+          return;
+      }
+      navigation.navigate("CompanyLegalInfo", { company: companyData });
   };
 
   /* ================= RENDER ITEM ================= */
@@ -133,6 +169,14 @@ export default function CompanyRoutesScreen() {
       {/* 🟢 HEADER CON NEÓN AQUÍ */}
       <AppHeader title={companyName || "Rutas"} neon={true} />
 
+      {/* Botón de Legalidad - Visible para todos */}
+      <View style={styles.legalButtonContainer}>
+          <TouchableOpacity onPress={handleOpenLegal} style={styles.legalButton}>
+               <ShieldCheck size={20} color="#15803d" />
+               <Text style={styles.legalButtonText}>Ver Legalidad y Documentos</Text>
+          </TouchableOpacity>
+      </View>
+
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#ff6b00" />
@@ -142,7 +186,7 @@ export default function CompanyRoutesScreen() {
           data={routes}
           keyExtractor={(item) => item._id}
           refreshing={loading}
-          onRefresh={loadRoutes}
+          onRefresh={loadData}
           contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
@@ -150,7 +194,7 @@ export default function CompanyRoutesScreen() {
               <View style={{ marginBottom: 20 }}>
                 <PrimaryButton
                   label="Nueva Ruta"
-                  onPress={() => navigation.navigate("CreateRoute", { companyId })}
+                  onPress={() => navigation.navigate("CreateRoute", { companyId })}        
                 />
               </View>
             ) : null
@@ -217,5 +261,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  legalButtonContainer: {
+      paddingHorizontal: 4,
+      marginBottom: 12,
+  },
+  legalButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#dcfce7', // green-100
+      padding: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#bbf7d0',
+      gap: 8,
+  },
+  legalButtonText: {
+      color: '#15803d', // green-700
+      fontWeight: '600',
+      fontSize: 14,
   }
 });

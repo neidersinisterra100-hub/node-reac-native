@@ -17,6 +17,7 @@ export const getTrips: RequestHandler = async (_req, res) => {
         match: { active: true },
         populate: { path: "company" },
       })
+      .populate("company", "name") // 👈 POPULATE COMPANY NAME
       .sort({ createdAt: -1 });
 
     // 🔒 Elimina viajes cuya ruta fue filtrada

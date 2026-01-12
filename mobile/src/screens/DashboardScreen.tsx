@@ -1,235 +1,743 @@
+// import React, { useEffect, useState } from 'react';
+// import { ScrollView, View, StyleSheet, TouchableOpacity, ActivityIndicator, useColorScheme } from 'react-native';
+// import { Text, Avatar, IconButton } from 'react-native-paper';
+// import { useNavigation } from '@react-navigation/native';
+// import { MaterialCommunityIcons } from '@expo/vector-icons';
+// import { LinearGradient } from 'expo-linear-gradient';
+
+// import { useAuth } from '../context/AuthContext';
+// import { getAllRoutes } from '../services/route.service';
+// import { tripService } from '../services/trip.service';
+// import { colors } from '../theme/colors';
+
+// export default function DashboardScreen() {
+//     const { user } = useAuth();
+//     const navigation = useNavigation<any>();
+//     const scheme = useColorScheme(); // 👈 Detectar esquema de color del sistema
+//     const isOwner = user?.role === 'owner' || user?.role === 'admin';
+
+//     const [loading, setLoading] = useState(true);
+//     const [routes, setRoutes] = useState<any[]>([]);
+//     const [trips, setTrips] = useState<any[]>([]);
+
+//     useEffect(() => {
+//         loadData();
+//     }, []);
+
+//     const loadData = async () => {
+//         try {
+//             setLoading(true);
+//             const routesData = await getAllRoutes();
+//             setRoutes(routesData.slice(0, 3));
+//             const tripsData = await tripService.getAll();
+//             setTrips(tripsData.slice(0, 3));
+//         } catch (e) {
+//             console.log("Error loading dashboard", e);
+//         } finally {
+//             setLoading(false);
+//         }
+//     };
+
+//     const renderRouteItem = (item: any) => (
+//         <TouchableOpacity
+//             key={item._id}
+//             style={[styles.listItem, { borderBottomColor: scheme === 'dark' ? '#1e293b' : '#f1f5f9' }]}
+//             onPress={() => navigation.navigate('AllRoutes')}
+//         >
+//             <View style={[styles.iconBox, { backgroundColor: scheme === 'dark' ? '#0f172a' : '#e0f2f1' }]}>
+//                 {/* Icono Marítimo: Brújula */}
+//                 <MaterialCommunityIcons name="compass-rose" size={24} color={colors.primary} />
+//             </View>
+//             <View style={{ flex: 1, marginLeft: 12 }}>
+//                 <Text style={[styles.itemTitle, { color: scheme === 'dark' ? '#e2e8f0' : '#1e293b' }]}>
+//                     {item.origin} → {item.destination}
+//                 </Text>
+//                 <Text style={styles.itemSubtitle}>
+//                     {typeof item.company === 'object' ? item.company.name : 'Naviera'}
+//                 </Text>
+//             </View>
+//             <MaterialCommunityIcons name="chevron-right" size={20} color={scheme === 'dark' ? '#475569' : '#ccc'} />
+//         </TouchableOpacity>
+//     );
+
+//     const renderTripItem = (item: any) => {
+//         const origin = item.route?.origin || 'Puerto Origen';
+//         const dest = item.route?.destination || 'Puerto Destino';
+
+//         return (
+//             <TouchableOpacity
+//                 key={item._id}
+//                 style={[styles.listItem, { borderBottomColor: scheme === 'dark' ? '#1e293b' : '#f1f5f9' }]}
+//                 onPress={() => navigation.navigate('AllTrips')}
+//             >
+//                 <View style={[styles.iconBox, { backgroundColor: scheme === 'dark' ? '#064e3b' : '#e8f5e9' }]}>
+//                     {/* Icono Marítimo: Barco */}
+//                     <MaterialCommunityIcons name="ferry" size={24} color={scheme === 'dark' ? '#34d399' : '#2e7d32'} />
+//                 </View>
+//                 <View style={{ flex: 1, marginLeft: 12 }}>
+//                     <Text style={[styles.itemTitle, { color: scheme === 'dark' ? '#e2e8f0' : '#1e293b' }]}>
+//                         {origin} → {dest}
+//                     </Text>
+//                     <Text style={styles.itemSubtitle}>
+//                         {new Date(item.date).toLocaleDateString()} • {item.departureTime}
+//                     </Text>
+//                 </View>
+//                 <View style={{ alignItems: 'flex-end' }}>
+//                     <Text style={[styles.statusBadge, { color: item.active ? (scheme === 'dark' ? '#34d399' : '#2e7d32') : '#ef4444' }]}>
+//                         {item.active ? 'Zarpando' : 'Cancelado'}
+//                     </Text>
+//                 </View>
+//             </TouchableOpacity>
+//         );
+//     };
+
+//     return (
+//         <View
+//             style={[
+//                 styles.container,
+//                 {
+//                     // 👈 CORRECCIÓN CRÍTICA: Estilo dinámico directo aquí
+//                     backgroundColor: scheme === "dark" ? "#020617" : "#f8fafc",
+//                 },
+//             ]}
+//         >
+//             {/* Header con Gradiente Marítimo */}
+//             <LinearGradient
+//                 colors={['#0c4a6e', '#0284c7']} // Tonos Océano Profundo
+//                 start={{ x: 0, y: 0 }}
+//                 end={{ x: 1, y: 1 }}
+//                 style={styles.header}
+//             >
+//                 <View style={styles.headerTop}>
+//                     <View style={styles.userInfo}>
+//                         <Avatar.Text
+//                             size={48}
+//                             label={user?.name?.substring(0, 2).toUpperCase() || "CP"}
+//                             style={{ backgroundColor: 'white' }}
+//                             color="#0c4a6e"
+//                         />
+//                         <View style={{ marginLeft: 12 }}>
+//                             <Text style={styles.userName}>{user?.name?.toUpperCase()}</Text>
+//                             <Text style={styles.userEmail}>{user?.email}</Text>
+//                         </View>
+//                     </View>
+//                     <View style={styles.headerIcons}>
+//                         <IconButton icon="bell-outline" iconColor="white" size={26} onPress={() => { }} />
+//                         <IconButton
+//                             icon="dots-vertical"
+//                             iconColor="white"
+//                             size={26}
+//                             onPress={() => navigation.navigate("Menu")}
+//                         />
+//                     </View>
+//                 </View>
+//                 <Text style={styles.pageTitle}>Panel de Navegación</Text>
+//             </LinearGradient>
+
+//             <ScrollView
+//                 contentContainerStyle={styles.scrollContent}
+//                 showsVerticalScrollIndicator={false}
+//             >
+//                 {/* Accesos Rápidos - BOTONES GRANDES Y COLORIDOS */}
+//                 <View style={styles.shortcutsRow}>
+//                     <TouchableOpacity onPress={() => navigation.navigate("AllRoutes")} style={styles.shortcutBtn}>
+//                         <LinearGradient colors={['#0ea5e9', '#0284c7']} style={styles.shortcutIconBg}>
+//                             <MaterialCommunityIcons name="map-search-outline" size={28} color="white" />
+//                         </LinearGradient>
+//                         <Text style={[styles.shortcutText, { color: scheme === 'dark' ? '#cbd5e1' : '#475569' }]}>Rutas</Text>
+//                     </TouchableOpacity>
+
+//                     <TouchableOpacity onPress={() => navigation.navigate("AllTrips")} style={styles.shortcutBtn}>
+//                         <LinearGradient colors={['#10b981', '#059669']} style={styles.shortcutIconBg}>
+//                             <MaterialCommunityIcons name="sail-boat" size={28} color="white" />
+//                         </LinearGradient>
+//                         <Text style={[styles.shortcutText, { color: scheme === 'dark' ? '#cbd5e1' : '#475569' }]}>Zarpes</Text>
+//                     </TouchableOpacity>
+
+//                     <TouchableOpacity onPress={() => navigation.navigate("MyTickets")} style={styles.shortcutBtn}>
+//                         <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.shortcutIconBg}>
+//                             <MaterialCommunityIcons name="ticket-confirmation-outline" size={28} color="white" />
+//                         </LinearGradient>
+//                         <Text style={[styles.shortcutText, { color: scheme === 'dark' ? '#cbd5e1' : '#475569' }]}>Bordos</Text>
+//                     </TouchableOpacity>
+
+//                     {isOwner && (
+//                         <TouchableOpacity onPress={() => navigation.navigate("MyCompanies")} style={styles.shortcutBtn}>
+//                             <LinearGradient colors={['#8b5cf6', '#7c3aed']} style={styles.shortcutIconBg}>
+//                                 <MaterialCommunityIcons name="domain" size={28} color="white" />
+//                             </LinearGradient>
+//                             <Text style={[styles.shortcutText, { color: scheme === 'dark' ? '#cbd5e1' : '#475569' }]}>Navieras</Text>
+//                         </TouchableOpacity>
+//                     )}
+//                 </View>
+
+//                 {loading ? (
+//                     <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+//                 ) : (
+//                     <>
+//                         {/* Card 1: Rutas Marítimas */}
+//                         <View style={[styles.cardContainer, { backgroundColor: scheme === 'dark' ? '#1e293b' : 'white' }]}>
+//                             <LinearGradient
+//                                 colors={['#0284c7', '#0369a1']}
+//                                 start={{ x: 0, y: 0 }}
+//                                 end={{ x: 1, y: 0 }}
+//                                 style={styles.cardHeaderGradient}
+//                             >
+//                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+//                                     <MaterialCommunityIcons name="waves" size={22} color="white" style={{ marginRight: 8 }} />
+//                                     <Text style={styles.cardTitleWhite}>Rutas Marítimas</Text>
+//                                 </View>
+//                                 <TouchableOpacity onPress={() => navigation.navigate('AllRoutes')}>
+//                                     <Text style={styles.seeAllWhite}>Ver carta</Text>
+//                                 </TouchableOpacity>
+//                             </LinearGradient>
+
+//                             <View style={styles.listContent}>
+//                                 {routes.length > 0 ? routes.map(renderRouteItem) : (
+//                                     <Text style={[styles.emptyText, { color: scheme === 'dark' ? '#94a3b8' : '#94a3b8' }]}>
+//                                         No hay rutas navegables registradas
+//                                     </Text>
+//                                 )}
+//                             </View>
+//                         </View>
+
+//                         {/* Card 2: Próximos Zarpes */}
+//                         <View style={[styles.cardContainer, { marginTop: 24, backgroundColor: scheme === 'dark' ? '#1e293b' : 'white' }]}>
+//                             <LinearGradient
+//                                 colors={['#059669', '#047857']}
+//                                 start={{ x: 0, y: 0 }}
+//                                 end={{ x: 1, y: 0 }}
+//                                 style={styles.cardHeaderGradient}
+//                             >
+//                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+//                                     <MaterialCommunityIcons name="anchor" size={22} color="white" style={{ marginRight: 8 }} />
+//                                     <Text style={styles.cardTitleWhite}>Próximos Zarpes</Text>
+//                                 </View>
+//                                 <TouchableOpacity onPress={() => navigation.navigate('AllTrips')}>
+//                                     <Text style={styles.seeAllWhite}>Ver itinerario</Text>
+//                                 </TouchableOpacity>
+//                             </LinearGradient>
+
+//                             <View style={styles.listContent}>
+//                                 {trips.length > 0 ? trips.map(renderTripItem) : (
+//                                     <Text style={[styles.emptyText, { color: scheme === 'dark' ? '#94a3b8' : '#94a3b8' }]}>
+//                                         No hay zarpes programados
+//                                     </Text>
+//                                 )}
+//                             </View>
+//                         </View>
+//                     </>
+//                 )}
+
+//                 <View style={{ height: 40 }} />
+//             </ScrollView>
+//         </View>
+//     );
+// }
+
+// const styles = StyleSheet.create({
+//     container: {
+//         flex: 1,
+//         // 👈 ELIMINADO backgroundColor fijo aquí para permitir el dinámico
+//     },
+//     header: {
+//         paddingTop: 50,
+//         paddingBottom: 40,
+//         paddingHorizontal: 20,
+//         borderBottomLeftRadius: 32,
+//         borderBottomRightRadius: 32,
+//         elevation: 8,
+//     },
+//     headerTop: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         marginBottom: 24,
+//     },
+//     userInfo: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//     },
+//     userName: {
+//         color: 'white',
+//         fontWeight: 'bold',
+//         fontSize: 18,
+//     },
+//     userEmail: {
+//         color: 'rgba(255,255,255,0.85)',
+//         fontSize: 13,
+//     },
+//     headerIcons: {
+//         flexDirection: 'row',
+//         gap: 4,
+//     },
+//     pageTitle: {
+//         color: 'white',
+//         fontSize: 26,
+//         fontWeight: '800',
+//         marginLeft: 4,
+//     },
+//     scrollContent: {
+//         padding: 20,
+//     },
+//     shortcutsRow: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         marginBottom: 30,
+//         marginTop: -10,
+//     },
+//     shortcutBtn: {
+//         alignItems: 'center',
+//         width: '23%',
+//     },
+//     shortcutIconBg: {
+//         width: 56,
+//         height: 56,
+//         borderRadius: 18,
+//         justifyContent: 'center',
+//         alignItems: 'center',
+//         marginBottom: 8,
+//         elevation: 4,
+//         shadowColor: '#0ea5e9',
+//         shadowOffset: { width: 0, height: 4 },
+//         shadowOpacity: 0.3,
+//         shadowRadius: 5,
+//     },
+//     shortcutText: {
+//         fontSize: 11,
+//         fontWeight: '700',
+//         textAlign: 'center'
+//     },
+//     // Card Styles
+//     cardContainer: {
+//         borderRadius: 24,
+//         elevation: 4,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.08,
+//         shadowRadius: 8,
+//         overflow: 'hidden',
+//     },
+//     cardHeaderGradient: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         padding: 18,
+//     },
+//     cardTitleWhite: {
+//         fontSize: 17,
+//         fontWeight: 'bold',
+//         color: 'white',
+//     },
+//     seeAllWhite: {
+//         color: 'rgba(255,255,255,0.95)',
+//         fontWeight: '600',
+//         fontSize: 13,
+//         backgroundColor: 'rgba(255,255,255,0.2)',
+//         paddingHorizontal: 10,
+//         paddingVertical: 4,
+//         borderRadius: 10,
+//     },
+//     listContent: {
+//         padding: 8,
+//     },
+//     listItem: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         padding: 14,
+//         borderBottomWidth: 1,
+//     },
+//     iconBox: {
+//         width: 48,
+//         height: 48,
+//         borderRadius: 14,
+//         justifyContent: 'center',
+//         alignItems: 'center',
+//     },
+//     itemTitle: {
+//         fontSize: 15,
+//         fontWeight: '600',
+//     },
+//     itemSubtitle: {
+//         fontSize: 13,
+//         color: '#64748b',
+//         marginTop: 2,
+//     },
+//     statusBadge: {
+//         fontSize: 12,
+//         fontWeight: '700',
+//     },
+//     emptyText: {
+//         textAlign: 'center',
+//         padding: 30,
+//         fontStyle: 'italic'
+//     }
+// });
+
+
 import React, { useEffect, useState } from 'react';
-import { ScrollView, View, StyleSheet, Dimensions, useWindowDimensions, TouchableOpacity, Alert } from 'react-native';
-import { Text, Avatar, Button, IconButton } from 'react-native-paper';
+import { ScrollView, View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Text, Avatar, IconButton } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useAuth } from '../context/AuthContext';
+import { getAllRoutes } from '../services/route.service';
+import { tripService } from '../services/trip.service';
 import { colors } from '../theme/colors';
 
-// Componente auxiliar para métricas
-const MetricCard = ({ title, value, icon, iconBackgroundColor, iconColor = "white" }: any) => (
-    <View style={styles.metricCard}>
-        <View style={[styles.iconContainer, { backgroundColor: iconBackgroundColor || '#f3f4f6' }]}>
-            <MaterialCommunityIcons name={icon} size={24} color={iconColor} />
-        </View>
-        <Text style={styles.metricValue}>{value}</Text>
-        <Text style={styles.metricTitle}>{title}</Text>
-    </View>
-);
-
-const screenWidth = Dimensions.get("window").width;
-
 export default function DashboardScreen() {
-  const { user } = useAuth();
-  const navigation = useNavigation<any>();
-  const isOwner = user?.role === 'owner' || user?.role === 'admin';
+    const { user } = useAuth();
+    const navigation = useNavigation<any>();
+    const isOwner = user?.role === 'owner' || user?.role === 'admin';
 
-  // Datos dummy o reales
-  const [stats, setStats] = useState({
-    earnings: 628,
-    share: 2434,
-    likes: 1259,
-    rating: 8.5
-  });
+    const [loading, setLoading] = useState(true);
+    const [routes, setRoutes] = useState<any[]>([]);
+    const [trips, setTrips] = useState<any[]>([]);
 
-  return (
-    <View style={styles.container}>
-      {/* Header Personalizado con Curva */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-            <View style={styles.userInfo}>
-                <Avatar.Text
-                    size={45}
-                    label={user?.name?.substring(0, 2).toUpperCase() || "CP"}
-                    style={{ backgroundColor: 'white' }}
-                    color="#1a2236"
-                />
-                <View style={{ marginLeft: 12 }}>
-                    <Text style={styles.userName}>{user?.name?.toUpperCase() || "CAPITÁN"}</Text>
-                    <Text style={styles.userEmail}>{user?.email || "capitan@maritimo.com"}</Text>
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const routesData = await getAllRoutes();
+            setRoutes(routesData.slice(0, 3));
+            const tripsData = await tripService.getAll();
+            setTrips(tripsData.slice(0, 3));
+        } catch (e) {
+            console.log("Error loading dashboard", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const renderRouteItem = (item: any) => (
+        <TouchableOpacity
+            key={item._id}
+            style={styles.listItem}
+            onPress={() => navigation.navigate('AllRoutes')}
+        >
+            <View style={[styles.iconBox, { backgroundColor: '#e0f2f1' }]}>
+                <MaterialCommunityIcons name="compass-outline" size={24} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.itemTitle}>{item.origin} → {item.destination}</Text>
+                <Text style={styles.itemSubtitle}>
+                    {typeof item.company === 'object' ? item.company.name : 'Empresa'}
+                </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#ccc" />
+        </TouchableOpacity>
+    );
+
+    const renderTripItem = (item: any) => {
+        const origin = item.route?.origin || 'Origen';
+        const dest = item.route?.destination || 'Destino';
+
+        return (
+            <TouchableOpacity
+                key={item._id}
+                style={styles.listItem}
+                onPress={() => navigation.navigate('AllTrips')}
+            >
+                <View style={[styles.iconBox, { backgroundColor: '#e8f5e9' }]}>
+                    <MaterialCommunityIcons name="sail-boat" size={24} color="#2e7d32" />
                 </View>
-            </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.itemTitle}>{origin} → {dest}</Text>
+                    <Text style={styles.itemSubtitle}>
+                        {new Date(item.date).toLocaleDateString()} • {item.departureTime}
+                    </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={[styles.statusBadge, { color: item.active ? '#2e7d32' : '#c62828' }]}>
+                        {item.active ? 'Activo' : 'Cancelado'}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
 
-            {/* 🔔 ICONOS HEADER */}
-            <View style={styles.headerIcons}>
-                <IconButton icon="bell-outline" iconColor="white" size={24} onPress={() => {}} />
+    return (
+        <View style={[
+            styles.container,
+            {
+                // backgroundColor: scheme === "dark" ? "#020617" : "#f8fafc",
+            },
+        ]}>
+            {/* Header con Gradiente */}
+            <LinearGradient
+                colors={['#1e3a8a', '#3b82f6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.header}
+            >
+                <View style={styles.headerTop}>
+                    <View style={styles.userInfo}>
+                        <Avatar.Text
+                            size={48}
+                            label={user?.name?.substring(0, 2).toUpperCase() || "CP"}
+                            style={{ backgroundColor: 'white' }}
+                            color="#1e3a8a"
+                        />
+                        <View style={{ marginLeft: 12 }}>
+                            <Text style={styles.userName}>{user?.name?.toUpperCase()}</Text>
+                            <Text style={styles.userEmail}>{user?.email}</Text>
+                        </View>
+                    </View>
+                    <View style={styles.headerIcons}>
+                        <IconButton icon="bell-outline" iconColor="white" size={26} onPress={() => { }} />
+                        <IconButton
+                            icon="dots-vertical"
+                            iconColor="white"
+                            size={26}
+                            onPress={() => navigation.navigate("Menu")}
+                        />
+                    </View>
+                </View>
+                <Text style={styles.pageTitle}>Resumen de Operación</Text>
+            </LinearGradient>
 
-                {/* 🍔 MENU BUTTON (Abre MenuScreen) */}
-                <IconButton
-                    icon="dots-vertical"
-                    iconColor="white"
-                    size={24}
-                    onPress={() => navigation.navigate("Menu")}
-                />
-            </View>
-        </View>
-        <Text style={styles.pageTitle}>Dashboard {isOwner ? 'Propietario' : 'Usuario'}</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-        {/* Accesos Directos (Navegación Condicional - TEMA MARÍTIMO ⚓️) */}
-        <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20}}>
-            {isOwner ? (
-                <>
-                    {/* OWNER */}
-                    <TouchableOpacity onPress={() => navigation.navigate("MyCompanies")} style={styles.shortcutBtn}>
-                        <MaterialCommunityIcons name="ferry" size={32} color="#ff6b00" />  
-                        <Text style={styles.shortcutText}>Empresas</Text>
-                    </TouchableOpacity>
-
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Accesos Rápidos - BOTONES GRANDES Y COLORIDOS */}
+                <View style={styles.shortcutsRow}>
                     <TouchableOpacity onPress={() => navigation.navigate("AllRoutes")} style={styles.shortcutBtn}>
-                        <MaterialCommunityIcons name="compass-outline" size={32} color="#1a2236" />
-                        <Text style={styles.shortcutText}>Rutas</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => Alert.alert("Info", "Selecciona una ruta para ver sus viajes.")} style={styles.shortcutBtn}>
-                        <MaterialCommunityIcons name="anchor" size={32} color="#10b981" /> 
-                        <Text style={styles.shortcutText}>Viajes</Text>
-                    </TouchableOpacity>
-                </>
-            ) : (
-                <>
-                    {/* USER */}
-                    <TouchableOpacity onPress={() => navigation.navigate("AllRoutes")} style={styles.shortcutBtn}>
-                        <MaterialCommunityIcons name="compass-outline" size={32} color="#ff6b00" />
+                        <LinearGradient colors={['#3b82f6', '#2563eb']} style={styles.shortcutIconBg}>
+                            <MaterialCommunityIcons name="compass-outline" size={28} color="white" />
+                        </LinearGradient>
                         <Text style={styles.shortcutText}>Rutas</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={() => navigation.navigate("AllTrips")} style={styles.shortcutBtn}>
-                        <MaterialCommunityIcons name="sail-boat" size={32} color="#1a2236" />
+                        <LinearGradient colors={['#10b981', '#059669']} style={styles.shortcutIconBg}>
+                            <MaterialCommunityIcons name="anchor" size={28} color="white" />
+                        </LinearGradient>
                         <Text style={styles.shortcutText}>Viajes</Text>
                     </TouchableOpacity>
 
-                    {/* BOTÓN TICKETS CONECTADO 🎟️ */}
                     <TouchableOpacity onPress={() => navigation.navigate("MyTickets")} style={styles.shortcutBtn}>
-                        <MaterialCommunityIcons name="ticket-confirmation" size={32} color="#10b981" />
+                        <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.shortcutIconBg}>
+                            <MaterialCommunityIcons name="ticket-confirmation" size={28} color="white" />
+                        </LinearGradient>
                         <Text style={styles.shortcutText}>Tickets</Text>
                     </TouchableOpacity>
-                </>
-            )}
+
+                    {isOwner && (
+                        <TouchableOpacity onPress={() => navigation.navigate("MyCompanies")} style={styles.shortcutBtn}>
+                            <LinearGradient colors={['#8b5cf6', '#7c3aed']} style={styles.shortcutIconBg}>
+                                <MaterialCommunityIcons name="domain" size={28} color="white" />
+                            </LinearGradient>
+                            <Text style={styles.shortcutText}>Empresas</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                {loading ? (
+                    <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+                ) : (
+                    <>
+                        {/* Card 1: Rutas Activas */}
+                        <View style={styles.cardContainer}>
+                            <LinearGradient
+                                colors={['#2563eb', '#1d4ed8']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.cardHeaderGradient}
+                            >
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <MaterialCommunityIcons name="map-marker-path" size={22} color="white" style={{ marginRight: 8 }} />
+                                    <Text style={styles.cardTitleWhite}>Rutas Activas</Text>
+                                </View>
+                                <TouchableOpacity onPress={() => navigation.navigate('AllRoutes')}>
+                                    <Text style={styles.seeAllWhite}>Ver todas</Text>
+                                </TouchableOpacity>
+                            </LinearGradient>
+
+                            <View style={styles.listContent}>
+                                {routes.length > 0 ? routes.map(renderRouteItem) : (
+                                    <Text style={styles.emptyText}>No hay rutas registradas</Text>
+                                )}
+                            </View>
+                        </View>
+
+                        {/* Card 2: Próximos Viajes */}
+                        <View style={[styles.cardContainer, { marginTop: 24 }]}>
+                            <LinearGradient
+                                colors={['#059669', '#047857']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.cardHeaderGradient}
+                            >
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <MaterialCommunityIcons name="clock-outline" size={22} color="white" style={{ marginRight: 8 }} />
+                                    <Text style={styles.cardTitleWhite}>Próximos Viajes</Text>
+                                </View>
+                                <TouchableOpacity onPress={() => navigation.navigate('AllTrips')}>
+                                    <Text style={styles.seeAllWhite}>Ver todas</Text>
+                                </TouchableOpacity>
+                            </LinearGradient>
+
+                            <View style={styles.listContent}>
+                                {trips.length > 0 ? trips.map(renderTripItem) : (
+                                    <Text style={styles.emptyText}>No hay viajes programados</Text>
+                                )}
+                            </View>
+                        </View>
+                    </>
+                )}
+
+                <View style={{ height: 40 }} />
+            </ScrollView>
         </View>
-
-        {/* Metrics Grid - Solo visible para Owners/Admins */}
-        {isOwner && (
-            <View style={styles.grid}>
-                <View style={styles.col}>
-                    <MetricCard title="Ingresos" value={`$ ${stats.earnings}`} icon="currency-usd" iconBackgroundColor="#1a2236" />
-                    <MetricCard title="Pasajeros" value={`${stats.likes}`} icon="account-group" iconBackgroundColor="#3b82f6" />
-                </View>
-                <View style={styles.col}>
-                    <MetricCard title="Zarpes" value={`${stats.share}`} icon="anchor" iconBackgroundColor="#8b5cf6" />
-                    <MetricCard title="Valoración" value={`${stats.rating}`} icon="star" iconBackgroundColor="#f59e0b" />
-                </View>
-            </View>
-        )}
-
-         <View style={{ height: 20 }} />
-      </ScrollView>
-    </View>
-  );
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  header: {
-    backgroundColor: '#1a2236', // Navy
-    paddingTop: 50,
-    paddingBottom: 25,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  userName: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  userEmail: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  pageTitle: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: '300',
-    marginLeft: 4,
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  shortcutBtn: {
-      backgroundColor: 'white',
-      padding: 12,
-      borderRadius: 12,
-      alignItems: 'center',
-      width: '30%',
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-  },
-  shortcutText: {
-      fontSize: 12,
-      marginTop: 8,
-      color: '#4b5563',
-      fontWeight: '600'
-  },
-  grid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  col: {
-    flex: 1,
-    gap: 12,
-  },
-  metricCard: {
-      backgroundColor: 'white',
-      borderRadius: 16,
-      padding: 16,
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-  },
-  iconContainer: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 8,
-  },
-  metricValue: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: '#1f2937',
-  },
-  metricTitle: {
-      fontSize: 12,
-      color: '#6b7280',
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#f8fafc',
+    },
+    header: {
+        paddingTop: 50,
+        paddingBottom: 40,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        elevation: 8,
+    },
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    userInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    userName: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    userEmail: {
+        color: 'rgba(255,255,255,0.85)',
+        fontSize: 13,
+    },
+    headerIcons: {
+        flexDirection: 'row',
+        gap: 4,
+    },
+    pageTitle: {
+        color: 'white',
+        fontSize: 26,
+        fontWeight: '800',
+        marginLeft: 4,
+    },
+    scrollContent: {
+        padding: 20,
+    },
+    shortcutsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 30,
+        marginTop: -10,
+    },
+    shortcutBtn: {
+        alignItems: 'center',
+        width: '23%',
+    },
+    shortcutIconBg: {
+        width: 56,
+        height: 56,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8,
+        elevation: 4,
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+    },
+    shortcutText: {
+        fontSize: 11,
+        color: '#475569',
+        fontWeight: '700',
+        textAlign: 'center'
+    },
+    // Card Styles
+    cardContainer: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        overflow: 'hidden',
+    },
+    cardHeaderGradient: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 18,
+    },
+    cardTitleWhite: {
+        fontSize: 17,
+        fontWeight: 'bold',
+        color: 'white',
+    },
+    seeAllWhite: {
+        color: 'rgba(255,255,255,0.95)',
+        fontWeight: '600',
+        fontSize: 13,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 10,
+    },
+    listContent: {
+        padding: 8,
+    },
+    listItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9',
+    },
+    iconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    itemTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#1e293b',
+    },
+    itemSubtitle: {
+        fontSize: 13,
+        color: '#64748b',
+        marginTop: 2,
+    },
+    statusBadge: {
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    emptyText: {
+        textAlign: 'center',
+        padding: 30,
+        color: '#94a3b8',
+        fontStyle: 'italic'
+    }
 });

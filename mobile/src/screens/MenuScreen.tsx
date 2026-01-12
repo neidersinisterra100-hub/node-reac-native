@@ -5,11 +5,13 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { colors } from "../theme/colors";
 
 export default function MenuScreen() {
   const navigation = useNavigation<any>();
   const { user, logout } = useAuth();
+  const { toggleTheme, isDark } = useTheme();
 
   const isOwner = user?.role === 'owner' || user?.role === 'admin';
 
@@ -21,10 +23,16 @@ export default function MenuScreen() {
         show: true
     },
     {
-        icon: "chart-bar",
-        label: "Balance y Estadísticas",
-        onPress: () => navigation.navigate("Balance"),
+        icon: "cog-outline",
+        label: "Configuración",
+        onPress: () => navigation.navigate("SettingsModal"),
         show: isOwner
+    },
+    {
+        icon: "chart-bar", // 👈 Icono de Reportes
+        label: "Reportes",
+        onPress: () => navigation.navigate("Reports"), // 👈 Navegación a Reports
+        show: isOwner // Visible para owners/admin
     },
     {
         icon: "qrcode-scan",
@@ -41,13 +49,16 @@ export default function MenuScreen() {
     {
         icon: "file-document-outline",
         label: "Términos y Condiciones",
-        onPress: () => navigation.navigate("Terms"), // 👈 Nueva opción
+        onPress: () => navigation.navigate("Terms"),
         show: true
     },
     {
-        icon: "theme-light-dark",
-        label: "Cambiar Tema",
-        onPress: () => alert("Próximamente"),
+        icon: isDark ? "weather-sunny" : "weather-night",
+        label: isDark ? "Modo Claro" : "Modo Oscuro",
+        onPress: () => {
+            console.log("Toggling theme..."); // Debug log
+            toggleTheme();
+        },
         show: true
     },
   ];
@@ -71,7 +82,7 @@ export default function MenuScreen() {
           </View>
       </View>
 
-      {/* Lista de Opciones - Ahora con ScrollView */}
+      {/* Lista de Opciones */}
       <ScrollView contentContainerStyle={styles.content}>
           {menuItems.filter(item => item.show).map((item, index) => (
               <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
@@ -79,7 +90,7 @@ export default function MenuScreen() {
                     <MaterialCommunityIcons name={item.icon as any} size={24} color={colors.primary} />
                   </View>
                   <Text style={styles.menuLabel}>{item.label}</Text>
-                  <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />   
+                  <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
               </TouchableOpacity>
           ))}
 
@@ -87,12 +98,11 @@ export default function MenuScreen() {
 
           <TouchableOpacity style={styles.menuItem} onPress={logout}>
               <View style={[styles.iconBox, { backgroundColor: '#fee2e2' }]}>
-                <MaterialCommunityIcons name="logout" size={24} color={colors.error} />    
+                <MaterialCommunityIcons name="logout" size={24} color={colors.error} />
               </View>
               <Text style={[styles.menuLabel, { color: colors.error }]}>Cerrar Sesión</Text>
           </TouchableOpacity>
-          
-          {/* Espacio extra al final para asegurar scroll cómodo */}
+
           <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -130,7 +140,7 @@ const styles = StyleSheet.create({
   },
   content: {
       padding: 20,
-      paddingTop: 30, // Un poco más de espacio arriba
+      paddingTop: 30,
   },
   menuItem: {
       flexDirection: 'row',

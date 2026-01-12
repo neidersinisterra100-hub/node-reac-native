@@ -2,7 +2,7 @@ import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator, Style
 import { IconButton } from "react-native-paper";
 import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { Building2 } from "lucide-react-native";
+import { Building2, CheckCircle2, AlertCircle } from "lucide-react-native";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
@@ -16,6 +16,7 @@ import {
   Company
 } from "../services/company.service";
 import { useAuth } from "../context/AuthContext";
+import { colors } from "../theme/colors";
 
 export default function MyCompaniesScreen() {
   const navigation = useNavigation<any>();
@@ -83,43 +84,82 @@ export default function MyCompaniesScreen() {
             companyId: item._id,
             companyName: item.name,
         })}
+        activeOpacity={0.7}
     >
-      <View style={styles.cardHeader}>
+      <View style={styles.cardContent}>
+          {/* Icono de Empresa */}
           <View style={styles.iconBox}>
-             <Building2 size={24} color="#1a2236" />
-          </View>
-          <View style={{flex: 1}}>
-              <Text style={styles.cardTitle}>{item.name}</Text>
-              {isOwner && <Text style={styles.cardSubtitle}>Balance: ${item.balance}</Text>}
+             <Building2 size={24} color={colors.primary} />
           </View>
 
-          {isOwner && (
-              <View style={{flexDirection: 'row'}}>
-                  <IconButton
-                      icon="power"
-                      iconColor={item.active ? "#10b981" : "#9ca3af"}
-                      size={20}
+          {/* Información Principal */}
+          <View style={{flex: 1}}>
+              <View style={styles.titleRow}>
+                  <Text style={styles.cardTitle}>{item.name}</Text>
+                  
+                  {/* BADGE DE LEGALIDAD PROFESIONAL */}
+                  <View style={[
+                      styles.statusBadge, 
+                      { backgroundColor: item.active ? '#dcfce7' : '#fee2e2' }
+                  ]}>
+                      {item.active ? (
+                          <CheckCircle2 size={12} color="#166534" />
+                      ) : (
+                          <AlertCircle size={12} color="#991b1b" />
+                      )}
+                      <Text style={[
+                          styles.statusText, 
+                          { color: item.active ? '#166534' : '#991b1b' }
+                      ]}>
+                          {item.active ? 'Verificada' : 'Pendiente'}
+                      </Text>
+                  </View>
+              </View>
+
+              <Text style={styles.nitText}>NIT: {item.nit || 'Sin registrar'}</Text>
+              
+              {isOwner && (
+                  <Text style={styles.balanceText}>
+                      Balance: <Text style={{fontWeight: 'bold'}}>${item.balance?.toLocaleString() || '0'}</Text>
+                  </Text>
+              )}
+          </View>
+      </View>
+
+      {/* Acciones (Solo Owner) */}
+      {isOwner && (
+          <View style={styles.actionsFooter}>
+              <Text style={styles.actionLabel}>Acciones:</Text>
+              <View style={styles.actionButtons}>
+                  <TouchableOpacity 
+                      style={[styles.actionBtn, { backgroundColor: item.active ? '#fef2f2' : '#f0fdf4' }]}
                       onPress={() => handleToggle(item._id, !!item.active)}
-                  />
+                  >
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: item.active ? '#ef4444' : '#16a34a' }}>
+                          {item.active ? 'Desactivar' : 'Activar'}
+                      </Text>
+                  </TouchableOpacity>
+
                   <IconButton
                       icon="delete-outline"
                       iconColor="#ef4444"
                       size={20}
+                      style={{ margin: 0 }}
                       onPress={() => handleDelete(item._id)}
                   />
               </View>
-          )}
-      </View>
-
-      {!item.active && !isOwner && (
-          <Text style={styles.inactiveText}>Inactiva</Text>
+          </View>
       )}
     </TouchableOpacity>
   );
 
   return (
     <AppContainer>
-      <AppHeader title={isOwner ? "Mis Empresas" : "Empresas Disponibles"} showBack={false} />
+      <AppHeader
+        title={isOwner ? "Mis Empresas" : "Empresas Disponibles"} // Cambiado "Navieras" a "Empresas"
+        showBack={true}
+        showAvatar={false}
+      />
 
       {errorMsg && (
           <View style={styles.errorBox}>
@@ -132,21 +172,21 @@ export default function MyCompaniesScreen() {
 
       {loading ? (
           <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-              <ActivityIndicator size="large" color="#ff6b00" />
+              <ActivityIndicator size="large" color={colors.primary} />
           </View>
       ) : (
         <FlatList
-            data={isOwner ? companies : companies.filter(c => c.active)} // 👈 FILTRADO MANUAL PARA USER
+            data={isOwner ? companies : companies.filter(c => c.active)}
             keyExtractor={(item) => item._id}
             refreshing={loading}
             onRefresh={loadCompanies}
-            contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+            contentContainerStyle={{ paddingBottom: 100, paddingTop: 10, paddingHorizontal: 16 }}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
             isOwner ? (
                 <View style={{ marginBottom: 20 }}>
                     <PrimaryButton
-                        label="Nueva Empresa"
+                        label="Registrar Nueva Empresa" // Cambiado "Naviera" a "Empresa"
                         onPress={() => navigation.navigate("CreateCompany")}
                     />
                 </View>
@@ -154,7 +194,7 @@ export default function MyCompaniesScreen() {
             }
             ListEmptyComponent={
             <View style={{alignItems: 'center', marginTop: 40}}>
-                <Text style={{color: '#6b7280'}}>No hay empresas disponibles.</Text>
+                <Text style={{color: '#6b7280'}}>No hay empresas registradas.</Text>       
             </View>
             }
             renderItem={renderItem}
@@ -168,45 +208,92 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: 'white',
         borderRadius: 16,
-        padding: 16,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: '#e5e7eb', // gray-200
+        borderColor: '#e5e7eb',
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        shadowRadius: 8,
+        elevation: 3,
+        overflow: 'hidden',
     },
     cardInactive: {
-        opacity: 0.7,
-        borderColor: '#d1d5db',
+        borderColor: '#e5e7eb',
+        backgroundColor: '#f9fafb',
     },
-    cardHeader: {
+    cardContent: {
+        padding: 16,
         flexDirection: 'row',
-        alignItems: 'center',
         gap: 12,
     },
     iconBox: {
-        backgroundColor: '#eff6ff', // blue-50
-        padding: 12,
+        width: 48,
+        height: 48,
         borderRadius: 12,
+        backgroundColor: '#e0f2fe',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
     },
     cardTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#1f2937', // gray-800
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1e293b',
+        flex: 1,
+        marginRight: 8,
     },
-    cardSubtitle: {
-        fontSize: 12,
-        color: '#6b7280', // gray-500
+    statusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 4,
     },
-    inactiveText: {
-        color: '#ef4444',
+    statusText: {
+        fontSize: 10,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+    },
+    nitText: {
         fontSize: 12,
-        fontWeight: 'bold',
-        marginTop: 8,
-        textAlign: 'right'
+        color: '#64748b',
+        marginBottom: 4,
+    },
+    balanceText: {
+        fontSize: 13,
+        color: '#0f172a',
+    },
+    actionsFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        backgroundColor: '#f8fafc',
+        borderTopWidth: 1,
+        borderTopColor: '#f1f5f9',
+    },
+    actionLabel: {
+        fontSize: 12,
+        color: '#94a3b8',
+        fontWeight: '500',
+    },
+    actionButtons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    actionBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
     },
     errorBox: {
         backgroundColor: '#fef2f2',

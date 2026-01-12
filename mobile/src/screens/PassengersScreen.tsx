@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -22,15 +22,18 @@ import AppHeader from "../components/ui/AppHeader";
 import { colors } from "../theme/colors";
 
 import {
-  getPassengersByTripRequest,
-  registerManualPassengerRequest,
+  getPassengersByTrip,
+  registerManualPassenger,
+  getTripsForPassengerControl,
 } from "../services/ticket.service";
-import { api } from "../services/api";
 
 /* =========================================================
-   TYPES
+   TYPES (UI ONLY)
    ========================================================= */
 
+/**
+ * Trip (vista de control)
+ */
 type Trip = {
   _id: string;
   route: {
@@ -41,13 +44,14 @@ type Trip = {
   departureTime: string;
 };
 
+/**
+ * Passenger (ticket simplificado)
+ */
 type Passenger = {
   _id: string;
   seatNumber: number;
   status: string;
-  user?: {
-    name: string;
-  };
+  passengerName?: string;
 };
 
 /* =========================================================
@@ -65,14 +69,14 @@ export default function PassengersScreen() {
   const [manualName, setManualName] = useState("");
 
   /* =====================================================
-     CARGAR VIAJES SEGÚN ROL (OWNER / ADMIN)
+     CARGAR VIAJES DISPONIBLES (OWNER / ADMIN)
      ===================================================== */
   const loadTrips = async () => {
     try {
-      const response = await api.get<Trip[]>("/trips/manage");
-      setTrips(Array.isArray(response.data) ? response.data : []);
+      const data = await getTripsForPassengerControl();
+      setTrips(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Error loading trips", error);
+      console.error("❌ Error loading trips", error);
       Alert.alert("Error", "No se pudieron cargar los viajes");
     }
   };
@@ -83,10 +87,10 @@ export default function PassengersScreen() {
   const loadPassengers = async (tripId: string) => {
     try {
       setLoading(true);
-      const data = await getPassengersByTripRequest(tripId);
-      setPassengers(data);
+      const data = await getPassengersByTrip(tripId);
+      setPassengers(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Error loading passengers", error);
+      console.error("❌ Error loading passengers", error);
       Alert.alert("Error", "No se pudieron cargar los pasajeros");
     } finally {
       setLoading(false);
@@ -94,13 +98,13 @@ export default function PassengersScreen() {
   };
 
   /* =====================================================
-     REGISTRO MANUAL
+     REGISTRO MANUAL DE PASAJERO
      ===================================================== */
-  const registerManualPassenger = async () => {
+  const handleRegisterManualPassenger = async () => {
     if (!selectedTrip || !manualName.trim()) return;
 
     try {
-      await registerManualPassengerRequest(
+      await registerManualPassenger(
         selectedTrip._id,
         manualName.trim()
       );
@@ -109,7 +113,7 @@ export default function PassengersScreen() {
       setModalVisible(false);
       loadPassengers(selectedTrip._id);
     } catch (error) {
-      console.error("Error registering passenger", error);
+      console.error("❌ Error registering passenger", error);
       Alert.alert("Error", "No se pudo registrar el pasajero");
     }
   };
@@ -125,16 +129,13 @@ export default function PassengersScreen() {
     <AppContainer>
       <AppHeader title="Pasajeros" />
 
-      {/* SELECTOR DE VIAJE */}
+      {/* ================= SELECTOR DE VIAJE ================= */}
       <View style={styles.selector}>
         <Menu
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
           anchor={
-            <Button
-              mode="outlined"
-              onPress={() => setMenuVisible(true)}
-            >
+            <Button mode="outlined" onPress={() => setMenuVisible(true)}>
               {selectedTrip
                 ? `${selectedTrip.route.origin} → ${selectedTrip.route.destination}`
                 : "Seleccionar viaje"}
@@ -155,7 +156,7 @@ export default function PassengersScreen() {
         </Menu>
       </View>
 
-      {/* LISTA DE PASAJEROS */}
+      {/* ================= LISTA DE PASAJEROS ================= */}
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} />
       ) : (
@@ -172,7 +173,7 @@ export default function PassengersScreen() {
             <View style={styles.passengerCard}>
               <View>
                 <Text style={styles.passengerName}>
-                  {item.user?.name || "Pasajero manual"}
+                  {item.passengerName || "Pasajero manual"}
                 </Text>
                 <Text style={styles.seat}>
                   Asiento #{item.seatNumber}
@@ -188,7 +189,7 @@ export default function PassengersScreen() {
         />
       )}
 
-      {/* BOTÓN REGISTRO MANUAL */}
+      {/* ================= BOTÓN REGISTRO MANUAL ================= */}
       {selectedTrip && (
         <Button
           mode="contained"
@@ -199,7 +200,7 @@ export default function PassengersScreen() {
         </Button>
       )}
 
-      {/* MODAL REGISTRO MANUAL */}
+      {/* ================= MODAL REGISTRO MANUAL ================= */}
       <Portal>
         <Modal
           visible={modalVisible}
@@ -221,7 +222,7 @@ export default function PassengersScreen() {
 
           <Button
             mode="contained"
-            onPress={registerManualPassenger}
+            onPress={handleRegisterManualPassenger}
           >
             Guardar
           </Button>

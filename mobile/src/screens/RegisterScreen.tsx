@@ -5,8 +5,9 @@ import {
   Pressable,
   Animated,
   Platform,
+  TouchableOpacity
 } from "react-native";
-import { Text } from "react-native-paper";
+import { Text, Checkbox } from "react-native-paper"; // 👈 Import Checkbox
 import { useEffect, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 
@@ -28,6 +29,7 @@ export default function RegisterScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false); // 👈 Nuevo estado
 
   const [focused, setFocused] = useState<
     "name" | "email" | "password" | null
@@ -77,7 +79,8 @@ export default function RegisterScreen() {
   const isFormValid =
     name.trim().length >= 2 &&
     isValidEmail(email) &&
-    password.length >= 6;
+    password.length >= 6 &&
+    termsAccepted; // 👈 Validación extra
 
   /* ================= ACTION ================= */
   const handleRegister = async () => {
@@ -167,6 +170,21 @@ export default function RegisterScreen() {
           </Text>
         )}
 
+        {/* ===== TERMS AND CONDITIONS ===== */}
+        <View style={styles.termsContainer}>
+            <Checkbox.Android
+                status={termsAccepted ? 'checked' : 'unchecked'}
+                onPress={() => setTermsAccepted(!termsAccepted)}
+                color={colors.primary}
+            />
+            <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                <Text style={{ color: colors.textSecondary }}>Acepto los </Text>
+                <TouchableOpacity onPress={() => navigation.navigate("Terms")}>
+                    <Text style={{ color: colors.primary, fontWeight: 'bold' }}>Términos y Condiciones</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+
         {error && (
           <Text style={styles.error}>{error}</Text>
         )}
@@ -250,6 +268,13 @@ const styles = StyleSheet.create({
   error: {
     marginTop: spacing.md,
     color: colors.error,
+  },
+
+  termsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 10,
+      marginBottom: 20,
   },
 
   loginLink: {

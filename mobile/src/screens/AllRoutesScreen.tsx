@@ -5,7 +5,7 @@ import { MapPin, Navigation } from "lucide-react-native";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
-import { getAllRoutes, Route } from "../services/route.service"; // 👈 Usar getAllRoutes
+import { getAllRoutes, Route } from "../services/route.service";
 import { useAuth } from "../context/AuthContext";
 import { colors } from "../theme/colors";
 
@@ -18,7 +18,7 @@ export default function AllRoutesScreen() {
   const loadRoutes = async () => {
     try {
       setLoading(true);
-      const data = await getAllRoutes(); // 👈 Llamada corregida
+      const data = await getAllRoutes();
       setRoutes(data);
     } catch {
       Alert.alert("Error", "No se pudieron cargar las rutas");
@@ -61,7 +61,17 @@ export default function AllRoutesScreen() {
 
   return (
     <AppContainer>
-      <AppHeader title="Todas las Rutas" neon={true} />
+      {/* 
+        Cambios: 
+        1. showBack={true}
+        2. showAvatar={false} 
+      */}
+      <AppHeader 
+        title="Todas las Rutas" 
+        neon={true} 
+        showBack={true}
+        showAvatar={false}
+      />
 
       {loading ? (
            <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
@@ -112,7 +122,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     iconBox: {
-        backgroundColor: '#e0f2f1', 
+        backgroundColor: '#e0f2f1',
         padding: 12,
         borderRadius: 12,
     },
@@ -124,7 +134,7 @@ const styles = StyleSheet.create({
     companyText: {
         fontSize: 14,
         fontWeight: '500',
-        color: colors.primary, 
+        color: colors.primary,
         marginBottom: 2,
     },
     cardSubtitle: {

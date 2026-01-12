@@ -17,6 +17,11 @@ export const typography = {
     fontWeight: "700" as TextStyle["fontWeight"],
     fontFamily,
   },
+  h2: {
+    fontSize: 23,
+    fontWeight: "600" as TextStyle["fontWeight"],
+    fontFamily,
+  },
 
   value: {
     fontSize: 28,

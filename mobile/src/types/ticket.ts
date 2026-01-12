@@ -1,18 +1,23 @@
+/**
+ * TicketUI
+ *
+ * Ticket listo para mostrar en pantallas.
+ * NO representa la respuesta cruda del backend.
+ */
 export type Ticket = {
   _id: string;
+
+  /* ===== DATOS MOSTRADOS ===== */
   routeName: string;
-  price: number;
   transport: string;
   date: string;
+  price: number;
   code: string;
 
-  // fecha + hora real del viaje
+  /* ===== OPCIONALES ===== */
   departureAt?: string;
-
-  // asiento asignado (ej: "12")
   seatNumber?: string;
 
-  // usuario que compró el ticket
   user?: {
     name: string;
   };

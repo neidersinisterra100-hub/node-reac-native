@@ -2,19 +2,22 @@ import {
   View,
   StyleSheet,
   BackHandler,
+  Switch
 } from "react-native";
-import { Text, Appbar } from "react-native-paper";
+import { Text, Appbar, List } from "react-native-paper";
 import {
   useNavigation,
   useFocusEffect,
 } from "@react-navigation/native";
 import { useCallback } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import AppContainer from "../../components/ui/AppContainer";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext"; // 👈 Import ThemeContext
 import { isAdminOrOwner } from "../../utils/roles";
 
 import { webTextFix } from "../../theme/webTextFix";
@@ -22,6 +25,7 @@ import PrimaryButton from "../../components/ui/PrimaryButton";
 
 export default function SettingsScreen() {
   const { user } = useAuth();
+  const { isDark, toggleTheme } = useTheme(); // 👈 Use Theme
   const navigation = useNavigation<any>();
 
   const handleClose = () => {
@@ -34,6 +38,10 @@ export default function SettingsScreen() {
 
   const handleMyCompanies = () => {
     navigation.navigate("MyCompanies");
+  };
+
+  const handleReports = () => {
+      navigation.navigate("Reports");
   };
 
   /* ================= ANDROID BACK HANDLER ================= */
@@ -98,6 +106,33 @@ export default function SettingsScreen() {
         <Text style={[typography.title, styles.sectionTitle]}>
           General
         </Text>
+
+        {/* ===== APARIENCIA ===== */}
+        <View style={styles.card}>
+            <View style={styles.row}>
+                <View style={styles.rowLeft}>
+                    <MaterialCommunityIcons name="theme-light-dark" size={24} color={colors.primary} />
+                    <Text style={[styles.itemText, { marginLeft: 12 }]}>Modo Oscuro</Text>
+                </View>
+                <Switch 
+                    value={isDark} 
+                    onValueChange={toggleTheme} 
+                    trackColor={{ false: "#767577", true: colors.primary }}
+                    thumbColor={isDark ? "#fff" : "#f4f3f4"}
+                />
+            </View>
+        </View>
+
+        {/* ===== REPORTES ===== */}
+        <View style={styles.card}>
+            <Text style={[typography.body, styles.bodyText, { marginBottom: 12 }]}>
+                Reportes y Métricas
+            </Text>
+            <PrimaryButton
+                label="Ver Reportes"
+                onPress={handleReports}
+            />
+        </View>
 
         {/* ===== GESTIÓN DE EMPRESAS ===== */}
         <View style={styles.card}>
@@ -177,112 +212,19 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     ...webTextFix,
   },
+  row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+  },
+  rowLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+  },
+  itemText: {
+      fontSize: 16,
+      color: colors.textPrimary,
+      fontWeight: "500",
+      ...webTextFix,
+  }
 });
-
-
-
-
-// import {
-//   View,
-//   StyleSheet,
-//   BackHandler,
-// } from "react-native";
-// import { Text, Appbar } from "react-native-paper";
-// import {
-//   useNavigation,
-//   useFocusEffect,
-// } from "@react-navigation/native";
-// import { useCallback } from "react";
-
-// import AppContainer from "../../components/ui/AppContainer";
-// import { colors } from "../../theme/colors";
-// import { spacing } from "../../theme/spacing";
-// import { typography } from "../../theme/typography";
-// import { usePermissions } from "../../hooks/usePermissions";
-
-// export default function SettingsScreen() {
-//   const navigation = useNavigation();
-//   const { isAdminOrOwner } = usePermissions();
-
-//   const handleClose = () => {
-//     navigation.goBack();
-//   };
-
-//   useFocusEffect(
-//     useCallback(() => {
-//       const sub = BackHandler.addEventListener(
-//         "hardwareBackPress",
-//         () => {
-//           handleClose();
-//           return true;
-//         }
-//       );
-
-//       return () => sub.remove();
-//     }, [])
-//   );
-
-//   if (!isAdminOrOwner) {
-//     return (
-//       <AppContainer>
-//         <Appbar.Header style={styles.header}>
-//           <Appbar.Content title="Configuración" />
-//           <Appbar.Action icon="close" onPress={handleClose} />
-//         </Appbar.Header>
-
-//         <View style={styles.center}>
-//           <Text style={styles.text}>
-//             No tienes permisos para acceder a esta sección
-//           </Text>
-//         </View>
-//       </AppContainer>
-//     );
-//   }
-
-//   return (
-//     <AppContainer>
-//       <Appbar.Header style={styles.header}>
-//         <Appbar.Content title="Configuración" />
-//         <Appbar.Action icon="close" onPress={handleClose} />
-//       </Appbar.Header>
-
-//       <View style={styles.container}>
-//         <Text style={styles.title}>General</Text>
-
-//         <View style={styles.card}>
-//           <Text style={styles.text}>• Empresa</Text>
-//           <Text style={styles.text}>• Rutas</Text>
-//           <Text style={styles.text}>• Viajes</Text>
-//           <Text style={styles.text}>• Usuarios</Text>
-//         </View>
-//       </View>
-//     </AppContainer>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   header: {
-//     backgroundColor: colors.surface,
-//   },
-//   container: {
-//     padding: spacing.lg,
-//   },
-//   center: {
-//     flex: 1,
-//     alignItems: "center",
-//     justifyContent: "center",
-//   },
-//   title: {
-//     ...typography.title,
-//     marginBottom: spacing.md,
-//   },
-//   card: {
-//     backgroundColor: "#fff",
-//     padding: spacing.lg,
-//     borderRadius: 16,
-//   },
-//   text: {
-//     ...typography.body,
-//     marginBottom: spacing.sm,
-//   },
-// });

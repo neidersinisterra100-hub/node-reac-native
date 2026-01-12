@@ -1,8 +1,22 @@
-import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Alert, TextInput, KeyboardAvoidingView, Platform, ScrollView, Modal, TouchableOpacity } from "react-native";
-import { Text, ActivityIndicator } from "react-native-paper";
+import React, { useState } from "react";
+import {
+  View,
+  StyleSheet,
+  Alert,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Modal,
+  TouchableOpacity,
+} from "react-native";
+import { Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import {
+  CameraView,
+  useCameraPermissions,
+  BarcodeScanningResult,
+} from "expo-camera";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
@@ -10,317 +24,412 @@ import PrimaryButton from "../components/ui/PrimaryButton";
 import { validateTicketRequest } from "../services/ticket.service";
 import { colors } from "../theme/colors";
 
+/* =========================================================
+   VALIDATE TICKET SCREEN
+   ========================================================= */
+
 export default function ValidateTicketScreen() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
-  
-  // Cámara
-  const [permission, requestPermission] = useCameraPermissions();
-  const [showCamera, setShowCamera] = useState(false);
-  const [scanned, setScanned] = useState(false);
 
-  const handleValidate = async (inputCode: string = code) => {
+  /* ================= CAMERA ================= */
+
+  const [permission, requestPermission] =
+    useCameraPermissions();
+
+  const [showCamera, setShowCamera] =
+    useState(false);
+
+  const [scanned, setScanned] =
+    useState(false);
+
+  /* =========================================================
+     VALIDACIÓN MANUAL / AUTOMÁTICA
+     ========================================================= */
+
+  const handleValidate = async (
+    inputCode: string = code
+  ) => {
     const codeToValidate = inputCode.trim();
-    
+
     if (!codeToValidate) {
-        Alert.alert("Error", "Ingresa el código del ticket");
-        return;
+      Alert.alert(
+        "Error",
+        "Ingresa el código del ticket"
+      );
+      return;
     }
 
     setLoading(true);
     setResult(null);
 
     try {
-      const data = await validateTicketRequest(codeToValidate);
-      setResult({ success: true, ...data });
+      const data =
+        await validateTicketRequest(codeToValidate);
+
+      setResult({
+        success: true,
+        ...data,
+      });
     } catch (error: any) {
-      setResult({ 
-          success: false, 
-          message: error?.response?.data?.message || "Ticket Inválido o Error" 
+      setResult({
+        success: false,
+        message:
+          error?.response?.data?.message ||
+          "Ticket inválido",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleBarCodeScanned = ({ type, data }: any) => {
-      // Evitar lecturas múltiples rápidas
-      if (scanned) return;
-      
-      setScanned(true);
-      setShowCamera(false);
-      setCode(data);
-      
-      // Vibrar o feedback visual sería ideal aquí
-      Alert.alert("Código Detectado", `Código: ${data}`, [
-          { text: "Validar", onPress: () => handleValidate(data) }
-      ]);
+  /* =========================================================
+     ESCANEO QR
+     ========================================================= */
+
+  const handleBarCodeScanned = (
+    result: BarcodeScanningResult
+  ) => {
+    if (scanned) return;
+
+    setScanned(true);
+    setShowCamera(false);
+
+    const scannedCode = result.data;
+    setCode(scannedCode);
+
+    Alert.alert(
+      "Código detectado",
+      scannedCode,
+      [
+        {
+          text: "Validar",
+          onPress: () =>
+            handleValidate(scannedCode),
+        },
+      ]
+    );
   };
 
+  /* =========================================================
+     ABRIR CÁMARA (CON PERMISOS BIEN HECHOS)
+     ========================================================= */
+
   const openCamera = async () => {
-      if (!permission) {
-          await requestPermission();
+    // Pedir permiso si no existe o no está concedido
+    if (!permission?.granted) {
+      const response =
+        await requestPermission();
+
+      if (!response.granted) {
+        Alert.alert(
+          "Permiso requerido",
+          "Necesitamos acceso a la cámara para escanear el QR"
+        );
+        return;
       }
-      if (!permission?.granted) {
-          const { status } = await requestPermission();
-          if (status !== 'granted') {
-              Alert.alert("Permiso denegado", "Se necesita acceso a la cámara");
-              return;
-          }
-      }
-      setScanned(false);
-      setShowCamera(true);
+    }
+
+    setScanned(false);
+    setShowCamera(true);
   };
+
+  /* =========================================================
+     RENDER
+     ========================================================= */
 
   return (
     <AppContainer>
       <AppHeader title="Validar Ticket" />
 
-      {/* MODAL CÁMARA */}
-      <Modal visible={showCamera} animationType="slide" onRequestClose={() => setShowCamera(false)}>
-          <View style={{ flex: 1, backgroundColor: 'black' }}>
-              <CameraView
-                  style={StyleSheet.absoluteFillObject}
-                  onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                  // Eliminamos settings restrictivos para probar detección general
-                  // O usamos "qr" explícitamente si funciona mejor
-                  barcodeScannerSettings={{
-                      barcodeTypes: ["qr", "ean13", "code128"],
-                  }}
-              />
-              
-              {/* Overlay visual para guiar al usuario */}
-              <View style={styles.cameraOverlay}>
-                  <TouchableOpacity onPress={() => setShowCamera(false)} style={styles.closeCameraButton}>
-                      <MaterialCommunityIcons name="close" size={30} color="white" />
-                  </TouchableOpacity>
-                  
-                  <View style={styles.scanArea}>
-                      <View style={styles.cornerTL} />
-                      <View style={styles.cornerTR} />
-                      <View style={styles.cornerBL} />
-                      <View style={styles.cornerBR} />
-                  </View>
-                  
-                  <Text style={styles.scanText}>Centra el código QR en el cuadro</Text>
-              </View>
-          </View>
-      </Modal>
-
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+      {/* ================= MODAL CÁMARA ================= */}
+      <Modal
+        visible={showCamera}
+        animationType="slide"
+        onRequestClose={() =>
+          setShowCamera(false)
+        }
       >
-        <ScrollView contentContainerStyle={styles.content}>
-            
-            <View style={styles.card}>
-                <Text style={styles.title}>Ingresar Código</Text>
-                <Text style={styles.subtitle}>Escanea el QR o escribe el código manualmente.</Text>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "black",
+          }}
+        >
+          <CameraView
+            style={StyleSheet.absoluteFillObject}
+            onBarcodeScanned={
+              scanned
+                ? undefined
+                : handleBarCodeScanned
+            }
+            barcodeScannerSettings={{
+              barcodeTypes: ["qr"],
+            }}
+          />
 
-                {/* BOTÓN ESCANEAR */}
-                <TouchableOpacity onPress={openCamera} style={styles.scanButton}>
-                    <MaterialCommunityIcons name="qrcode-scan" size={32} color="white" />
-                    <Text style={styles.scanButtonText}>Escanear QR</Text>
-                </TouchableOpacity>
+          {/* Overlay visual */}
+          <View style={styles.cameraOverlay}>
+            <TouchableOpacity
+              onPress={() =>
+                setShowCamera(false)
+              }
+              style={styles.closeCameraButton}
+            >
+              <MaterialCommunityIcons
+                name="close"
+                size={30}
+                color="white"
+              />
+            </TouchableOpacity>
 
-                <View style={styles.divider}>
-                    <View style={styles.line} />
-                    <Text style={styles.orText}>O</Text>
-                    <View style={styles.line} />
-                </View>
-
-                <TextInput
-                    style={styles.input}
-                    placeholder="Ej: A1B2C3"
-                    placeholderTextColor="#9ca3af"
-                    value={code}
-                    onChangeText={text => setCode(text.toUpperCase())}
-                    autoCapitalize="characters"
-                    maxLength={10}
-                />
-
-                <PrimaryButton 
-                    label="Validar Manualmente" 
-                    onPress={() => handleValidate()} 
-                    loading={loading}
-                />
+            <View style={styles.scanArea}>
+              <View style={styles.cornerTL} />
+              <View style={styles.cornerTR} />
+              <View style={styles.cornerBL} />
+              <View style={styles.cornerBR} />
             </View>
 
-            {/* RESULTADO */}
-            {result && (
-                <View style={[styles.resultCard, result.success ? styles.successCard : styles.errorCard]}>
-                    <MaterialCommunityIcons 
-                        name={result.success ? "check-circle" : "alert-circle"} 
-                        size={48} 
-                        color={result.success ? "#166534" : "#991b1b"} 
-                    />
-                    <Text style={[styles.resultTitle, { color: result.success ? "#166534" : "#991b1b" }]}>
-                        {result.success ? "¡Ticket Válido!" : "Ticket Inválido"}
-                    </Text>
-                    
-                    <Text style={styles.resultMessage}>{result.message}</Text>
+            <Text style={styles.scanText}>
+              Centra el código QR en el
+              cuadro
+            </Text>
+          </View>
+        </View>
+      </Modal>
 
-                    {result.success && (
-                        <View style={styles.details}>
-                            <Text style={styles.detailText}>Pasajero: {result.passenger}</Text>
-                            <Text style={styles.detailText}>Ruta: {result.routeName}</Text>
-                        </View>
-                    )}
-                </View>
-            )}
+      {/* ================= CONTENIDO ================= */}
+      <KeyboardAvoidingView
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : "height"
+        }
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={
+            styles.content
+          }
+        >
+          <View style={styles.card}>
+            <Text style={styles.title}>
+              Ingresar Código
+            </Text>
 
+            <Text style={styles.subtitle}>
+              Escanea el QR o escribe el
+              código manualmente
+            </Text>
+
+            <TouchableOpacity
+              onPress={openCamera}
+              style={styles.scanButton}
+            >
+              <MaterialCommunityIcons
+                name="qrcode-scan"
+                size={32}
+                color="white"
+              />
+              <Text
+                style={styles.scanButtonText}
+              >
+                Escanear QR
+              </Text>
+            </TouchableOpacity>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Ej: A1B2C3"
+              placeholderTextColor="#9ca3af"
+              value={code}
+              onChangeText={(text) =>
+                setCode(text.toUpperCase())
+              }
+              autoCapitalize="characters"
+            />
+
+            <PrimaryButton
+              label="Validar manualmente"
+              onPress={() =>
+                handleValidate()
+              }
+              loading={loading}
+            />
+          </View>
+
+          {result && (
+            <View
+              style={[
+                styles.resultCard,
+                result.success
+                  ? styles.successCard
+                  : styles.errorCard,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={
+                  result.success
+                    ? "check-circle"
+                    : "alert-circle"
+                }
+                size={48}
+                color={
+                  result.success
+                    ? "#166534"
+                    : "#991b1b"
+                }
+              />
+              <Text
+                style={[
+                  styles.resultTitle,
+                  {
+                    color: result.success
+                      ? "#166534"
+                      : "#991b1b",
+                  },
+                ]}
+              >
+                {result.success
+                  ? "¡Ticket válido!"
+                  : "Ticket inválido"}
+              </Text>
+
+              <Text
+                style={styles.resultMessage}
+              >
+                {result.message}
+              </Text>
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </AppContainer>
   );
 }
 
+/* =========================================================
+   STYLES
+   ========================================================= */
+
 const styles = StyleSheet.create({
-  content: {
-    padding: 20,
-  },
+  content: { padding: 20 },
   card: {
-      backgroundColor: "white",
-      borderRadius: 16,
-      padding: 24,
-      marginBottom: 24,
-      elevation: 4,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 24,
   },
   title: {
-      fontSize: 20,
-      fontWeight: "bold",
-      color: colors.primary,
-      marginBottom: 8,
-      textAlign: "center",
+    fontSize: 20,
+    fontWeight: "bold",
+    color: colors.primary,
+    textAlign: "center",
   },
   subtitle: {
-      fontSize: 14,
-      color: "#6b7280",
-      textAlign: "center",
-      marginBottom: 24,
+    textAlign: "center",
+    color: "#6b7280",
+    marginBottom: 24,
   },
   scanButton: {
-      backgroundColor: colors.primary,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 16,
-      borderRadius: 12,
-      gap: 12,
-      marginBottom: 20,
+    backgroundColor: colors.primary,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 12,
+    marginBottom: 20,
   },
   scanButtonText: {
-      color: 'white',
-      fontSize: 18,
-      fontWeight: 'bold',
-  },
-  divider: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 20,
-  },
-  line: {
-      flex: 1,
-      height: 1,
-      backgroundColor: '#e5e7eb',
-  },
-  orText: {
-      marginHorizontal: 12,
-      color: '#9ca3af',
-      fontWeight: 'bold',
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
   },
   input: {
-      backgroundColor: "#f3f4f6",
-      borderRadius: 12,
-      padding: 16,
-      fontSize: 24,
-      fontWeight: "bold",
-      textAlign: "center",
-      letterSpacing: 4,
-      marginBottom: 24,
-      borderWidth: 1,
-      borderColor: "#e5e7eb",
-      color: "#1f2937",
+    backgroundColor: "#f3f4f6",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 22,
+    textAlign: "center",
+    marginBottom: 24,
   },
   resultCard: {
-      borderRadius: 16,
-      padding: 24,
-      alignItems: "center",
-      borderWidth: 1,
+    padding: 24,
+    borderRadius: 16,
+    alignItems: "center",
   },
   successCard: {
-      backgroundColor: "#dcfce7",
-      borderColor: "#86efac",
+    backgroundColor: "#dcfce7",
   },
   errorCard: {
-      backgroundColor: "#fee2e2",
-      borderColor: "#fca5a5",
+    backgroundColor: "#fee2e2",
   },
   resultTitle: {
-      fontSize: 24,
-      fontWeight: "bold",
-      marginTop: 12,
-      marginBottom: 8,
+    fontSize: 22,
+    fontWeight: "bold",
+    marginTop: 12,
   },
   resultMessage: {
-      fontSize: 16,
-      textAlign: "center",
-      marginBottom: 16,
-      color: "#374151",
-  },
-  details: {
-      width: "100%",
-      backgroundColor: "rgba(255,255,255,0.5)",
-      padding: 12,
-      borderRadius: 8,
-  },
-  detailText: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: "#1f2937",
-      textAlign: "center",
-      marginBottom: 4,
+    marginTop: 8,
+    textAlign: "center",
   },
   cameraOverlay: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      position: 'relative',
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeCameraButton: {
-      position: 'absolute',
-      top: 50,
-      right: 20,
-      padding: 10,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      borderRadius: 20,
-      zIndex: 10,
+    position: "absolute",
+    top: 50,
+    right: 20,
   },
   scanArea: {
-      width: 250,
-      height: 250,
-      justifyContent: 'center',
-      alignItems: 'center',
-      position: 'relative',
+    width: 250,
+    height: 250,
   },
   scanText: {
-      color: 'white',
-      marginTop: 40,
-      fontSize: 16,
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 8,
-      overflow: 'hidden',
+    color: "white",
+    marginTop: 24,
   },
-  // Esquinas del marco (Visual)
-  cornerTL: { position: 'absolute', top: 0, left: 0, width: 40, height: 40, borderTopWidth: 4, borderLeftWidth: 4, borderColor: '#00bcd4' },
-  cornerTR: { position: 'absolute', top: 0, right: 0, width: 40, height: 40, borderTopWidth: 4, borderRightWidth: 4, borderColor: '#00bcd4' },
-  cornerBL: { position: 'absolute', bottom: 0, left: 0, width: 40, height: 40, borderBottomWidth: 4, borderLeftWidth: 4, borderColor: '#00bcd4' },
-  cornerBR: { position: 'absolute', bottom: 0, right: 0, width: 40, height: 40, borderBottomWidth: 4, borderRightWidth: 4, borderColor: '#00bcd4' },
+  cornerTL: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderColor: "#00bcd4",
+  },
+  cornerTR: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderColor: "#00bcd4",
+  },
+  cornerBL: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderColor: "#00bcd4",
+  },
+  cornerBR: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderColor: "#00bcd4",
+  },
 });

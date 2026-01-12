@@ -25,8 +25,28 @@ export default function HistoryScreen() {
     try {
       const data = await getMyTickets();
 
-      // 🛡️ SIEMPRE ARRAY
-      setTickets(Array.isArray(data) ? data : []);
+      if (!Array.isArray(data)) {
+        setTickets([]);
+        return;
+      }
+
+      /**
+       * 🔄 ADAPTADOR
+       * Convertimos el ticket del backend
+       * al Ticket que la UI espera
+       */
+      const mappedTickets: Ticket[] = data.map((t: any) => ({
+        _id: t._id,
+        routeName: t.trip?.route
+          ? `${t.trip.route.origin} → ${t.trip.route.destination}`
+          : "Ruta",
+        date: t.trip?.date ?? t.purchaseDate,
+        price: t.financials?.price ?? t.trip?.price ?? 0,
+        transport: t.trip?.transportType ?? "Lancha",
+        code: t.qrCode ?? t._id.slice(-6).toUpperCase(),
+      }));
+
+      setTickets(mappedTickets);
     } catch (error) {
       console.log("❌ Error cargando historial", error);
       setTickets([]);

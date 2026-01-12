@@ -1,22 +1,4 @@
-import axios from "axios";
-import Constants from "expo-constants";
-
-/**
- * Base URL tomada desde variables de entorno
- * - Local: http://localhost:3001/api
- * - Producción: https://tu-backend.onrender.com/api
- */
-const API_URL =
-  Constants.expoConfig?.extra?.API_URL ??
-  "http://localhost:3000/api";
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  timeout: 10000,
-});
+import { api } from "./api"; // 👈 Usar instancia centralizada
 
 export type LoginPayload = {
   email: string;

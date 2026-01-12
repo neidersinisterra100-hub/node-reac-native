@@ -16,11 +16,17 @@ export const MetricCard = ({ title, value, icon, iconColor, iconBackgroundColor 
     <Card style={styles.card}>
       <Card.Content style={styles.content}>
         <View>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.value}>{value}</Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.value}>{value}</Text>
         </View>
         <View style={[styles.iconContainer, iconBackgroundColor ? { backgroundColor: iconBackgroundColor } : {}]}>
-             <IconButton icon={icon} iconColor={iconColor || colors.dashboard.orange} size={20} style={{ margin: 0 }} />
+          <IconButton
+            icon={icon}
+            iconColor={iconColor || colors.primary}
+            size={20}
+            style={{ margin: 0 }}
+          />
+
         </View>
       </Card.Content>
     </Card>

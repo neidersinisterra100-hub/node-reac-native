@@ -1,7 +1,7 @@
 import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { Ship, Calendar, Clock, DollarSign, MapPin } from "lucide-react-native";
+import { Ship, Calendar, Clock } from "lucide-react-native";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -49,9 +49,9 @@ export default function AllTripsScreen() {
   const renderItem = ({ item }: { item: Trip }) => {
     const routeOrigin = item.route && typeof item.route === 'object' ? item.route.origin : 'Origen';
     const routeDest = item.route && typeof item.route === 'object' ? item.route.destination : 'Destino';
-    
+
     return (
-        <TouchableOpacity 
+        <TouchableOpacity
             style={styles.card}
             onPress={() => handlePressTrip(item)}
         >
@@ -92,7 +92,17 @@ export default function AllTripsScreen() {
 
   return (
     <AppContainer>
-      <AppHeader title="Próximos Zarpes" neon={true} />
+      {/* 
+        Cambios: 
+        1. showBack={true}
+        2. showAvatar={false} 
+      */}
+      <AppHeader 
+        title="Próximos Zarpes" 
+        neon={true} 
+        showBack={true}
+        showAvatar={false}
+      />
 
       {loading ? (
            <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
@@ -144,7 +154,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     iconBox: {
-        backgroundColor: '#eef2ff', 
+        backgroundColor: '#eef2ff',
         padding: 12,
         borderRadius: 12,
     },

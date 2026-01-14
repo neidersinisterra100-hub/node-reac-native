@@ -9,14 +9,14 @@ import { loadSession } from "../utils/authStorage";
 
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
-  "https://gramophonical-silvana-unmurmuringly.ngrok-free.dev/api";
+  "https://lighter-copyrights-generic-discusses.trycloudflare.com/api";
 
 export const api = axios.create({
   baseURL: API_URL,
   timeout: 15000,
   headers: {
     "bypass-tunnel-reminder": "true",
-    "ngrok-skip-browser-warning": "true",
+    
   },
 });
 
@@ -79,8 +79,8 @@ api.interceptors.request.use(
 // import { loadSession } from "../utils/authStorage";
 // import Constants from "expo-constants";
 
-// // 👇 URL ESTABLE DE NGROK
-// const API_URL = "https://gramophonical-silvana-unmurmuringly.ngrok-free.dev/api";
+// // 👇 URL ESTABLE DE CLOUDFLARE
+// const API_URL = "https://boundaries-eau-entities-counties.trycloudflare.com/api";
 
 // export const api = axios.create({
 //   baseURL: API_URL,

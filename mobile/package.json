@@ -1,8 +1,8 @@
 {
-  "name": "transmilenio-mobile",
+  "name": "NauticGo",
   "version": "1.0.0",
   "private": true,
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "index.js",
   "scripts": {
     "start": "expo start --tunnel",
     "copiar-pegar": "npx expo start | npx expo start --web | npx expo start --android",
@@ -22,7 +22,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "expo": "^54.0.30",
-    "expo-camera": "~15.0.16",
+    "expo-camera": "~17.0.10",
     "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.11",
     "expo-print": "~15.0.8",
@@ -39,15 +39,15 @@
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
-    "react-native-svg": "^15.12.1",
+    "react-native-svg": "15.12.1",
     "react-native-web": "^0.21.0",
+    "react-native-worklets": "0.5.1",
     "tailwind-merge": "^3.4.0",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",
     "@types/react": "~19.1.0",
-    "@types/react-native": "^0.72.8",
     "babel-preset-expo": "^54.0.9",
     "react-native-svg-transformer": "^1.5.2",
     "tailwindcss": "3.3.2",

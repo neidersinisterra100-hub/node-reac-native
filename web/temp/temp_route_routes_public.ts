@@ -1,0 +1,46 @@
+import { Router } from "express";
+import {
+  createRoute,
+  getCompanyRoutes,
+  toggleRouteActive,
+  deleteRoute
+} from "../controllers/route.controller.js";
+import { requireAuth } from "../middlewares/requireAuth.js";
+import { requireOwner } from "../middlewares/requireOwner.js";
+
+const router = Router();
+
+/* ================= PROTECTED ================= */
+
+// LISTAR RUTAS DE UNA EMPRESA (OWNER & ADMIN & USER)
+// Eliminamos requireOwner para que los usuarios puedan ver las rutas
+router.get(
+  "/company/:companyId",
+  requireAuth,
+  getCompanyRoutes
+);
+
+// CREAR RUTA → SOLO OWNER
+router.post(
+  "/",
+  requireAuth,
+  requireOwner,
+  createRoute
+);
+
+// TOGGLE RUTA (OWNER & ADMIN)
+router.patch(
+  "/:routeId",
+  requireAuth,
+  toggleRouteActive
+);
+
+// ELIMINAR RUTA (OWNER)
+router.delete(
+  "/:routeId",
+  requireAuth,
+  requireOwner,
+  deleteRoute
+);
+
+export default router;

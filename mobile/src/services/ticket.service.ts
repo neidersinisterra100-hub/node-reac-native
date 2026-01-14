@@ -191,7 +191,7 @@ export async function getTripsForPassengerControl() {
  */
 export async function getPassengersByTrip(tripId: string) {
   const response = await api.get(
-    `/tickets/passengers/${tripId}`
+    `/tickets/trip/${tripId}/passengers`
   );
   return response.data;
 }

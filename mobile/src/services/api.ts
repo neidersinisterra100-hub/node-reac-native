@@ -9,7 +9,7 @@ import { loadSession } from "../utils/authStorage";
 
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
-  "https://lighter-copyrights-generic-discusses.trycloudflare.com/api";
+  "https://utah-mega-sep-accessed.trycloudflare.com/api";
 
 export const api = axios.create({
   baseURL: API_URL,

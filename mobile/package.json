@@ -4,9 +4,9 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "expo start --tunnel",
+    "start": "expo start --lan",
     "copiar-pegar": "npx expo start | npx expo start --web | npx expo start --android",
-    "dev": "expo start --tunnel -c",
+    "dev": "expo start --lan -c",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",

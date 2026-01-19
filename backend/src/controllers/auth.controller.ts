@@ -1,227 +1,58 @@
-import { Request, Response } from "express";
-
-// Modelo de usuario (MongoDB)
-import User from "../models/User.js";
-
-// Librería para hashear contraseñas
-import bcrypt from "bcryptjs";
-
-// JWT para autenticación
-import jwt from "jsonwebtoken";
-
-// Modelo de empresa (para owner / admin)
-import { CompanyModel } from "../models/company.model.js";
-
-// Clave secreta para firmar tokens
-const JWT_SECRET = process.env.JWT_SECRET as string;
-
-/* =========================================================
-   REGISTER
-   ========================================================= */
-/**
- * POST /api/auth/register
- *
- * Responsabilidad:
- * - Crear usuario
- * - Hashear contraseña
- * - Generar JWT inicial
- *
- * ❌ No asigna empresa
- * ❌ No inicia sesión compleja
- */
-export async function register(req: Request, res: Response) {
-  try {
-    const { name, email, password } = req.body;
-
-    /* =========================
-       VALIDACIONES BÁSICAS
-       ========================= */
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        message: "Datos incompletos",
-      });
-    }
-
-    /* =========================
-       EVITAR DUPLICADOS
-       ========================= */
-    const exists = await User.findOne({ email });
-    if (exists) {
-      return res.status(400).json({
-        message: "El usuario ya existe",
-      });
-    }
-
-    /* =========================
-       HASH DE CONTRASEÑA
-       ========================= */
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    /* =========================
-       CREAR USUARIO
-       ========================= */
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-    });
-
-    /* =========================
-       FIRMAR JWT (CORREGIDO)
-       ========================= */
-    /**
-     * ⚠️ JWT NORMALIZADO
-     * - id     → string
-     * - email  → requerido por AuthUser
-     * - role   → permisos
-     * - companyId → undefined (aún no tiene empresa)
-     */
-    const token = jwt.sign(
-      {
-        id: user._id.toString(),
-        email: user.email,        // ✅ CORRECCIÓN CLAVE
-        role: user.role,
-        companyId: undefined,
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    /* =========================
-       RESPUESTA
-       ========================= */
-    return res.status(201).json({
-      user: {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-      token,
-    });
-  } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    return res.status(500).json({
-      message: "Error al registrar usuario",
-    });
-  }
-}
-
-/* =========================================================
-   LOGIN
-   ========================================================= */
-/**
- * POST /api/auth/login
- *
- * Responsabilidad:
- * - Validar credenciales
- * - Resolver empresa (si aplica)
- * - Firmar JWT completo
- */
-export async function login(req: Request, res: Response) {
-  try {
-    const { email, password } = req.body;
-
-    /* =========================
-       VALIDACIONES
-       ========================= */
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Email y contraseña requeridos",
-      });
-    }
-
-    /* =========================
-       BUSCAR USUARIO
-       ========================= */
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({
-        message: "Credenciales inválidas",
-      });
-    }
-
-    /* =========================
-       VALIDAR PASSWORD
-       ========================= */
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
-      return res.status(401).json({
-        message: "Credenciales inválidas",
-      });
-    }
-
-    /* =========================
-       RESOLVER EMPRESA (OWNER / ADMIN)
-       ========================= */
-    let companyId: string | undefined = undefined;
-
-    if (user.role === "owner" || user.role === "admin") {
-      const company = await CompanyModel.findOne({
-        owner: user._id, // ajustar si cambia el modelo
-      }).select("_id");
-
-      companyId = company?._id.toString();
-    }
-
-    /* =========================
-       FIRMAR JWT (CORREGIDO)
-       ========================= */
-    /**
-     * ⚠️ JWT CONSISTENTE CON AuthUser
-     */
-    const token = jwt.sign(
-      {
-        id: user._id.toString(),
-        email: user.email,        // ✅ CORRECCIÓN CLAVE
-        role: user.role,
-        companyId,
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    /* =========================
-       RESPUESTA
-       ========================= */
-    return res.json({
-      user: {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-      token,
-    });
-  } catch (error) {
-    console.error("LOGIN ERROR:", error);
-    return res.status(500).json({
-      message: "Error al iniciar sesión",
-    });
-  }
-}
-
-
-
 // import { Request, Response } from "express";
+
+// // ===============================
+// // MODELOS
+// // ===============================
 // import User from "../models/User.js";
-// import bcrypt from "bcryptjs";
-// import jwt from "jsonwebtoken";
 // import { CompanyModel } from "../models/company.model.js";
 
-// const JWT_SECRET = process.env.JWT_SECRET as string;
+// // ===============================
+// // LIBRERÍAS
+// // ===============================
+// import bcrypt from "bcryptjs";
+// import jwt from "jsonwebtoken";
 
-// /* ================= REGISTER ================= */
+// // ===============================
+// // SERVICIOS
+// // ===============================
+// import { sendPasswordResetEmail, sendVerificationEmail } from "../services/email.service.js";
+
+// // ===============================
+// // SECRETS
+// // ===============================
+// const JWT_SECRET = process.env.JWT_SECRET as string;
+// const EMAIL_SECRET = process.env.EMAIL_SECRET as string;
+
+// /* =========================================================
+//    REGISTER
+//    ========================================================= */
+// /**
+//  * POST /api/auth/register
+//  *
+//  * Responsabilidad:
+//  * - Crear usuario
+//  * - Hashear contraseña
+//  * - Enviar email de verificación
+//  *
+//  * ❌ NO inicia sesión
+//  * ❌ NO devuelve JWT de login
+//  */
 // export async function register(req: Request, res: Response) {
 //   try {
 //     const { name, email, password } = req.body;
 
+//     /* =========================
+//        VALIDACIONES BÁSICAS
+//        ========================= */
 //     if (!name || !email || !password) {
 //       return res.status(400).json({
 //         message: "Datos incompletos",
 //       });
 //     }
 
+//     /* =========================
+//        EVITAR DUPLICADOS
+//        ========================= */
 //     const exists = await User.findOne({ email });
 //     if (exists) {
 //       return res.status(400).json({
@@ -229,33 +60,44 @@ export async function login(req: Request, res: Response) {
 //       });
 //     }
 
+//     /* =========================
+//        HASH DE CONTRASEÑA
+//        ========================= */
 //     const hashedPassword = await bcrypt.hash(password, 10);
 
+//     /* =========================
+//        CREAR USUARIO (NO VERIFICADO)
+//        ========================= */
 //     const user = await User.create({
 //       name,
 //       email,
 //       password: hashedPassword,
+//       verified: false, // 🔐 CLAVE: email aún no confirmado
 //     });
 
-//     // 🔒 Registrar no tiene empresa todavía
-//     const token = jwt.sign(
-//       {
-//         id: user._id.toString(),
-//         role: user.role,
-//         companyId: undefined,
-//       },
-//       JWT_SECRET,
-//       { expiresIn: "7d" }
+//     /* =========================
+//        TOKEN DE VERIFICACIÓN
+//        ========================= */
+//     /**
+//      * ⚠️ ESTE TOKEN NO ES DE LOGIN
+//      * Solo sirve para verificar el correo
+//      */
+//     const verificationToken = jwt.sign(
+//       { userId: user._id.toString() },
+//       EMAIL_SECRET,
+//       { expiresIn: "24h" }
 //     );
 
+//     /* =========================
+//        ENVIAR EMAIL DE VERIFICACIÓN
+//        ========================= */
+//     await sendVerificationEmail(user.email, verificationToken);
+
+//     /* =========================
+//        RESPUESTA
+//        ========================= */
 //     return res.status(201).json({
-//       user: {
-//         id: user._id.toString(),
-//         name: user.name,
-//         email: user.email,
-//         role: user.role,
-//       },
-//       token,
+//       message: "Revisa tu correo para verificar tu cuenta",
 //     });
 //   } catch (error) {
 //     console.error("REGISTER ERROR:", error);
@@ -265,17 +107,34 @@ export async function login(req: Request, res: Response) {
 //   }
 // }
 
-// /* ================= LOGIN ================= */
+// /* =========================================================
+//    LOGIN
+//    ========================================================= */
+// /**
+//  * POST /api/auth/login
+//  *
+//  * Responsabilidad:
+//  * - Validar credenciales
+//  * - Bloquear si email no está verificado
+//  * - Resolver empresa
+//  * - Firmar JWT de sesión
+//  */
 // export async function login(req: Request, res: Response) {
 //   try {
 //     const { email, password } = req.body;
 
+//     /* =========================
+//        VALIDACIONES
+//        ========================= */
 //     if (!email || !password) {
 //       return res.status(400).json({
 //         message: "Email y contraseña requeridos",
 //       });
 //     }
 
+//     /* =========================
+//        BUSCAR USUARIO
+//        ========================= */
 //     const user = await User.findOne({ email });
 //     if (!user) {
 //       return res.status(401).json({
@@ -283,6 +142,9 @@ export async function login(req: Request, res: Response) {
 //       });
 //     }
 
+//     /* =========================
+//        VALIDAR PASSWORD
+//        ========================= */
 //     const isValid = await bcrypt.compare(password, user.password);
 //     if (!isValid) {
 //       return res.status(401).json({
@@ -290,20 +152,35 @@ export async function login(req: Request, res: Response) {
 //       });
 //     }
 
-//     // 🔎 Buscar empresa asociada (owner / admin)
+//     /* =========================
+//        BLOQUEAR SI NO VERIFICADO
+//        ========================= */
+//     if (!user.verified) {
+//       return res.status(403).json({
+//         message: "Debes verificar tu correo antes de iniciar sesión",
+//       });
+//     }
+
+//     /* =========================
+//        RESOLVER EMPRESA (OWNER / ADMIN)
+//        ========================= */
 //     let companyId: string | undefined = undefined;
 
 //     if (user.role === "owner" || user.role === "admin") {
 //       const company = await CompanyModel.findOne({
-//         owner: user._id, // ajusta si tu modelo usa otro campo
+//         owner: user._id,
 //       }).select("_id");
 
 //       companyId = company?._id.toString();
 //     }
 
+//     /* =========================
+//        FIRMAR JWT DE SESIÓN
+//        ========================= */
 //     const token = jwt.sign(
 //       {
 //         id: user._id.toString(),
+//         email: user.email,
 //         role: user.role,
 //         companyId,
 //       },
@@ -311,6 +188,9 @@ export async function login(req: Request, res: Response) {
 //       { expiresIn: "7d" }
 //     );
 
+//     /* =========================
+//        RESPUESTA
+//        ========================= */
 //     return res.json({
 //       user: {
 //         id: user._id.toString(),
@@ -327,3 +207,619 @@ export async function login(req: Request, res: Response) {
 //     });
 //   }
 // }
+
+// /* =========================================================
+//    VERIFY EMAIL
+//    ========================================================= */
+// /**
+//  * GET /api/auth/verify-email
+//  *
+//  * Responsabilidad:
+//  * - Validar token de verificación
+//  * - Marcar usuario como verificado
+//  * - Redirigir al frontend (login)
+//  *
+//  * 🔐 Seguridad:
+//  * - Token firmado con EMAIL_SECRET
+//  * - Expira automáticamente (24h)
+//  */
+// export async function verifyEmail(req: Request, res: Response) {
+//   try {
+//     const { token } = req.query;
+
+//     /* =========================
+//        VALIDAR TOKEN
+//        ========================= */
+//     if (!token || typeof token !== "string") {
+//       return res.status(400).json({
+//         message: "Token de verificación inválido",
+//       });
+//     }
+
+//     /* =========================
+//        DECODIFICAR TOKEN
+//        ========================= */
+//     const decoded = jwt.verify(token, EMAIL_SECRET) as {
+//       userId: string;
+//     };
+
+//     /* =========================
+//        BUSCAR USUARIO
+//        ========================= */
+//     const user = await User.findById(decoded.userId);
+
+//     if (!user) {
+//       return res.status(404).json({
+//         message: "Usuario no encontrado",
+//       });
+//     }
+
+//     /* =========================
+//        EVITAR DOBLE VERIFICACIÓN
+//        ========================= */
+//     if (user.verified) {
+//       return res.redirect(
+//         `${process.env.FRONTEND_URL}/login?verified=already`
+//       );
+//     }
+
+//     /* =========================
+//        MARCAR COMO VERIFICADO
+//        ========================= */
+//     user.verified = true;
+//     await user.save();
+
+//     /* =========================
+//        REDIRIGIR AL FRONTEND
+//        ========================= */
+//     return res.redirect(
+//       `${process.env.FRONTEND_URL}/login?verified=success`
+//     );
+//   } catch (error) {
+//     console.error("VERIFY EMAIL ERROR:", error);
+
+//     return res.status(400).json({
+//       message: "Token expirado o inválido",
+//     });
+//   }
+// }
+
+// export async function resendVerificationEmail(
+//   req: Request,
+//   res: Response
+// ) {
+//   try {
+//     const { email } = req.body;
+
+//     if (!email) {
+//       return res.status(400).json({
+//         message: "Email requerido",
+//       });
+//     }
+
+//     const user = await User.findOne({ email });
+
+//     if (!user) {
+//       return res.status(404).json({
+//         message: "Usuario no encontrado",
+//       });
+//     }
+
+//     if (user.verified) {
+//       return res.status(400).json({
+//         message: "El correo ya está verificado",
+//       });
+//     }
+
+//     const token = jwt.sign(
+//       { userId: user._id.toString() },
+//       EMAIL_SECRET,
+//       { expiresIn: "24h" }
+//     );
+    
+//     await sendVerificationEmail(user.email, token);
+
+//     return res.json({
+//       message: "Correo de verificación reenviado",
+//     });
+//   } catch (error) {
+//     console.error("RESEND VERIFICATION ERROR:", error);
+//     return res.status(500).json({
+//       message: "Error al reenviar verificación",
+//     });
+//   }
+// }
+
+// /* =========================================================
+//    REQUEST PASSWORD RESET
+//    ========================================================= */
+// /**
+//  * POST /api/auth/request-password-reset
+//  *
+//  * Responsabilidad:
+//  * - Validar email
+//  * - Generar token temporal
+//  * - Enviar email con link de recuperación
+//  */
+// export async function requestPasswordReset(
+//   req: Request,
+//   res: Response
+// ) {
+//   try {
+//     const { email } = req.body;
+
+//     if (!email) {
+//       return res.status(400).json({
+//         message: "Email requerido",
+//       });
+//     }
+
+//     const user = await User.findOne({ email });
+
+//     /**
+//      * ⚠️ Seguridad:
+//      * NO revelamos si el email existe o no
+//      */
+//     if (!user) {
+//       return res.json({
+//         message:
+//           "Si el correo existe, te enviaremos instrucciones para recuperar tu contraseña",
+//       });
+//     }
+
+//     const resetToken = jwt.sign(
+//       { userId: user._id.toString() },
+//       EMAIL_SECRET,
+//       { expiresIn: "15m" } // corto por seguridad
+//     );
+
+//     await sendPasswordResetEmail(user.email, resetToken);
+
+//     return res.json({
+//       message:
+//         "Si el correo existe, te enviaremos instrucciones para recuperar tu contraseña",
+//     });
+//   } catch (error) {
+//     console.error("REQUEST PASSWORD RESET ERROR:", error);
+//     return res.status(500).json({
+//       message: "Error al solicitar recuperación",
+//     });
+//   }
+// }
+
+// /* =========================================================
+//    RESET PASSWORD
+//    ========================================================= */
+// /**
+//  * POST /api/auth/reset-password
+//  *
+//  * Responsabilidad:
+//  * - Validar token
+//  * - Hashear nueva contraseña
+//  * - Guardarla
+//  */
+// export async function resetPassword(
+//   req: Request,
+//   res: Response
+// ) {
+//   try {
+//     const { token, password } = req.body;
+
+//     if (!token || !password) {
+//       return res.status(400).json({
+//         message: "Token y contraseña requeridos",
+//       });
+//     }
+
+//     if (password.length < 6) {
+//       return res.status(400).json({
+//         message: "La contraseña debe tener al menos 6 caracteres",
+//       });
+//     }
+
+//     const decoded = jwt.verify(token, EMAIL_SECRET) as {
+//       userId: string;
+//     };
+
+//     const user = await User.findById(decoded.userId);
+
+//     if (!user) {
+//       return res.status(404).json({
+//         message: "Usuario no encontrado",
+//       });
+//     }
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     user.password = hashedPassword;
+//     await user.save();
+
+//     return res.json({
+//       message: "Contraseña actualizada correctamente",
+//     });
+//   } catch (error) {
+//     console.error("RESET PASSWORD ERROR:", error);
+//     return res.status(400).json({
+//       message: "Token inválido o expirado",
+//     });
+//   }
+// }
+
+
+import { Request, Response } from "express";
+
+// ===============================
+// MODELOS
+// ===============================
+import User from "../models/User.js";
+import { CompanyModel } from "../models/company.model.js";
+
+// ===============================
+// LIBRERÍAS
+// ===============================
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+// ===============================
+// SERVICIOS
+// ===============================
+import {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from "../services/email.service.js";
+
+// ===============================
+// SECRETS
+// ===============================
+const JWT_SECRET = process.env.JWT_SECRET as string;
+const EMAIL_SECRET = process.env.RESEND_API_KEY as string;
+console.log("🔎 EMAIL_SECRET cargado:", EMAIL_SECRET);
+
+/* =========================================================
+   REGISTER
+   ========================================================= */
+export async function register(req: Request, res: Response) {
+  try {
+    const { name, email, password } = req.body;
+
+    console.log("🟢 REGISTER iniciado");
+    console.log("📧 Email recibido:", email);
+
+    if (!name || !email || !password) {
+      console.log("❌ Datos incompletos");
+      return res.status(400).json({
+        message: "Datos incompletos",
+      });
+    }
+
+    const exists = await User.findOne({ email });
+    if (exists) {
+      console.log("⚠️ Usuario ya existe:", email);
+      return res.status(400).json({
+        message: "El usuario ya existe",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log("🔐 Password hasheada");
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      verified: false,
+    });
+
+    console.log("👤 Usuario creado con ID:", user._id.toString());
+
+    const verificationToken = jwt.sign(
+      { userId: user._id.toString() },
+      EMAIL_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    console.log("🔑 Token de verificación generado");
+    console.log("📨 Enviando email de verificación a:", user.email);
+
+    await sendVerificationEmail(user.email, verificationToken);
+
+    console.log("✅ sendVerificationEmail ejecutado correctamente");
+
+    return res.status(201).json({
+      message: "Revisa tu correo para verificar tu cuenta",
+    });
+  } catch (error) {
+    console.error("❌ REGISTER ERROR:", error);
+    return res.status(500).json({
+      message: "Error al registrar usuario",
+    });
+  }
+}
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+export async function login(req: Request, res: Response) {
+  try {
+    const { email, password } = req.body;
+
+    console.log("🟡 LOGIN intento:", email);
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email y contraseña requeridos",
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log("❌ Usuario no encontrado");
+      return res.status(401).json({
+        message: "Credenciales inválidas",
+      });
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      console.log("❌ Password incorrecta");
+      return res.status(401).json({
+        message: "Credenciales inválidas",
+      });
+    }
+
+    if (!user.verified) {
+      console.log("⚠️ Usuario NO verificado:", email);
+      return res.status(403).json({
+        message: "Debes verificar tu correo antes de iniciar sesión",
+      });
+    }
+
+    let companyId: string | undefined = undefined;
+
+    if (user.role === "owner" || user.role === "admin") {
+      const company = await CompanyModel.findOne({
+        owner: user._id,
+      }).select("_id");
+
+      companyId = company?._id.toString();
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        companyId,
+      },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    console.log("✅ LOGIN exitoso:", email);
+
+    return res.json({
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error("❌ LOGIN ERROR:", error);
+    return res.status(500).json({
+      message: "Error al iniciar sesión",
+    });
+  }
+}
+
+/* =========================================================
+   VERIFY EMAIL
+   ========================================================= */
+export async function verifyEmail(req: Request, res: Response) {
+  try {
+    const { token } = req.query;
+
+    console.log("🔗 VERIFY EMAIL llamado");
+
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({
+        message: "Token de verificación inválido",
+      });
+    }
+
+    const decoded = jwt.verify(token, EMAIL_SECRET) as {
+      userId: string;
+    };
+
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Usuario no encontrado",
+      });
+    }
+
+    if (user.verified) {
+      console.log("ℹ️ Usuario ya estaba verificado");
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/login?verified=already`
+      );
+    }
+
+    user.verified = true;
+    await user.save();
+
+    console.log("✅ Usuario verificado:", user.email);
+
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/login?verified=success`
+    );
+  } catch (error) {
+    console.error("❌ VERIFY EMAIL ERROR:", error);
+    return res.status(400).json({
+      message: "Token expirado o inválido",
+    });
+  }
+}
+
+/* =========================================================
+   RESEND VERIFICATION EMAIL
+   ========================================================= */
+export async function resendVerificationEmail(
+  req: Request,
+  res: Response
+) {
+  try {
+    const { email } = req.body;
+
+    console.log("🔄 Reenvío de verificación solicitado:", email);
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Email requerido",
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Usuario no encontrado",
+      });
+    }
+
+    if (user.verified) {
+      return res.status(400).json({
+        message: "El correo ya está verificado",
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: user._id.toString() },
+      EMAIL_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    console.log("📨 Reenviando email de verificación a:", email);
+
+    await sendVerificationEmail(user.email, token);
+
+    console.log("✅ Email de verificación reenviado");
+
+    return res.json({
+      message: "Correo de verificación reenviado",
+    });
+  } catch (error) {
+    console.error("❌ RESEND VERIFICATION ERROR:", error);
+    return res.status(500).json({
+      message: "Error al reenviar verificación",
+    });
+  }
+}
+
+/* =========================================================
+   REQUEST PASSWORD RESET
+   ========================================================= */
+export async function requestPasswordReset(
+  req: Request,
+  res: Response
+) {
+  try {
+    const { email } = req.body;
+
+    console.log("🔐 Password reset solicitado para:", email);
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Email requerido",
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      console.log("ℹ️ Email no registrado (respuesta neutra)");
+      return res.json({
+        message:
+          "Si el correo existe, te enviaremos instrucciones para recuperar tu contraseña",
+      });
+    }
+
+    const resetToken = jwt.sign(
+      { userId: user._id.toString() },
+      EMAIL_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    console.log("📨 Enviando email de reset a:", email);
+
+    await sendPasswordResetEmail(user.email, resetToken);
+
+    console.log("✅ Email de reset enviado");
+
+    return res.json({
+      message:
+        "Si el correo existe, te enviaremos instrucciones para recuperar tu contraseña",
+    });
+  } catch (error) {
+    console.error("❌ REQUEST PASSWORD RESET ERROR:", error);
+    return res.status(500).json({
+      message: "Error al solicitar recuperación",
+    });
+  }
+}
+
+/* =========================================================
+   RESET PASSWORD
+   ========================================================= */
+export async function resetPassword(
+  req: Request,
+  res: Response
+) {
+  try {
+    const { token, password } = req.body;
+
+    console.log("🔑 RESET PASSWORD llamado");
+
+    if (!token || !password) {
+      return res.status(400).json({
+        message: "Token y contraseña requeridos",
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        message: "La contraseña debe tener al menos 6 caracteres",
+      });
+    }
+
+    const decoded = jwt.verify(token, EMAIL_SECRET) as {
+      userId: string;
+    };
+
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Usuario no encontrado",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    console.log("✅ Contraseña actualizada para:", user.email);
+
+    return res.json({
+      message: "Contraseña actualizada correctamente",
+    });
+  } catch (error) {
+    console.error("❌ RESET PASSWORD ERROR:", error);
+    return res.status(400).json({
+      message: "Token inválido o expirado",
+    });
+  }
+}

@@ -15,31 +15,27 @@ export const getTrips: RequestHandler = async (_req, res) => {
       .populate({
         path: "route",
         match: { active: true },
-        populate: { path: "company" },
+        populate: { path: "company", select: "name" },
       })
-      .populate("company", "name") // 👈 POPULATE COMPANY NAME
+      .populate("company", "name")
       .sort({ createdAt: -1 });
 
-    // 🔒 Elimina viajes cuya ruta fue filtrada
-    const filtered = trips.filter(
-      (trip) => trip.route !== null
-    );
+    // Eliminar viajes cuya ruta fue filtrada
+    const filtered = trips.filter((trip) => trip.route !== null);
 
-    res.json(filtered);
+    return res.json(filtered);
   } catch (error) {
-    console.error("❌ Error getTrips:", error);
-    res.status(500).json({
+    console.error("❌ [getTrips] Error:", error);
+    return res.status(500).json({
       message: "Error al obtener viajes",
     });
   }
 };
 
 /* =========================================================
-   LISTAR VIAJES POR ROL (INTERNO)
-   - Admin: solo viajes de su empresa
-   - Owner: viajes de sus empresas
+   LISTAR VIAJES PARA GESTIÓN (OWNER / ADMIN)
    ========================================================= */
-export const getTripsByRole: RequestHandler = async (req, res) => {
+export const getManageTrips: RequestHandler = async (req, res) => {
   try {
     const authReq = req as AuthRequest;
 
@@ -51,22 +47,24 @@ export const getTripsByRole: RequestHandler = async (req, res) => {
 
     let companyFilter: { _id?: string; owner?: string } = {};
 
-    /* 🔒 ADMIN: solo su empresa */
     if (role === "admin") {
       if (!companyId) {
-        return res.status(403).json({
-          message: "Admin sin empresa asignada",
-        });
+        return res
+          .status(403)
+          .json({ message: "Admin sin empresa asignada" });
       }
       companyFilter._id = companyId;
     }
 
-    /* 🔒 OWNER: todas sus empresas */
     if (role === "owner") {
       companyFilter.owner = userId;
     }
 
     const companies = await CompanyModel.find(companyFilter).select("_id");
+
+    if (companies.length === 0) {
+      return res.json([]);
+    }
 
     const companyIds = companies.map((c) => c._id);
 
@@ -75,14 +73,14 @@ export const getTripsByRole: RequestHandler = async (req, res) => {
     })
       .populate({
         path: "route",
-        select: "origin destination",
+        populate: { path: "company", select: "name" },
       })
       .sort({ createdAt: -1 });
 
-    res.json(trips);
+    return res.json(trips);
   } catch (error) {
-    console.error("❌ Error getTripsByRole:", error);
-    res.status(500).json({
+    console.error("❌ [getManageTrips] Error:", error);
+    return res.status(500).json({
       message: "Error al obtener viajes",
     });
   }
@@ -91,19 +89,22 @@ export const getTripsByRole: RequestHandler = async (req, res) => {
 /* =========================================================
    CREAR VIAJE (SOLO OWNER)
    ========================================================= */
+   
 export const createTrip: RequestHandler = async (req, res) => {
+  console.log("🟢 [createTrip] BODY:", req.body);
+
   try {
     const authReq = req as AuthRequest;
 
-    /* 🔒 AUTENTICACIÓN */
+    console.log("🟢 [createTrip] USER:", authReq.user);
+
     if (!authReq.user) {
-      return res.status(401).json({
-        message: "No autenticado",
-      });
+      console.log("🔴 No autenticado");
+      return res.status(401).json({ message: "No autenticado" });
     }
 
-    /* 🔒 SOLO OWNER */
     if (authReq.user.role !== "owner") {
+      console.log("🔴 No es owner:", authReq.user.role);
       return res.status(403).json({
         message: "Solo los owners pueden crear viajes",
       });
@@ -114,37 +115,54 @@ export const createTrip: RequestHandler = async (req, res) => {
       date,
       departureTime,
       price,
+      capacity,
       transportType,
     } = req.body;
 
-    if (!routeId || !date || !departureTime || price == null) {
+    console.log("🟢 [createTrip] Datos:", {
+      routeId,
+      date,
+      departureTime,
+      price,
+      capacity,
+      transportType,
+    });
+
+    if (
+      !routeId ||
+      !date ||
+      !departureTime ||
+      price == null ||
+      capacity == null
+    ) {
+      console.log("🔴 Faltan campos");
       return res.status(400).json({
         message:
-          "routeId, date, departureTime y price son obligatorios",
+          "routeId, date, departureTime, price y capacity son obligatorios",
       });
     }
 
-    /* =====================================================
-       VALIDAR RUTA
-       ===================================================== */
-    const route = await RouteModel.findById(routeId);
-
-    if (!route) {
-      return res.status(404).json({
-        message: "Ruta no encontrada",
-      });
-    }
-
-    if (!route.active) {
+    if (capacity <= 0) {
+      console.log("🔴 Capacity inválida:", capacity);
       return res.status(400).json({
-        message: "No se pueden crear viajes en rutas inactivas",
+        message: "La capacidad debe ser mayor a 0",
       });
     }
 
-    /* =====================================================
-       VALIDAR EMPRESA
-       ===================================================== */
+    console.log("🟢 Buscando ruta...");
+    const route = await RouteModel.findById(routeId);
+    console.log("🟢 Ruta:", route);
+
+    if (!route || !route.active) {
+      console.log("🔴 Ruta inválida o inactiva");
+      return res.status(400).json({
+        message: "Ruta inválida o inactiva",
+      });
+    }
+
+    console.log("🟢 Buscando empresa...");
     const company = await CompanyModel.findById(route.company);
+    console.log("🟢 Empresa:", company);
 
     if (!company) {
       return res.status(404).json({
@@ -153,14 +171,13 @@ export const createTrip: RequestHandler = async (req, res) => {
     }
 
     if (company.owner.toString() !== authReq.user.id) {
+      console.log("🔴 Owner no coincide");
       return res.status(403).json({
         message: "No eres owner de esta empresa",
       });
     }
 
-    /* =====================================================
-       CREAR VIAJE
-       ===================================================== */
+    console.log("🟢 Creando viaje en Mongo...");
     const trip = await TripModel.create({
       route: route._id,
       company: company._id,
@@ -168,18 +185,29 @@ export const createTrip: RequestHandler = async (req, res) => {
       date,
       departureTime,
       price,
+      capacity,
       transportType: transportType || "lancha",
       active: true,
     });
 
+    console.log("✅ Viaje creado:", trip);
+
     return res.status(201).json(trip);
-  } catch (error) {
-    console.error("❌ Error createTrip:", error);
+  } catch (error: any) {
+    console.error("🔥 ERROR REAL createTrip:", error);
+
+    if (error?.name === "ValidationError") {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
     return res.status(500).json({
-      message: "Error al crear el viaje",
+      message: "Error interno al crear el viaje",
     });
   }
 };
+
 
 /* =========================================================
    ACTIVAR / DESACTIVAR VIAJE (OWNER / ADMIN)
@@ -199,14 +227,13 @@ export const toggleTripActive: RequestHandler = async (req, res) => {
       return res.status(404).json({ message: "Viaje no encontrado" });
     }
 
-    const company = trip.company as unknown as { _id: string; owner: { toString: () => string } | string };
+    const company: any = trip.company;
 
     const isOwner = company.owner.toString() === authReq.user.id;
     const isAdmin =
       authReq.user.role === "admin" &&
       authReq.user.companyId === company._id.toString();
 
-    /* 🔒 VALIDACIÓN DE PERMISOS */
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
         message: "No autorizado para modificar este viaje",
@@ -216,10 +243,10 @@ export const toggleTripActive: RequestHandler = async (req, res) => {
     trip.active = !trip.active;
     await trip.save();
 
-    res.json(trip);
+    return res.json(trip);
   } catch (error) {
-    console.error("❌ Error toggleTripActive:", error);
-    res.status(500).json({
+    console.error("❌ [toggleTripActive] Error:", error);
+    return res.status(500).json({
       message: "Error al cambiar estado del viaje",
     });
   }
@@ -243,9 +270,8 @@ export const deleteTrip: RequestHandler = async (req, res) => {
       return res.status(404).json({ message: "Viaje no encontrado" });
     }
 
-    const company = trip.company as unknown as { owner: { toString: () => string } | string };
+    const company: any = trip.company;
 
-    /* 🔒 SOLO OWNER */
     if (company.owner.toString() !== authReq.user.id) {
       return res.status(403).json({
         message: "No autorizado para eliminar este viaje",
@@ -254,111 +280,63 @@ export const deleteTrip: RequestHandler = async (req, res) => {
 
     await TripModel.findByIdAndDelete(tripId);
 
-    res.json({ message: "Viaje eliminado correctamente" });
+    return res.json({ message: "Viaje eliminado correctamente" });
   } catch (error) {
-    console.error("❌ Error deleteTrip:", error);
-    res.status(500).json({
+    console.error("❌ [deleteTrip] Error:", error);
+    return res.status(500).json({
       message: "Error al eliminar viaje",
     });
   }
 };
 
 /* =========================================================
-   LISTAR VIAJES PARA GESTIÓN (OWNER / ADMIN)
-   ========================================================= */
-export const getManageTrips: RequestHandler = async (req, res) => {
-  try {
-    const authReq = req as AuthRequest;
-
-    if (!authReq.user) {
-      return res.status(401).json({ message: "No autenticado" });
-    }
-
-    const { role, companyId, id: userId } = authReq.user;
-
-    let companyFilter: { _id?: string; owner?: string } = {};
-
-    // 🔒 ADMIN → solo su empresa
-    if (role === "admin") {
-      if (!companyId) {
-        return res.status(403).json({
-          message: "Admin sin empresa asignada",
-        });
-      }
-      companyFilter._id = companyId;
-    }
-
-    // 🔒 OWNER → todas sus empresas
-    if (role === "owner") {
-      companyFilter.owner = userId;
-    }
-
-    const companies = await CompanyModel.find(companyFilter).select("_id");
-    const companyIds = companies.map((c) => c._id);
-
-    const trips = await TripModel.find({
-      company: { $in: companyIds },
-    })
-      .populate({
-        path: "route",
-        populate: { path: "company" },
-      })
-      .sort({ createdAt: -1 });
-
-    res.json(trips);
-  } catch (error) {
-    console.error("❌ Error getManageTrips:", error);
-    res.status(500).json({
-      message: "Error al obtener viajes",
-    });
-  }
-};
-
-/* =========================================================
-   LISTAR VIAJES DE UNA EMPRESA ESPECÍFICA (PÚBLICO/PRIVADO)
+   LISTAR VIAJES DE UNA EMPRESA ESPECÍFICA
    ========================================================= */
 export const getCompanyTrips: RequestHandler = async (req, res) => {
   try {
     const authReq = req as AuthRequest;
     const { companyId } = req.params;
 
-    if (!authReq.user) {
-      return res.status(401).json({ message: "No autenticado" });
-    }
-
-    // Validar que la empresa exista
     const company = await CompanyModel.findById(companyId);
+
     if (!company) {
-        return res.status(404).json({ message: "Empresa no encontrada" });
+      return res.status(404).json({
+        message: "Empresa no encontrada",
+      });
     }
 
-    const isOwner = company.owner.toString() === authReq.user.id;
-    const isAdmin = authReq.user.role === 'admin' && authReq.user.companyId === companyId;
+    const isOwner =
+      authReq.user && company.owner.toString() === authReq.user.id;
+
+    const isAdmin =
+      authReq.user &&
+      authReq.user.role === "admin" &&
+      authReq.user.companyId === companyId;
+
     const hasPrivileges = isOwner || isAdmin;
 
-    // Construir filtro
-    let filter: any = { company: companyId };
+    const filter: any = { company: companyId };
 
-    // Si NO tiene privilegios (es usuario normal), solo ver viajes activos
     if (!hasPrivileges) {
-         // Validar que la empresa esté activa también
-         if (!company.active) {
-             return res.status(403).json({ message: "Esta empresa no está disponible" });
-         }
-         filter.active = true;
+      if (!company.active) {
+        return res.status(403).json({
+          message: "Empresa no disponible",
+        });
+      }
+      filter.active = true;
     }
 
     const trips = await TripModel.find(filter)
       .populate({
-          path: "route",
-          populate: { path: "company" }
+        path: "route",
+        populate: { path: "company", select: "name" },
       })
       .sort({ createdAt: -1 });
 
-    res.json(trips);
+    return res.json(trips);
   } catch (error) {
-    console.error("❌ Error getCompanyTrips:", error);
-    res.status(500).json({
+    console.error("❌ [getCompanyTrips] Error:", error);
+    return res.status(500).json({
       message: "Error al obtener viajes de la empresa",
     });
   }

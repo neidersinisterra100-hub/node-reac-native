@@ -2,43 +2,105 @@ import { api } from "./api";
 
 /* ================= TYPES ================= */
 
+/**
+ * Trip
+ *
+ * ⚠️ Nota:
+ * - availableSeats NO viene del backend aún
+ * - capacity SÍ existe y debe enviarse al crear
+ */
 export interface Trip {
   _id: string;
-  route: string | { _id: string, origin: string, destination: string }; // Populated or ID
-  company: string | { _id: string, name: string };
+
+  route:
+    | string
+    | {
+        _id: string;
+        origin: string;
+        destination: string;
+      };
+
+  company:
+    | string
+    | {
+        _id: string;
+        name: string;
+      };
+
   date: string;
   departureTime: string;
   price: number;
-  availableSeats: number;
-  transportType?: string; // Asegurar que exista
+  capacity: number; // 🔑 CLAVE
+  transportType: string;
+  active?: boolean;
 }
 
-/* ================= API ================= */
-
-export async function getTrips() {
-  const response = await api.get("/trips");
-  return response.data as Trip[];
+/* ================= GET TRIPS ================= */
+/**
+ * Reglas:
+ * - Owner / admin → /trips/manage (SOLO sus empresas)
+ * - Usuario / público → /trips (solo activos)
+ *
+ * 🔐 El backend decide qué devolver
+ */
+export async function getTrips(): Promise<Trip[]> {
+  try {
+    const { data } = await api.get<Trip[]>("/trips/manage");
+    return data;
+  } catch {
+    const { data } = await api.get<Trip[]>("/trips");
+    return data;
+  }
 }
+
+/* ================= CREATE TRIP ================= */
+/**
+ * Solo owner (validado en backend)
+ *
+ * ⚠️ capacity es OBLIGATORIO
+ * Si falta → backend responde 400 (correcto)
+ */
+// export async function createTrip(data: {
+//   routeId: string;
+//   date: string;
+//   departureTime: string;
+//   price: number;
+//   capacity: number;
+//   transportType: string;
+// }) {
+//   const { data: trip } = await api.post("/trips", data);
+//   return trip;
+// }
 
 export async function createTrip(data: {
   routeId: string;
   date: string;
   departureTime: string;
   price: number;
+  capacity: number; // 🔑 CLAVE
   transportType: string;
-}) {
-  const response = await api.post("/trips", data);
-  return response.data;
+}): Promise<Trip> {
+  const { data: trip } = await api.post<Trip>(
+    "/trips",
+    data
+  );
+  return trip;
 }
 
-export async function deleteTrip(id: string) {
-    const response = await api.delete(`/trips/${id}`);
-    return response.data;
+/* ================= DELETE TRIP ================= */
+/**
+ * Solo owner (validado en backend)
+ */
+export async function deleteTrip(
+  tripId: string
+): Promise<void> {
+  await api.delete(`/trips/${tripId}`);
 }
 
-// Objeto de compatibilidad
+/* ================= COMPAT ================= */
+
 export const tripService = {
-    getAll: getTrips,
-    create: createTrip,
-    delete: deleteTrip
+  getAll: getTrips,
+  create: createTrip,
+  delete: deleteTrip,
 };

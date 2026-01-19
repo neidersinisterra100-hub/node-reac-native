@@ -1,25 +1,28 @@
-import { Schema, model, Types } from 'mongoose';
+import { Schema, model, Types } from "mongoose";
 
 const tripSchema = new Schema(
   {
     route: {
       type: Types.ObjectId,
-      ref: 'Route',
+      ref: "Route",
       required: true,
+      index: true,
     },
     company: {
       type: Types.ObjectId,
-      ref: 'Company',
+      ref: "Company",
       required: true,
+      index: true, // 🔐 CLAVE: todas las queries filtran por company
     },
     createdBy: {
       type: Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     date: {
       type: String, // YYYY-MM-DD
       required: true,
+      index: true,
     },
     departureTime: {
       type: String, // HH:mm
@@ -28,24 +31,44 @@ const tripSchema = new Schema(
     price: {
       type: Number,
       required: true,
+      min: 0,
     },
     transportType: {
       type: String,
-      default: 'Lancha',
-    },
-    active: {
-      type: Boolean,
-      default: true,
+      default: "lancha", // 🔧 normalizado
+      enum: ["lancha", "metrera", "barco"],
     },
     capacity: {
       type: Number,
       required: true,
       min: 1,
-    }
+    },
+    active: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-export const TripModel = model('Trip', tripSchema);
+/* =========================================================
+   ÍNDICES COMPUESTOS (RENDIMIENTO + SEGURIDAD)
+   ========================================================= */
+
+// Para listados por empresa
+tripSchema.index({ company: 1, createdAt: -1 });
+
+// Para listados por fecha
+tripSchema.index({ company: 1, date: 1 });
+
+// 🔒 FUTURO (OPCIONAL):
+// Evitar viajes duplicados en misma ruta / fecha / hora
+// tripSchema.index(
+//   { company: 1, route: 1, date: 1, departureTime: 1 },
+//   { unique: true }
+// );
+
+export const TripModel = model("Trip", tripSchema);

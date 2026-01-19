@@ -5,6 +5,7 @@ import {
   useState,
   ReactNode,
 } from "react";
+
 import { User } from "../types/user";
 import {
   saveSession,
@@ -22,30 +23,16 @@ import {
    TIPOS DEL CONTEXTO DE AUTENTICACIÓN
    ========================================================= */
 
-/**
- * AuthContextType
- *
- * Define TODO lo que el resto de la app puede usar
- * relacionado con autenticación.
- *
- * ⚠️ Nota:
- * - El token NO se expone aquí
- * - El token vive en storage y en el cliente HTTP
- */
 type AuthContextType = {
   user: User | null;
   loading: boolean;
   error: string | null;
 
-  login: (payload: LoginPayload) => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<void>;
+  login: (payload: LoginPayload) => Promise<boolean>;
+  register: (payload: RegisterPayload) => Promise<boolean>;
   logout: () => Promise<void>;
 };
 
-/**
- * Contexto base.
- * Empieza como undefined para forzar el uso del Provider.
- */
 const AuthContext =
   createContext<AuthContextType | undefined>(undefined);
 
@@ -58,98 +45,68 @@ export function AuthProvider({
 }: {
   children: ReactNode;
 }) {
-  /* =========================
-     ESTADOS GLOBALES
-     ========================= */
-
-  /**
-   * user:
-   * - null → no autenticado
-   * - User → sesión activa
-   */
   const [user, setUser] = useState<User | null>(null);
-
-  /**
-   * loading:
-   * - true  → inicializando / login / register
-   * - false → listo
-   */
   const [loading, setLoading] = useState(true);
-
-  /**
-   * error:
-   * - mensajes legibles para UI
-   */
   const [error, setError] = useState<string | null>(null);
 
-  /* =======================================================
-     RESTAURAR SESIÓN (AL ABRIR LA APP)
-     ======================================================= */
+  /* =====================================================
+     RESTORE SESSION (BOOTSTRAP)
+     ===================================================== */
 
   useEffect(() => {
-    /**
-     * restoreSession
-     *
-     * Se ejecuta UNA sola vez al montar la app.
-     *
-     * Responsabilidad:
-     * - Leer storage (AsyncStorage / SecureStore)
-     * - Restaurar usuario si existe sesión
-     */
+    let isMounted = true;
+
     const restoreSession = async () => {
       try {
         const session = await loadSession();
 
-        if (session?.user) {
+        if (session?.user && isMounted) {
           setUser(session.user);
         }
       } catch (err) {
         console.log("❌ Error restaurando sesión", err);
       } finally {
-        // ⚠️ MUY IMPORTANTE:
-        // loading pasa a false SOLO cuando termina restore
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     restoreSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  /* =======================================================
+  /* =====================================================
      LOGIN
-     ======================================================= */
+     ===================================================== */
 
   const login = async ({
     email,
     password,
-  }: LoginPayload) => {
+  }: LoginPayload): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
 
-      /**
-       * Llamada al backend:
-       * POST /api/auth/login
-       */
       const { user, token } = await loginRequest({
         email,
         password,
       });
 
-      /**
-       * Guardamos sesión:
-       * - user
-       * - token
-       *
-       * El token NO se guarda en estado React
-       */
       await saveSession(user, token);
-      setUser(user);
-    } catch (err: unknown) {
+
       /**
-       * Normalización del error
-       * (evita reventar la UI)
+       * 🔑 Punto CLAVE:
+       * seteamos user ANTES de quitar loading
+       * para que AppNavigator cambie de stack sin rebote
        */
+      setUser(user);
+
+      return true;
+    } catch (err: unknown) {
       const message =
         typeof (err as any)?.response?.data?.message === "string"
           ? (err as any).response.data.message
@@ -158,41 +115,40 @@ export function AuthProvider({
           : "Error al iniciar sesión";
 
       setError(message);
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  /* =======================================================
+  /* =====================================================
      REGISTER
-     ======================================================= */
+     ===================================================== */
 
   const register = async ({
     name,
     email,
     password,
-  }: RegisterPayload) => {
+  }: RegisterPayload): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
 
       /**
+       * Backend:
        * POST /api/auth/register
+       *
+       * ✔️ NO devuelve token
+       * ✔️ NO inicia sesión
+       * ✔️ Envía email de verificación
        */
-      const { user, token } =
-        await registerRequest({
-          name,
-          email,
-          password,
-        });
+      await registerRequest({
+        name,
+        email,
+        password,
+      });
 
-      /**
-       * ⚠️ CORRECCIÓN IMPORTANTE:
-       * - El backend YA envía role correcto
-       * - NO debemos transformarlo aquí
-       */
-      await saveSession(user, token);
-      setUser(user);
+      return true;
     } catch (err: unknown) {
       const message =
         typeof (err as any)?.response?.data?.message === "string"
@@ -202,27 +158,31 @@ export function AuthProvider({
           : "Error al registrar usuario";
 
       setError(message);
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  /* =======================================================
+  /* =====================================================
      LOGOUT
-     ======================================================= */
+     ===================================================== */
 
   const logout = async () => {
-    /**
-     * Limpia TODO rastro de sesión
-     */
-    await clearSession();
-    setUser(null);
-    setError(null);
+    setLoading(true);
+
+    try {
+      await clearSession();
+      setUser(null);
+      setError(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  /* =======================================================
+  /* =====================================================
      PROVIDER
-     ======================================================= */
+     ===================================================== */
 
   return (
     <AuthContext.Provider
@@ -241,15 +201,9 @@ export function AuthProvider({
 }
 
 /* =========================================================
-   HOOK DE CONSUMO
+   HOOK
    ========================================================= */
 
-/**
- * useAuth
- *
- * Garantiza que el hook solo se use
- * dentro de <AuthProvider>
- */
 export function useAuth() {
   const context = useContext(AuthContext);
 
@@ -284,22 +238,26 @@ export function useAuth() {
 //   LoginPayload,
 // } from "../services/auth.service";
 
-// /* ================= TYPES ================= */
+// /* =========================================================
+//    TIPOS DEL CONTEXTO DE AUTENTICACIÓN
+//    ========================================================= */
 
 // type AuthContextType = {
 //   user: User | null;
 //   loading: boolean;
-//   // token: string | null;
 //   error: string | null;
+
 //   login: (payload: LoginPayload) => Promise<void>;
-//   register: (payload: RegisterPayload) => Promise<void>;
+//   register: (payload: RegisterPayload) => Promise<boolean>;
 //   logout: () => Promise<void>;
 // };
 
 // const AuthContext =
 //   createContext<AuthContextType | undefined>(undefined);
 
-// /* ================= PROVIDER ================= */
+// /* =========================================================
+//    AUTH PROVIDER
+//    ========================================================= */
 
 // export function AuthProvider({
 //   children,
@@ -311,10 +269,12 @@ export function useAuth() {
 //   const [error, setError] = useState<string | null>(null);
 
 //   /* ================= RESTORE SESSION ================= */
+
 //   useEffect(() => {
 //     const restoreSession = async () => {
 //       try {
 //         const session = await loadSession();
+
 //         if (session?.user) {
 //           setUser(session.user);
 //         }
@@ -345,13 +305,13 @@ export function useAuth() {
 
 //       await saveSession(user, token);
 //       setUser(user);
-//     } catch (err: any) {
+//     } catch (err: unknown) {
 //       const message =
-//         typeof err?.response?.data?.message === "string"
-//           ? err.response.data.message
-//           : typeof err?.message === "string"
-//             ? err.message
-//             : "Error al iniciar sesión";
+//         typeof (err as any)?.response?.data?.message === "string"
+//           ? (err as any).response.data.message
+//           : err instanceof Error
+//           ? err.message
+//           : "Error al iniciar sesión";
 
 //       setError(message);
 //     } finally {
@@ -365,34 +325,36 @@ export function useAuth() {
 //     name,
 //     email,
 //     password,
-//   }: RegisterPayload) => {
+//   }: RegisterPayload): Promise<boolean> => {
 //     try {
 //       setLoading(true);
 //       setError(null);
 
-//       const { user, token } =
-//         await registerRequest({
-//           name,
-//           email,
-//           password,
-//         });
-
-//       await saveSession(user, token);
-//       setUser({
-//         ...user,
-//         role: user.role.toLowerCase(),
+//       /**
+//        * Backend:
+//        * POST /api/auth/register
+//        *
+//        * ✔️ NO devuelve token
+//        * ✔️ NO inicia sesión
+//        * ✔️ Envía email de verificación
+//        */
+//       await registerRequest({
+//         name,
+//         email,
+//         password,
 //       });
 
-//       // setUser(user);
-//     } catch (err: any) {
+//       return true;
+//     } catch (err: unknown) {
 //       const message =
-//         typeof err?.response?.data?.message === "string"
-//           ? err.response.data.message
-//           : typeof err?.message === "string"
-//             ? err.message
-//             : "Error al registrar usuario";
+//         typeof (err as any)?.response?.data?.message === "string"
+//           ? (err as any).response.data.message
+//           : err instanceof Error
+//           ? err.message
+//           : "Error al registrar usuario";
 
 //       setError(message);
+//       return false;
 //     } finally {
 //       setLoading(false);
 //     }
@@ -405,6 +367,8 @@ export function useAuth() {
 //     setUser(null);
 //     setError(null);
 //   };
+
+//   /* ================= PROVIDER ================= */
 
 //   return (
 //     <AuthContext.Provider
@@ -422,14 +386,18 @@ export function useAuth() {
 //   );
 // }
 
-// /* ================= HOOK ================= */
+// /* =========================================================
+//    HOOK
+//    ========================================================= */
 
 // export function useAuth() {
 //   const context = useContext(AuthContext);
+
 //   if (!context) {
 //     throw new Error(
 //       "useAuth debe usarse dentro de <AuthProvider>"
 //     );
 //   }
+
 //   return context;
 // }

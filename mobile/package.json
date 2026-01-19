@@ -1,10 +1,10 @@
 {
-  "name": "NauticGo",
+  "name": "nauticgo",
   "version": "1.0.0",
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "expo start --lan",
+    "start": "expo start",
     "copiar-pegar": "npx expo start | npx expo start --web | npx expo start --android",
     "dev": "expo start --lan -c",
     "android": "expo start --android",

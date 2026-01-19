@@ -62,6 +62,11 @@ export const createCompany: RequestHandler = async (req, res) => {
       },
     });
 
+    // ✅ VINCULAR EMPRESA AL OWNER
+    await UserModel.findByIdAndUpdate(authReq.user.id, {
+      $set: { companyId: company._id },
+    });
+
     return res.status(201).json(company);
   } catch (error) {
     console.error("❌ Error createCompany:", error);
@@ -120,12 +125,18 @@ export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
 
     await newCompany.save({ session });
 
-    /* ---------- 3. Vincular empresa al admin ---------- */
+    /* ---------- 3. Vincular empresa al ADMIN ---------- */
     newAdmin.managedCompanies = [
       newCompany._id as Types.ObjectId,
     ];
-
     await newAdmin.save({ session });
+
+    /* ---------- 4. VINCULAR empresa al OWNER ---------- */
+    await UserModel.findByIdAndUpdate(
+      ownerId,
+      { $set: { companyId: newCompany._id } },
+      { session }
+    );
 
     await session.commitTransaction();
 

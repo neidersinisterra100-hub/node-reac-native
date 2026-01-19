@@ -1,0 +1,46 @@
+services:
+  # ===============================
+  # MONGODB (REPLICA SET)
+  # ===============================
+  mongo:
+    image: mongo:8.0
+    container_name: mongo-dev
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+    # ✔️ Healthcheck para asegurar PRIMARY antes de que el backend arranque
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ===============================
+  # BACKEND API
+  # ===============================
+  backend:
+    build: .
+    container_name: backend-api
+    ports:
+      - "3000:3000"
+
+    # ✔️ Variables de entorno
+    env_file:
+      - .env
+
+    # ✔️ Espera a que Mongo esté realmente listo
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+# ===============================
+# VOLUMES
+# ===============================
+volumes:
+  mongo_data:

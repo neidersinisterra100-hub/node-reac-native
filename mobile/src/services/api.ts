@@ -18,6 +18,7 @@ import { loadSession } from "../utils/authStorage";
  * 🟢 1️⃣ BACKEND LOCAL — WEB (React en navegador)
  */
 const BASE_API = "http://localhost:3000/api";
+// const BASE_API = "http://192.168.1.36:3000/api";
 
 /**
  * 🟢 2️⃣ BACKEND LOCAL — EXPO GO / MÓVIL FÍSICO

@@ -1,27 +1,63 @@
 import { RequestHandler } from "express";
 import mongoose, { Types } from "mongoose";
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 
 import { CompanyModel } from "../models/company.model.js";
 import { UserModel } from "../models/user.model.js";
 import { AuthRequest } from "../middlewares/requireAuth.js";
 
 /* =========================================================
-   CREAR EMPRESA (SOLO OWNER)
+   ZOD SCHEMAS (VALIDACIÓN + NORMALIZACIÓN)
+   ========================================================= */
+
+const createCompanySchema = z.object({
+  name: z.string().min(2).transform((v) => v.trim()),
+  nit: z.string().optional().default(""),
+  legalRepresentative: z.string().optional().default(""),
+  licenseNumber: z.string().optional().default(""),
+  insurancePolicyNumber: z.string().optional().default(""),
+  compliance: z
+    .object({
+      hasLegalConstitution: z.boolean().optional(),
+      hasTransportLicense: z.boolean().optional(),
+      hasVesselRegistration: z.boolean().optional(),
+      hasCrewLicenses: z.boolean().optional(),
+      hasInsurance: z.boolean().optional(),
+      hasSafetyProtocols: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+const createCompanyWithAdminSchema = createCompanySchema.extend({
+  adminName: z.string().min(2).transform((v) => v.trim()),
+  adminEmail: z.string().email().transform((v) => v.toLowerCase()),
+  adminPassword: z.string().min(6),
+});
+
+/* =========================================================
+   CREAR EMPRESA (SOLO OWNER) — DEFENSIVO
    ========================================================= */
 export const createCompany: RequestHandler = async (req, res) => {
   try {
     const authReq = req as AuthRequest;
 
-    // 🔐 Validación de autenticación
     if (!authReq.user) {
       return res.status(401).json({ message: "No autenticado" });
     }
 
-    // 🔐 Solo OWNER puede crear empresas
     if (authReq.user.role !== "owner") {
       return res.status(403).json({
         message: "Solo los owners pueden crear empresas",
+      });
+    }
+
+    const parsed = createCompanySchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errors: parsed.error.flatten().fieldErrors,
       });
     }
 
@@ -32,25 +68,19 @@ export const createCompany: RequestHandler = async (req, res) => {
       licenseNumber,
       insurancePolicyNumber,
       compliance,
-    } = req.body;
-
-    if (!name || typeof name !== "string") {
-      return res.status(400).json({
-        message: "El nombre de la empresa es obligatorio",
-      });
-    }
+    } = parsed.data;
 
     const company = await CompanyModel.create({
-      name: name.trim(),
+      name,
       owner: authReq.user.id,
       balance: 0,
       active: true,
       admins: [],
 
-      nit: nit || "",
-      legalRepresentative: legalRepresentative || "",
-      licenseNumber: licenseNumber || "",
-      insurancePolicyNumber: insurancePolicyNumber || "",
+      nit,
+      legalRepresentative,
+      licenseNumber,
+      insurancePolicyNumber,
 
       compliance: {
         hasLegalConstitution: compliance?.hasLegalConstitution ?? false,
@@ -62,14 +92,14 @@ export const createCompany: RequestHandler = async (req, res) => {
       },
     });
 
-    // ✅ VINCULAR EMPRESA AL OWNER
+    // 🔐 Vincular empresa al OWNER
     await UserModel.findByIdAndUpdate(authReq.user.id, {
       $set: { companyId: company._id },
     });
 
     return res.status(201).json(company);
   } catch (error) {
-    console.error("❌ Error createCompany:", error);
+    console.error("❌ [createCompany] Error:", error);
     return res.status(500).json({
       message: "Error al crear la empresa",
     });
@@ -77,7 +107,7 @@ export const createCompany: RequestHandler = async (req, res) => {
 };
 
 /* =========================================================
-   CREAR EMPRESA + ADMIN (TRANSACCIÓN)
+   CREAR EMPRESA + ADMIN (TRANSACCIÓN SEGURA)
    ========================================================= */
 export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
   const session = await mongoose.startSession();
@@ -90,15 +120,28 @@ export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
       return res.status(403).json({ message: "No autorizado" });
     }
 
-    const ownerId = authReq.user.id;
+    const parsed = createCompanyWithAdminSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
 
     const {
       name,
       nit,
+      legalRepresentative,
+      licenseNumber,
+      insurancePolicyNumber,
+      compliance,
       adminName,
       adminEmail,
       adminPassword,
-    } = req.body;
+    } = parsed.data;
+
+    const ownerId = authReq.user.id;
 
     /* ---------- 1. Crear ADMIN ---------- */
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
@@ -121,17 +164,28 @@ export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
       owner: ownerId,
       admins: [newAdmin._id],
       active: true,
+
+      legalRepresentative,
+      licenseNumber,
+      insurancePolicyNumber,
+
+      compliance: {
+        hasLegalConstitution: compliance?.hasLegalConstitution ?? false,
+        hasTransportLicense: compliance?.hasTransportLicense ?? false,
+        hasVesselRegistration: compliance?.hasVesselRegistration ?? false,
+        hasCrewLicenses: compliance?.hasCrewLicenses ?? false,
+        hasInsurance: compliance?.hasInsurance ?? false,
+        hasSafetyProtocols: compliance?.hasSafetyProtocols ?? false,
+      },
     });
 
     await newCompany.save({ session });
 
     /* ---------- 3. Vincular empresa al ADMIN ---------- */
-    newAdmin.managedCompanies = [
-      newCompany._id as Types.ObjectId,
-    ];
+    newAdmin.managedCompanies = [newCompany._id as Types.ObjectId];
     await newAdmin.save({ session });
 
-    /* ---------- 4. VINCULAR empresa al OWNER ---------- */
+    /* ---------- 4. Vincular empresa al OWNER ---------- */
     await UserModel.findByIdAndUpdate(
       ownerId,
       { $set: { companyId: newCompany._id } },
@@ -150,7 +204,7 @@ export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
     });
   } catch (error) {
     await session.abortTransaction();
-    console.error("❌ Error createCompanyWithAdmin:", error);
+    console.error("❌ [createCompanyWithAdmin] Error:", error);
 
     return res.status(500).json({
       message: "Error al crear empresa y admin",
@@ -171,24 +225,20 @@ export const getMyCompanies: RequestHandler = async (req, res) => {
       return res.status(401).json({ message: "No autenticado" });
     }
 
-    const role = authReq.user.role;
+    let query: any = {};
 
-    let query = {};
-
-    // 👑 OWNER → empresas propias
-    if (role === "owner") {
-      query = { owner: authReq.user.id };
+    if (authReq.user.role === "owner") {
+      query.owner = authReq.user.id;
     }
 
-    // 🛠️ ADMIN → solo empresas asignadas
-    if (role === "admin") {
+    if (authReq.user.role === "admin") {
       const adminUser = await UserModel.findById(authReq.user.id);
 
       if (!adminUser?.managedCompanies?.length) {
         return res.json([]);
       }
 
-      query = { _id: { $in: adminUser.managedCompanies } };
+      query._id = { $in: adminUser.managedCompanies };
     }
 
     const companies = await CompanyModel.find(query).sort({
@@ -197,7 +247,7 @@ export const getMyCompanies: RequestHandler = async (req, res) => {
 
     return res.json(companies);
   } catch (error) {
-    console.error("❌ Error getMyCompanies:", error);
+    console.error("❌ [getMyCompanies] Error:", error);
     return res.status(500).json({
       message: "Error al obtener empresas",
     });
@@ -211,8 +261,10 @@ export const getCompanyAdmins: RequestHandler = async (req, res) => {
   try {
     const { companyId } = req.params;
 
-    const company = await CompanyModel.findById(companyId)
-      .populate("admins", "name email");
+    const company = await CompanyModel.findById(companyId).populate(
+      "admins",
+      "name email"
+    );
 
     if (!company) {
       return res.status(404).json({
@@ -222,7 +274,7 @@ export const getCompanyAdmins: RequestHandler = async (req, res) => {
 
     return res.json(company.admins ?? []);
   } catch (error) {
-    console.error("❌ Error getCompanyAdmins:", error);
+    console.error("❌ [getCompanyAdmins] Error:", error);
     return res.status(500).json({
       message: "Error al obtener admins",
     });
@@ -249,17 +301,14 @@ export const toggleCompanyActive: RequestHandler = async (req, res) => {
       });
     }
 
-    const isOwner =
-      company.owner.toString() === authReq.user.id;
+    const isOwner = company.owner.toString() === authReq.user.id;
 
-    /* ---------- ADMIN: validar que gestione la empresa ---------- */
     if (!isOwner && authReq.user.role === "admin") {
       const adminUser = await UserModel.findById(authReq.user.id);
 
       const managesCompany =
         adminUser?.managedCompanies?.some(
-          (id: Types.ObjectId) =>
-            id.toString() === companyId
+          (id: Types.ObjectId) => id.toString() === companyId
         ) ?? false;
 
       if (!managesCompany) {
@@ -280,7 +329,7 @@ export const toggleCompanyActive: RequestHandler = async (req, res) => {
 
     return res.json(company);
   } catch (error) {
-    console.error("❌ Error toggleCompanyActive:", error);
+    console.error("❌ [toggleCompanyActive] Error:", error);
     return res.status(500).json({
       message: "Error al cambiar estado de la empresa",
     });
@@ -319,7 +368,7 @@ export const deleteCompany: RequestHandler = async (req, res) => {
       message: "Empresa eliminada correctamente",
     });
   } catch (error) {
-    console.error("❌ Error deleteCompany:", error);
+    console.error("❌ [deleteCompany] Error:", error);
     return res.status(500).json({
       message: "Error al eliminar empresa",
     });

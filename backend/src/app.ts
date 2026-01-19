@@ -11,6 +11,9 @@ import scheduleRoutes from "./routes/schedule.routes.js";
 
 const app = express();
 
+/* =========================================================
+   CORS
+   ========================================================= */
 app.use(
   cors({
     origin: true,
@@ -28,15 +31,24 @@ app.use(
 app.options("*", cors());
 app.use(express.json());
 
+/* =========================================================
+   HEALTH CHECK
+   ========================================================= */
 app.get("/", (_req, res) => {
   res.status(200).send("API OK");
 });
 
+/* =========================================================
+   LOGGER SIMPLE
+   ========================================================= */
 app.use((req, _res, next) => {
   console.log("➡️", req.method, req.originalUrl);
   next();
 });
 
+/* =========================================================
+   ROUTES
+   ========================================================= */
 app.use("/api/auth", authRoutes);
 app.use("/api/companies", companyRoutes);
 app.use("/api/routes", routeRoutes);
@@ -45,9 +57,47 @@ app.use("/api/tickets", ticketRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/schedules", scheduleRoutes);
 
+/* =========================================================
+   404 — ENDPOINT NO ENCONTRADO
+   ========================================================= */
 app.use((_req, res) => {
-  res.status(404).json({ message: "Endpoint no encontrado" });
+  res.status(404).json({
+    message: "Endpoint no encontrado",
+  });
 });
+
+/* =========================================================
+   ERROR HANDLER GLOBAL (ESCUDO FINAL)
+   ========================================================= */
+app.use(
+  (
+    err: any,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    console.error("🔥 ERROR GLOBAL:", err);
+
+    // Error lanzado manualmente con status
+    if (err.status && err.message) {
+      return res.status(err.status).json({
+        message: err.message,
+      });
+    }
+
+    // Error de JSON malformado
+    if (err instanceof SyntaxError) {
+      return res.status(400).json({
+        message: "JSON inválido",
+      });
+    }
+
+    // Fallback seguro (NUNCA filtra stack)
+    return res.status(500).json({
+      message: "Error interno del servidor",
+    });
+  }
+);
 
 export default app;
 

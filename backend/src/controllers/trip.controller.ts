@@ -1,13 +1,33 @@
 import { RequestHandler } from "express";
+import { z } from "zod";
+
 import { TripModel } from "../models/trip.model.js";
 import { RouteModel } from "../models/route.model.js";
 import { CompanyModel } from "../models/company.model.js";
 import { AuthRequest } from "../middlewares/requireAuth.js";
+import { TRANSPORT_TYPES } from "../constants/enums.js";
+
+/* =========================================================
+   ZOD SCHEMA (VALIDACIÓN + NORMALIZACIÓN)
+   ========================================================= */
+
+const createTripSchema = z.object({
+  routeId: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  departureTime: z.string().regex(/^\d{2}:\d{2}$/),
+  price: z.number().min(0),
+  capacity: z.number().int().min(1),
+  transportType: z
+    .string()
+    .transform((v) => v.toLowerCase())
+    .refine((v) => TRANSPORT_TYPES.includes(v as any), {
+      message: "Tipo de transporte inválido",
+    })
+    .optional(),
+});
 
 /* =========================================================
    LISTAR VIAJES (PÚBLICO)
-   - Solo viajes activos
-   - Solo rutas activas
    ========================================================= */
 export const getTrips: RequestHandler = async (_req, res) => {
   try {
@@ -20,15 +40,11 @@ export const getTrips: RequestHandler = async (_req, res) => {
       .populate("company", "name")
       .sort({ createdAt: -1 });
 
-    // Eliminar viajes cuya ruta fue filtrada
     const filtered = trips.filter((trip) => trip.route !== null);
-
     return res.json(filtered);
   } catch (error) {
     console.error("❌ [getTrips] Error:", error);
-    return res.status(500).json({
-      message: "Error al obtener viajes",
-    });
+    return res.status(500).json({ message: "Error al obtener viajes" });
   }
 };
 
@@ -45,7 +61,7 @@ export const getManageTrips: RequestHandler = async (req, res) => {
 
     const { role, companyId, id: userId } = authReq.user;
 
-    let companyFilter: { _id?: string; owner?: string } = {};
+    let companyFilter: any = {};
 
     if (role === "admin") {
       if (!companyId) {
@@ -80,33 +96,34 @@ export const getManageTrips: RequestHandler = async (req, res) => {
     return res.json(trips);
   } catch (error) {
     console.error("❌ [getManageTrips] Error:", error);
-    return res.status(500).json({
-      message: "Error al obtener viajes",
-    });
+    return res.status(500).json({ message: "Error al obtener viajes" });
   }
 };
 
 /* =========================================================
-   CREAR VIAJE (SOLO OWNER)
+   CREAR VIAJE (SOLO OWNER) — DEFENSIVO
    ========================================================= */
-   
 export const createTrip: RequestHandler = async (req, res) => {
-  console.log("🟢 [createTrip] BODY:", req.body);
-
   try {
     const authReq = req as AuthRequest;
 
-    console.log("🟢 [createTrip] USER:", authReq.user);
-
     if (!authReq.user) {
-      console.log("🔴 No autenticado");
       return res.status(401).json({ message: "No autenticado" });
     }
 
     if (authReq.user.role !== "owner") {
-      console.log("🔴 No es owner:", authReq.user.role);
       return res.status(403).json({
         message: "Solo los owners pueden crear viajes",
+      });
+    }
+
+    // 🛡️ VALIDACIÓN + NORMALIZACIÓN
+    const parsed = createTripSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errors: parsed.error.flatten().fieldErrors,
       });
     }
 
@@ -116,53 +133,18 @@ export const createTrip: RequestHandler = async (req, res) => {
       departureTime,
       price,
       capacity,
-      transportType,
-    } = req.body;
+      transportType = "lancha",
+    } = parsed.data;
 
-    console.log("🟢 [createTrip] Datos:", {
-      routeId,
-      date,
-      departureTime,
-      price,
-      capacity,
-      transportType,
-    });
-
-    if (
-      !routeId ||
-      !date ||
-      !departureTime ||
-      price == null ||
-      capacity == null
-    ) {
-      console.log("🔴 Faltan campos");
-      return res.status(400).json({
-        message:
-          "routeId, date, departureTime, price y capacity son obligatorios",
-      });
-    }
-
-    if (capacity <= 0) {
-      console.log("🔴 Capacity inválida:", capacity);
-      return res.status(400).json({
-        message: "La capacidad debe ser mayor a 0",
-      });
-    }
-
-    console.log("🟢 Buscando ruta...");
     const route = await RouteModel.findById(routeId);
-    console.log("🟢 Ruta:", route);
 
     if (!route || !route.active) {
-      console.log("🔴 Ruta inválida o inactiva");
       return res.status(400).json({
         message: "Ruta inválida o inactiva",
       });
     }
 
-    console.log("🟢 Buscando empresa...");
     const company = await CompanyModel.findById(route.company);
-    console.log("🟢 Empresa:", company);
 
     if (!company) {
       return res.status(404).json({
@@ -171,13 +153,11 @@ export const createTrip: RequestHandler = async (req, res) => {
     }
 
     if (company.owner.toString() !== authReq.user.id) {
-      console.log("🔴 Owner no coincide");
       return res.status(403).json({
         message: "No eres owner de esta empresa",
       });
     }
 
-    console.log("🟢 Creando viaje en Mongo...");
     const trip = await TripModel.create({
       route: route._id,
       company: company._id,
@@ -186,28 +166,18 @@ export const createTrip: RequestHandler = async (req, res) => {
       departureTime,
       price,
       capacity,
-      transportType: transportType || "lancha",
+      transportType,
       active: true,
     });
 
-    console.log("✅ Viaje creado:", trip);
-
     return res.status(201).json(trip);
-  } catch (error: any) {
-    console.error("🔥 ERROR REAL createTrip:", error);
-
-    if (error?.name === "ValidationError") {
-      return res.status(400).json({
-        message: error.message,
-      });
-    }
-
+  } catch (error) {
+    console.error("🔥 [createTrip] Error:", error);
     return res.status(500).json({
       message: "Error interno al crear el viaje",
     });
   }
 };
-
 
 /* =========================================================
    ACTIVAR / DESACTIVAR VIAJE (OWNER / ADMIN)
@@ -290,7 +260,7 @@ export const deleteTrip: RequestHandler = async (req, res) => {
 };
 
 /* =========================================================
-   LISTAR VIAJES DE UNA EMPRESA ESPECÍFICA
+   LISTAR VIAJES DE UNA EMPRESA
    ========================================================= */
 export const getCompanyTrips: RequestHandler = async (req, res) => {
   try {

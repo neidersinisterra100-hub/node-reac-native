@@ -1,4 +1,5 @@
 import { Schema, model, Types } from "mongoose";
+import { TRANSPORT_TYPES } from "../constants/enums.js";
 
 const tripSchema = new Schema(
   {
@@ -35,8 +36,9 @@ const tripSchema = new Schema(
     },
     transportType: {
       type: String,
-      default: "lancha", // 🔧 normalizado
-      enum: ["lancha", "metrera", "barco"],
+      default: "lancha",
+      enum: TRANSPORT_TYPES,
+      set: (v: string) => v?.toLowerCase(), // 🛡️ normalización defensiva
     },
     capacity: {
       type: Number,

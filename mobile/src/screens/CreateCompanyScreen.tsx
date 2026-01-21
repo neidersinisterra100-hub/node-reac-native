@@ -15,10 +15,12 @@ import PrimaryButton from "../components/ui/PrimaryButton";
 
 import {
     createCompany,
+    createCompanyWithAdmin,
     CreateCompanyInput,
 } from "../services/company.service";
 import { useAuth } from "../context/AuthContext";
 import { colors } from "../theme/colors";
+import { Users, FileText, Building2, ShieldCheck } from "lucide-react-native";
 
 
 /**
@@ -34,6 +36,9 @@ type CreateCompanyForm = Omit<CreateCompanyInput, "compliance"> & {
         hasInsurance: boolean;
         hasSafetyProtocols: boolean;
     };
+    adminName: string;
+    adminEmail: string;
+    adminPassword: string;
 };
 
 /* =========================================================
@@ -71,6 +76,9 @@ export default function CreateCompanyScreen() {
             hasInsurance: false,
             hasSafetyProtocols: false,
         },
+        adminName: "",
+        adminEmail: "",
+        adminPassword: "",
     });
 
 
@@ -83,7 +91,7 @@ export default function CreateCompanyScreen() {
      * (name, nit, legalRepresentative, etc.)
      */
     const handleInputChange = (
-        field: keyof CreateCompanyInput,
+        field: keyof CreateCompanyForm,
         value: string
     ) => {
         setFormData((prev) => ({
@@ -132,7 +140,14 @@ export default function CreateCompanyScreen() {
         setLoading(true);
 
         try {
-            await createCompany(formData);
+            if (formData.adminEmail && formData.adminPassword) {
+                // Si hay datos de admin, usar creación transaccional
+                await createCompanyWithAdmin(formData);
+            } else {
+                // Creación simple
+                await createCompany(formData);
+            }
+
             Alert.alert("Éxito", "Empresa creada correctamente");
             navigation.goBack();
         } catch (error: any) {
@@ -157,16 +172,19 @@ export default function CreateCompanyScreen() {
             <ScrollView contentContainerStyle={{ padding: 16 }}>
                 {/* ===== INFO GENERAL ===== */}
                 <View className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
-                    <Text className="text-lg font-bold text-gray-800 mb-4">
-                        Información General
-                    </Text>
+                    <View className="flex-row items-center gap-2 mb-4">
+                        <Building2 size={20} color={colors.primary} />
+                        <Text className="text-lg font-bold text-gray-800">
+                            Información General
+                        </Text>
+                    </View>
 
                     <Text className="text-gray-500 mb-2 font-medium">
                         Nombre Comercial *
                     </Text>
                     <RNTextInput
                         className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 text-gray-800"
-                        placeholder="Ej: Transportes Pacífico"
+                        placeholder="Ej: NauticGo S.A."
                         placeholderTextColor="#9ca3af"
                         value={formData.name}
                         onChangeText={(text) =>
@@ -213,14 +231,60 @@ export default function CreateCompanyScreen() {
                     />
                 </View>
 
+                {/* ===== ADMINISTRADOR ===== */}
+                <View className="bg-blue-50/50 p-6 rounded-2xl shadow-sm border border-blue-100 mb-6">
+                    <View className="flex-row items-center gap-2 mb-4">
+                        <Users size={20} color="#1d4ed8" />
+                        <Text className="text-lg font-bold text-blue-800">
+                            Administrador Asignado
+                        </Text>
+                    </View>
+
+                    <Text className="text-blue-600 mb-2 font-medium">Nombre Admin *</Text>
+                    <RNTextInput
+                        className="bg-white border border-blue-200 rounded-xl p-4 mb-4 text-gray-800"
+                        placeholder="Nombre Completo"
+                        placeholderTextColor="#94a3b8"
+                        value={formData.adminName}
+                        onChangeText={(text) => handleInputChange("adminName", text)}
+                    />
+
+                    <Text className="text-blue-600 mb-2 font-medium">Email (Login) *</Text>
+                    <RNTextInput
+                        className="bg-white border border-blue-200 rounded-xl p-4 mb-4 text-gray-800"
+                        placeholder="admin@empresa.com"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        value={formData.adminEmail}
+                        onChangeText={(text) => handleInputChange("adminEmail", text)}
+                    />
+
+                    <Text className="text-blue-600 mb-2 font-medium">Contraseña *</Text>
+                    <RNTextInput
+                        className="bg-white border border-blue-200 rounded-xl p-4 mb-2 text-gray-800"
+                        placeholder="******"
+                        placeholderTextColor="#94a3b8"
+                        secureTextEntry
+                        value={formData.adminPassword}
+                        onChangeText={(text) => handleInputChange("adminPassword", text)}
+                    />
+                    <Text className="text-[10px] text-blue-500 italic mt-1">
+                        * Este usuario gestionará rutas y viajes de esta empresa.
+                    </Text>
+                </View>
+
                 {/* ===== COMPLIANCE ===== */}
                 <View className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
-                    <Text className="text-lg font-bold text-gray-800 mb-4">
-                        Checklist de Cumplimiento
-                    </Text>
+                    <View className="flex-row items-center gap-2 mb-4">
+                        <ShieldCheck size={20} color="#16a34a" />
+                        <Text className="text-lg font-bold text-gray-800">
+                            Checklist de Cumplimiento
+                        </Text>
+                    </View>
 
                     <ComplianceItem
-                        label="Constitución Legal"
+                        label="Constitución Legal (Cámara/RUT)"
                         value={formData.compliance.hasLegalConstitution}
                         onValueChange={(val) =>
                             handleComplianceChange(
@@ -231,7 +295,7 @@ export default function CreateCompanyScreen() {
                     />
 
                     <ComplianceItem
-                        label="Habilitación Transporte"
+                        label="Habilitación Transporte (Dimar/Min)"
                         value={formData.compliance.hasTransportLicense}
                         onValueChange={(val) =>
                             handleComplianceChange(
@@ -253,33 +317,11 @@ export default function CreateCompanyScreen() {
                     />
 
                     <ComplianceItem
-                        label="Licencias de Tripulación"
-                        value={formData.compliance.hasCrewLicenses}
-                        onValueChange={(val) =>
-                            handleComplianceChange(
-                                "hasCrewLicenses",
-                                val
-                            )
-                        }
-                    />
-
-                    <ComplianceItem
-                        label="Seguros Vigentes"
+                        label="Seguros Vigentes (RC/Pasajeros)"
                         value={formData.compliance.hasInsurance}
                         onValueChange={(val) =>
                             handleComplianceChange(
                                 "hasInsurance",
-                                val
-                            )
-                        }
-                    />
-
-                    <ComplianceItem
-                        label="Protocolos de Seguridad"
-                        value={formData.compliance.hasSafetyProtocols}
-                        onValueChange={(val) =>
-                            handleComplianceChange(
-                                "hasSafetyProtocols",
                                 val
                             )
                         }

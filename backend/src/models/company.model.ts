@@ -9,14 +9,6 @@ import mongoose, {
    COMPANY DOCUMENT (TIPO TYPESCRIPT)
    ========================================================= */
 
-/**
- * CompanyDocument
- *
- * 👉 Representa el documento en MongoDB
- * 👉 SOLO se usa para tipar (TypeScript)
- *
- * ⚠️ AQUÍ sí usamos Types.ObjectId
- */
 export interface CompanyDocument extends Document {
   name: string;
 
@@ -27,7 +19,10 @@ export interface CompanyDocument extends Document {
   // Estado financiero
   balance: number;
 
-  active: boolean;
+  // 🔥 ESTADO CANÓNICO
+  isActive: boolean;
+  deactivatedAt?: Date;
+
   transportTypes: string[];
 
   // Plan y suscripción
@@ -68,14 +63,6 @@ export interface CompanyDocument extends Document {
    COMPANY SCHEMA (MONGOOSE RUNTIME)
    ========================================================= */
 
-/**
- * ⚠️ DIFERENCIA CLAVE
- *
- * - Interface (arriba) → Types.ObjectId
- * - Schema (abajo)     → Schema.Types.ObjectId
- *
- * Si no respetas esto → ERROR DE TYPESCRIPT
- */
 const CompanySchema = new Schema<CompanyDocument>(
   {
     /* =========================
@@ -90,10 +77,8 @@ const CompanySchema = new Schema<CompanyDocument>(
     /* =========================
        RELACIONES
        ========================= */
-
     owner: {
-      // ✅ CORRECCIÓN CLAVE AQUÍ
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId, // ✅ CORRECTO
       ref: "User",
       required: true,
       index: true,
@@ -101,8 +86,7 @@ const CompanySchema = new Schema<CompanyDocument>(
 
     admins: [
       {
-        // ✅ CORRECCIÓN CLAVE AQUÍ
-        type: Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId, // ✅ CORRECTO
         ref: "User",
       },
     ],
@@ -117,11 +101,16 @@ const CompanySchema = new Schema<CompanyDocument>(
     },
 
     /* =========================
-       ESTADO
+       ESTADO (🔥 CLAVE PARA CASCADA)
        ========================= */
-    active: {
+    isActive: {
       type: Boolean,
       default: true,
+      index: true,
+    },
+
+    deactivatedAt: {
+      type: Date,
     },
 
     transportTypes: {
@@ -214,9 +203,6 @@ const CompanySchema = new Schema<CompanyDocument>(
    VIRTUALS
    ========================================================= */
 
-/**
- * Indica si la empresa está verificada legalmente
- */
 CompanySchema.virtual("isVerified").get(function (this: CompanyDocument) {
   return (
     this.compliance.hasLegalConstitution &&
@@ -226,27 +212,28 @@ CompanySchema.virtual("isVerified").get(function (this: CompanyDocument) {
 });
 
 /**
- * Relaciones virtuales
+ * 🔥 VIRTUALS CORREGIDOS (ALINEADOS CON CASCADA)
  */
 CompanySchema.virtual("routes", {
   ref: "Route",
   localField: "_id",
-  foreignField: "company",
+  foreignField: "companyId",
 });
 
 CompanySchema.virtual("trips", {
   ref: "Trip",
   localField: "_id",
-  foreignField: "company",
+  foreignField: "companyId",
 });
 
 /* =========================================================
-   EXPORTACIÓN DEL MODELO
+   EXPORTACIÓN
    ========================================================= */
 
 export const CompanyModel =
   mongoose.models.Company ||
   model<CompanyDocument>("Company", CompanySchema);
+
 
 
 
@@ -258,14 +245,16 @@ export const CompanyModel =
 // } from "mongoose";
 
 // /* =========================================================
-//    COMPANY DOCUMENT (TIPADO FUENTE DE LA VERDAD)
+//    COMPANY DOCUMENT (TIPO TYPESCRIPT)
 //    ========================================================= */
 
 // /**
-//  * CompanyDocument representa el documento REAL en MongoDB.
+//  * CompanyDocument
 //  *
-//  * ⚠️ Aquí SÍ usamos ObjectId
-//  * ⚠️ Fuera del modelo, NO
+//  * 👉 Representa el documento en MongoDB
+//  * 👉 SOLO se usa para tipar (TypeScript)
+//  *
+//  * ⚠️ AQUÍ sí usamos Types.ObjectId
 //  */
 // export interface CompanyDocument extends Document {
 //   name: string;
@@ -315,9 +304,17 @@ export const CompanyModel =
 // }
 
 // /* =========================================================
-//    COMPANY SCHEMA
+//    COMPANY SCHEMA (MONGOOSE RUNTIME)
 //    ========================================================= */
 
+// /**
+//  * ⚠️ DIFERENCIA CLAVE
+//  *
+//  * - Interface (arriba) → Types.ObjectId
+//  * - Schema (abajo)     → Schema.Types.ObjectId
+//  *
+//  * Si no respetas esto → ERROR DE TYPESCRIPT
+//  */
 // const CompanySchema = new Schema<CompanyDocument>(
 //   {
 //     /* =========================
@@ -334,16 +331,17 @@ export const CompanyModel =
 //        ========================= */
 
 //     owner: {
-//       type: Types.ObjectId,
+//       // ✅ CORRECCIÓN CLAVE AQUÍ
+//       type: Schema.Types.ObjectId,
 //       ref: "User",
 //       required: true,
 //       index: true,
 //     },
 
-//     // 👇 CORRECCIÓN CLAVE: admins tipado como ObjectId[]
 //     admins: [
 //       {
-//         type: Types.ObjectId,
+//         // ✅ CORRECCIÓN CLAVE AQUÍ
+//         type: Schema.Types.ObjectId,
 //         ref: "User",
 //       },
 //     ],
@@ -351,7 +349,6 @@ export const CompanyModel =
 //     /* =========================
 //        FINANZAS
 //        ========================= */
-
 //     balance: {
 //       type: Number,
 //       default: 0,
@@ -361,7 +358,6 @@ export const CompanyModel =
 //     /* =========================
 //        ESTADO
 //        ========================= */
-
 //     active: {
 //       type: Boolean,
 //       default: true,
@@ -375,7 +371,6 @@ export const CompanyModel =
 //     /* =========================
 //        PLAN / SUSCRIPCIÓN
 //        ========================= */
-
 //     plan: {
 //       type: String,
 //       enum: ["free", "pro", "enterprise"],
@@ -392,7 +387,6 @@ export const CompanyModel =
 //     /* =========================
 //        DATOS LEGALES
 //        ========================= */
-
 //     nit: {
 //       type: String,
 //       trim: true,
@@ -427,7 +421,6 @@ export const CompanyModel =
 //     /* =========================
 //        WOMPI
 //        ========================= */
-
 //     wompi: {
 //       accountId: {
 //         type: String,
@@ -451,8 +444,6 @@ export const CompanyModel =
 //   },
 //   {
 //     timestamps: true,
-
-//     // Permiten que los virtuals aparezcan en JSON
 //     toJSON: { virtuals: true },
 //     toObject: { virtuals: true },
 //   }
@@ -463,8 +454,7 @@ export const CompanyModel =
 //    ========================================================= */
 
 // /**
-//  * Empresa verificada:
-//  * - Cumple requisitos mínimos legales
+//  * Indica si la empresa está verificada legalmente
 //  */
 // CompanySchema.virtual("isVerified").get(function (this: CompanyDocument) {
 //   return (
@@ -493,14 +483,6 @@ export const CompanyModel =
 //    EXPORTACIÓN DEL MODELO
 //    ========================================================= */
 
-// /**
-//  * CompanyModel
-//  *
-//  * ✔️ Tipado
-//  * ✔️ Sin any
-//  * ✔️ Compatible con middlewares de seguridad
-//  */
 // export const CompanyModel =
 //   mongoose.models.Company ||
 //   model<CompanyDocument>("Company", CompanySchema);
-

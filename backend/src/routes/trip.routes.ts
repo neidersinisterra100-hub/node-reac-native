@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/requireAuth.js";
+import { blockLegacyFields } from "../middlewares/blockLegacyFields.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { createTripSchema } from "../schemas/trip.schema.js";
 
@@ -14,18 +15,26 @@ import {
 
 const router = Router();
 
-// Rutas Públicas
-router.get("/", getTrips); // Listar viajes activos para pasajeros
+// 🌍 Público
+router.get("/", getTrips);
 
-// Rutas Privadas (Requieren Auth)
+// 🔐 Privado
 router.use(requireAuth);
 
-// 🛡️ Validación ANTES del controller
-router.post("/", validateRequest(createTripSchema), createTrip);
+// 🧱 Crear viaje (bloqueo legacy + validación)
+router.post(
+  "/",
+  blockLegacyFields,
+  validateRequest(createTripSchema),
+  createTrip
+);
 
-router.get("/manage", getManageTrips); // Listar viajes para gestión (admin/owner)
-router.get("/company/:companyId", getCompanyTrips); // Listar viajes de una empresa ESPECÍFICA
-router.patch("/:tripId", toggleTripActive); // Activar/Desactivar
-router.delete("/:tripId", deleteTrip); // Eliminar
+// Gestión
+router.get("/manage", getManageTrips);
+router.get("/company/:companyId", getCompanyTrips);
+
+// Mutaciones
+router.patch("/:tripId", toggleTripActive);
+router.delete("/:tripId", deleteTrip);
 
 export default router;

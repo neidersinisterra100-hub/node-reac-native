@@ -1,31 +1,44 @@
-import { Router } from 'express';
-import { requireAuth } from '../middlewares/requireAuth.js';
+import { Router } from "express";
+import { requireAuth } from "../middlewares/requireAuth.js";
+import { blockLegacyFields } from "../middlewares/blockLegacyFields.js";
+import { validateRequest } from "../middlewares/validateRequest.js";
+import {
+  createRouteSchema,
+  updateRouteSchema,
+} from "../schemas/route.schema.js";
+
 import {
   createRoute,
   getRoutesByRole,
   getCompanyRoutes,
   toggleRouteActive,
   deleteRoute,
-} from '../controllers/route.controller.js';
+} from "../controllers/route.controller.js";
 
 const router = Router();
 
-// Todas las rutas requieren autenticación
+// 🔐 Todas las rutas requieren autenticación
 router.use(requireAuth);
 
-// Crear nueva ruta (Solo Owner)
-router.post('/', createRoute);
+// 🧱 Mutaciones (bloqueo legacy + validación)
+router.post(
+  "/",
+  blockLegacyFields,
+  validateRequest(createRouteSchema),
+  createRoute
+);
 
-// Listar rutas (Vista General)
-router.get('/', getRoutesByRole);
+router.patch(
+  "/:routeId",
+  blockLegacyFields,
+  validateRequest(updateRouteSchema),
+  toggleRouteActive
+);
 
-// Listar rutas de una empresa ESPECÍFICA (Ahora sí filtra de verdad)
-router.get('/company/:companyId', getCompanyRoutes);
+router.delete("/:routeId", deleteRoute);
 
-// Activar/Desactivar ruta
-router.patch('/:routeId', toggleRouteActive);
-
-// Eliminar ruta
-router.delete('/:routeId', deleteRoute);
+// 📤 Lecturas
+router.get("/", getRoutesByRole);
+router.get("/company/:companyId", getCompanyRoutes);
 
 export default router;

@@ -1,35 +1,99 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const routeSchema = new mongoose.Schema(
   {
     origin: {
       type: String,
       required: true,
-      trim: true,
+      trim: true
     },
     destination: {
       type: String,
       required: true,
-      trim: true,
+      trim: true
     },
-    company: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Company',
+
+    // 🔥 CLAVE PARA LA CASCADA
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId, // ✅ CORRECTO
+      ref: "Company",
       required: true,
+      index: true
     },
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+      ref: "User",
+      required: true
     },
-    active: {
+
+    // 🔥 CONSISTENCIA DE ESTADO
+    isActive: {
       type: Boolean,
-      default: false,
+      default: true
     },
+
+    deactivatedAt: {
+      type: Date
+    }
   },
   {
-    timestamps: true,
+    timestamps: true
   }
 );
 
-export const RouteModel = mongoose.model('Route', routeSchema);
+export interface RouteDocument extends mongoose.Document {
+  origin: string;
+  destination: string;
+  companyId: mongoose.Types.ObjectId;
+  createdBy: mongoose.Types.ObjectId;
+  isActive: boolean;
+  deactivatedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 🔎 ÍNDICE COMPUESTO (RECOMENDADO)
+routeSchema.index({ companyId: 1, isActive: 1 });
+
+export const RouteModel =
+  mongoose.models.Route ||
+  mongoose.model("Route", routeSchema);
+
+
+
+// import mongoose from 'mongoose';
+
+// const routeSchema = new mongoose.Schema(
+//   {
+//     origin: {
+//       type: String,
+//       required: true,
+//       trim: true,
+//     },
+//     destination: {
+//       type: String,
+//       required: true,
+//       trim: true,
+//     },
+//     company: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: 'Company',
+//       required: true,
+//     },
+//     createdBy: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: 'User',
+//       required: true,
+//     },
+//     active: {
+//       type: Boolean,
+//       default: true, // 🔧 CAMBIO CLAVE
+//     },
+//   },
+//   {
+//     timestamps: true,
+//   }
+// );
+
+// export const RouteModel = mongoose.model('Route', routeSchema);

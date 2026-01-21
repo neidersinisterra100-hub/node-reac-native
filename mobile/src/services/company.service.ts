@@ -1,16 +1,17 @@
 import { api } from "./api"; // 👈 Corregido import
 
 export interface CompanyCompliance {
-    hasLegalConstitution: boolean;
-    hasTransportLicense: boolean;
-    hasVesselRegistration: boolean;
-    hasCrewLicenses: boolean;
-    hasInsurance: boolean;
-    hasSafetyProtocols: boolean;
+  hasLegalConstitution: boolean;
+  hasTransportLicense: boolean;
+  hasVesselRegistration: boolean;
+  hasCrewLicenses: boolean;
+  hasInsurance: boolean;
+  hasSafetyProtocols: boolean;
 }
 
 export interface Company {
-  _id: string;
+  id: string; // ✅ Match DTO
+  _id?: string; // Compat
   name: string;
   nit?: string;
   legalRepresentative?: string;
@@ -18,7 +19,8 @@ export interface Company {
   insurancePolicyNumber?: string;
   owner: string;      // userId (owner)
   balance: number;
-  active: boolean;
+  active?: boolean;   // Compat
+  isActive?: boolean; // ✅ Match DTO
   isVerified?: boolean;
   compliance?: CompanyCompliance;
   admins?: string[];  // Lista de IDs de admins
@@ -43,9 +45,9 @@ export interface CreateCompanyWithAdminInput extends CreateCompanyInput {
 }
 
 export interface CompanyAdmin {
-    _id: string;
-    name: string;
-    email: string;
+  _id: string;
+  name: string;
+  email: string;
 }
 
 /* ================= CREATE COMPANY (OWNER) ================= */
@@ -70,31 +72,31 @@ export async function getMyCompanies() {
 
 export async function getAllCompanies() {
   try {
-      const response = await api.get("/companies");
-      return response.data as Company[];
+    const response = await api.get("/companies");
+    return response.data as Company[];
   } catch (error) {
-      console.log("Error fetching public companies (endpoint might not exist yet):", error);
-      return [];
+    console.log("Error fetching public companies (endpoint might not exist yet):", error);
+    return [];
   }
 }
 
 /* ================= ACTIONS (OWNER) ================= */
 
-export async function toggleCompanyActive(id: string, active: boolean) {
-    const response = await api.patch(`/companies/${id}`, { active });
-    return response.data;
+export async function toggleCompanyActive(id: string, isActive: boolean) {
+  const response = await api.patch(`/companies/${id}`, { isActive });
+  return response.data;
 }
 
 export async function deleteCompany(id: string) {
-    const response = await api.delete(`/companies/${id}`);
-    return response.data;
+  const response = await api.delete(`/companies/${id}`);
+  return response.data;
 }
 
 /* ================= ADMINS ================= */
 // Obtener lista de administradores de una empresa
 export async function getCompanyAdmins(companyId: string) {
-    const response = await api.get(`/companies/${companyId}/admins`);
-    return response.data as CompanyAdmin[];
+  const response = await api.get(`/companies/${companyId}/admins`);
+  return response.data as CompanyAdmin[];
 }
 
 

@@ -10,29 +10,32 @@ import { api } from "./api";
  * - capacity SÍ existe y debe enviarse al crear
  */
 export interface Trip {
-  _id: string;
+  id: string;
+  _id?: string;
 
   route:
-    | string
-    | {
-        _id: string;
-        origin: string;
-        destination: string;
-      };
+  | string
+  | {
+    id?: string;
+    _id?: string;
+    origin: string;
+    destination: string;
+  };
 
   company:
-    | string
-    | {
-        _id: string;
-        name: string;
-      };
+  | string
+  | {
+    id?: string;
+    _id?: string;
+    name: string;
+  };
 
   date: string;
   departureTime: string;
   price: number;
   capacity: number; // 🔑 CLAVE
   transportType: string;
-  active?: boolean;
+  isActive: boolean;
 }
 
 /* ================= GET TRIPS ================= */
@@ -97,10 +100,16 @@ export async function deleteTrip(
   await api.delete(`/trips/${tripId}`);
 }
 
+/* ================= TOGGLE ACTIVE ================= */
+export async function toggleTripActive(tripId: string, isActive: boolean): Promise<void> {
+  await api.patch(`/trips/${tripId}`, { isActive });
+}
+
 /* ================= COMPAT ================= */
 
 export const tripService = {
   getAll: getTrips,
   create: createTrip,
   delete: deleteTrip,
+  toggleActive: toggleTripActive,
 };

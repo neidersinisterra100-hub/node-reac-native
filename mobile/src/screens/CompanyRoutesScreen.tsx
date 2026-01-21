@@ -50,7 +50,7 @@ export default function CompanyRoutesScreen() {
       
       // Eliminar duplicados por _id
       const uniqueRoutes = Array.from(
-        new Map(routesData.map(r => [r._id, r])).values()
+        new Map(routesData.map(r => [r._id || r.id, r])).values()
       );
       setRoutes(uniqueRoutes);
 
@@ -122,11 +122,14 @@ export default function CompanyRoutesScreen() {
           !item.active && isOwner && styles.cardInactive
       ]}
       onPress={() => navigation.navigate("Trips", {
-        routeId: item._id,
+        routeId: item._id || item.id,
         routeName: `${item.origin} - ${item.destination}`,
-        companyName: companyName
+        companyName: companyName,
+        routeActive: !!item.active,
+        companyActive: !!companyData?.active
       })}
     >
+    
       <View style={styles.cardHeader}>
         <View style={[styles.iconBox, { backgroundColor: theme.dark ? '#333' : '#eef2ff' }]}>
           <Navigation size={24} color={theme.colors.primary} />
@@ -142,15 +145,28 @@ export default function CompanyRoutesScreen() {
           <View style={{ flexDirection: 'row' }}>
             <IconButton
               icon="power"
-              iconColor={item.active ? "#10b981" : "#9ca3af"}
+              iconColor={
+                  // Si empresa inactiva -> gris
+                  // Si activa -> verde/gris normal
+                  !companyData?.active && !item.active 
+                    ? "#d1d5db" 
+                    : item.active ? "#10b981" : "#9ca3af"
+              }
               size={20}
-              onPress={() => handleToggle(item._id, !!item.active)}
+              onPress={() => {
+                  // Validación Cascada
+                  if (!companyData?.active && !item.active) {
+                      Alert.alert("Acción Bloqueada", "No puedes activar una ruta si la empresa está inactiva.");
+                      return;
+                  }
+                  handleToggle(item._id || item.id, !!item.active);
+              }}
             />
             <IconButton
               icon="delete-outline"
               iconColor="#ef4444"
               size={20}
-              onPress={() => handleDelete(item._id)}
+              onPress={() => handleDelete(item._id || item.id)}
             />
           </View>
         )}
@@ -171,6 +187,13 @@ export default function CompanyRoutesScreen() {
           </TouchableOpacity>
       </View>
 
+      {/* Alerta si empresa inactiva */}
+      {isOwner && companyData && !companyData.active && (
+          <View style={{ marginHorizontal: 16, marginBottom: 8, padding: 8, backgroundColor: '#fff7ed', borderRadius: 8, borderWidth: 1, borderColor: '#ffedd5' }}>
+              <Text style={{ color: '#c2410c', fontSize: 12, textAlign: 'center' }}>⚠️ Empresa inactiva. Activa la empresa para gestionar rutas.</Text>
+          </View>
+      )}
+
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#ff6b00" />
@@ -178,7 +201,7 @@ export default function CompanyRoutesScreen() {
       ) : (
         <FlatList
           data={routes}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item, index) => item._id || item.id || index.toString()}
           refreshing={loading}
           onRefresh={loadData}
           contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
@@ -436,7 +459,7 @@ const styles = StyleSheet.create({
 //               icon="delete-outline"
 //               iconColor="#ef4444"
 //               size={20}
-//               onPress={() => handleDelete(item._id)}
+//               onPress={() => handleDelete(item._id || item.id)}
 //             />
 //           </View>
 //         )}

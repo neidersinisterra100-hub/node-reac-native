@@ -14,8 +14,12 @@ export const createTripSchema = z.object({
   transportType: z
     .string()
     .transform((v) => v.toLowerCase())
-    .refine((v) => TRANSPORT_TYPES.includes(v as any), {
-      message: "Tipo de transporte inválido",
-    })
+    .refine(
+      (v) => TRANSPORT_TYPES.includes(
+        v as (typeof TRANSPORT_TYPES)[number]
+      ),
+      { message: "Tipo de transporte inválido" }
+    )
+
     .optional(),
 });

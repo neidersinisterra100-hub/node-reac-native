@@ -1,11 +1,15 @@
 {
   "dependencies": {
     "date-fns": "^4.1.0",
+    "mongoose": "^9.1.4",
     "react-native-chart-kit": "^6.12.0",
-    "react-native-svg": "^15.15.1"
+    "react-native-svg": "^15.15.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@esbuild/linux-x64": "^0.27.2",
-    "@rollup/rollup-linux-x64-gnu": "^4.55.1"
+    "@rollup/rollup-linux-x64-gnu": "^4.55.1",
+    "@types/mongoose": "^5.11.96"
   }
 }

@@ -1,11 +1,51 @@
 import { RequestHandler } from "express";
+import mongoose, { Types } from "mongoose";
+import { z } from "zod";
+
 import { RouteModel } from "../models/route.model.js";
+import { TripModel } from "../models/trip.model.js";
 import { CompanyModel } from "../models/company.model.js";
 import { AuthRequest } from "../middlewares/requireAuth.js";
+import type { RouteDocument } from "../models/route.model.js";
 
 /* =========================================================
-   CREAR RUTA (SOLO OWNER)
+   DTO
    ========================================================= */
+ 
+export interface RouteDTO {
+  id: string;
+  origin: string;
+  destination: string;
+  companyId: string;
+  isActive: boolean;
+  createdAt: Date;
+}
+
+function toRouteDTO(route: RouteDocument): RouteDTO {
+  return {
+    id: route._id.toString(),
+    origin: route.origin,
+    destination: route.destination,
+    companyId: route.companyId.toString(),
+    isActive: route.isActive,
+    createdAt: route.createdAt,
+  };
+}
+
+/* =========================================================
+   ZOD SCHEMA
+   ========================================================= */
+
+const createRouteSchema = z.object({
+  origin: z.string().min(2).transform((v) => v.trim()),
+  destination: z.string().min(2).transform((v) => v.trim()),
+  companyId: z.string().min(1),
+});
+
+/* =========================================================
+   CREAR RUTA
+   ========================================================= */
+
 export const createRoute: RequestHandler = async (req, res) => {
   try {
     const authReq = req as AuthRequest;
@@ -14,171 +54,87 @@ export const createRoute: RequestHandler = async (req, res) => {
       return res.status(401).json({ message: "No autenticado" });
     }
 
-    if (authReq.user.role !== "owner") {
-      return res.status(403).json({
-        message: "Solo los owners pueden crear rutas",
-      });
-    }
+    const parsed = createRouteSchema.safeParse(req.body);
 
-    const { origin, destination, companyId } = req.body;
-
-    if (!origin || !destination || !companyId) {
+    if (!parsed.success) {
       return res.status(400).json({
-        message: "origin, destination y companyId son obligatorios",
+        message: "Datos inválidos",
+        errors: parsed.error.flatten().fieldErrors,
       });
     }
 
-    const company = await CompanyModel.findById(companyId);
+    const { origin, destination, companyId } = parsed.data;
 
+    // Verificar empresa
+    const company = await CompanyModel.findById(companyId);
     if (!company) {
       return res.status(404).json({ message: "Empresa no encontrada" });
     }
 
-    if (company.owner.toString() !== authReq.user.id) {
-      return res.status(403).json({
-        message: "No eres owner de esta empresa",
-      });
-    }
+    // Verificar permisos
+    const isOwner = company.owner.toString() === authReq.user.id;
+    const isAdmin =
+      authReq.user.role === "admin" &&
+      authReq.user.companyId === company._id.toString();
 
-    const exists = await RouteModel.findOne({
-      origin: origin.trim(),
-      destination: destination.trim(),
-      company: companyId,
-    });
-
-    if (exists) {
-      return res.status(409).json({
-        message: "La ruta ya existe para esta empresa",
-      });
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: "No autorizado" });
     }
 
     const route = await RouteModel.create({
-      origin: origin.trim(),
-      destination: destination.trim(),
-      company: companyId,
-      createdBy: authReq.user.id,
-      active: true,
+      origin,
+      destination,
+      companyId: company._id, // ✅ FK Correcta
+      createdBy: new Types.ObjectId(authReq.user.id),
+      isActive: true, // ✅ CORRECTO
     });
 
-    return res.status(201).json(route);
+    return res.status(201).json(toRouteDTO(route));
   } catch (error) {
-    console.error("❌ Error createRoute:", error);
-    return res.status(500).json({
-      message: "Error al crear la ruta",
-    });
+    console.error("❌ [createRoute] Error:", error);
+    return res.status(500).json({ message: "Error al crear ruta" });
   }
 };
 
 /* =========================================================
-   LISTAR RUTAS POR ROL (ADMIN/OWNER Dashboard)
+   LISTAR RUTAS POR EMPRESA
    ========================================================= */
-export const getRoutesByRole: RequestHandler = async (req, res) => {
-  try {
-    const authReq = req as AuthRequest;
 
-    if (!authReq.user) {
-      return res.status(401).json({ message: "No autenticado" });
-    }
-
-    const { role, companyId, id: userId } = authReq.user;
-
-    let companyFilter: any = {};
-
-    if (role === "admin") {
-      if (!companyId) {
-        return res.status(403).json({
-          message: "Admin sin empresa asignada",
-        });
-      }
-      companyFilter._id = companyId;
-    }
-
-    if (role === "owner") {
-      companyFilter.owner = userId;
-    }
-
-    const companies = await CompanyModel.find(companyFilter).select("_id");
-    const companyIds = companies.map((c) => c._id);
-
-    const routes = await RouteModel.find({
-      company: { $in: companyIds },
-    }).sort({ createdAt: -1 });
-
-    res.json(routes);
-  } catch (error) {
-    console.error("❌ Error getRoutesByRole:", error);
-    res.status(500).json({
-      message: "Error al obtener rutas",
-    });
-  }
-};
-
-/* =========================================================
-   LISTAR RUTAS DE UNA EMPRESA (PÚBLICO/PRIVADO)
-   - Owner/Admin de la empresa: Ven todo
-   - Otros: Solo ven rutas activas de empresas activas
-   ========================================================= */
 export const getCompanyRoutes: RequestHandler = async (req, res) => {
-  try {
-    const authReq = req as AuthRequest;
-    const { companyId } = req.params;
-
-    if (!authReq.user) {
-      return res.status(401).json({ message: "No autenticado" });
-    }
-
-    const company = await CompanyModel.findById(companyId);
-    if (!company) {
-      return res.status(404).json({ message: "Empresa no encontrada" });
-    }
-
-    // Determinar si el usuario tiene privilegios sobre esta empresa
-    const isOwner = company.owner.toString() === authReq.user.id;
-    const isAdmin = authReq.user.role === 'admin' && authReq.user.companyId === companyId;
-    const hasPrivileges = isOwner || isAdmin;
-
-    // Construir filtro
-    let filter: any = { company: companyId };
-
-    // Si NO tiene privilegios, solo ver activas
-    if (!hasPrivileges) {
-        // Validar que la empresa esté activa también
-        if (!company.active) {
-             return res.status(403).json({ message: "Esta empresa no está disponible" });
-        }
-        filter.active = true;
-    }
-
-    const routes = await RouteModel.find(filter).sort({ createdAt: -1 });
-    res.json(routes);
-
-  } catch (error) {
-    console.error("❌ Error getCompanyRoutes:", error);
-    res.status(500).json({
-      message: "Error al obtener rutas de la empresa",
-    });
-  }
+  const { companyId } = req.params;
+  const routes = await RouteModel.find({ companyId }); // ✅ FK Correcta
+  return res.json(routes.map(toRouteDTO));
 };
 
 /* =========================================================
-   ACTIVAR / DESACTIVAR RUTA (OWNER / ADMIN)
+   TOGGLE RUTA (CON CASCADA)
    ========================================================= */
+
 export const toggleRouteActive: RequestHandler = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const authReq = req as AuthRequest;
     const { routeId } = req.params;
 
     if (!authReq.user) {
+      await session.abortTransaction();
       return res.status(401).json({ message: "No autenticado" });
     }
 
-    const route = await RouteModel.findById(routeId).populate("company");
-
+    const route = await RouteModel.findById(routeId).session(session);
     if (!route) {
+      await session.abortTransaction();
       return res.status(404).json({ message: "Ruta no encontrada" });
     }
 
-    const company: any = route.company;
+    // Verificar empresa padre
+    const company = await CompanyModel.findById(route.companyId).session(session);
+    if (!company) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Empresa padre no encontrada" });
+    }
 
     const isOwner = company.owner.toString() === authReq.user.id;
     const isAdmin =
@@ -186,56 +142,88 @@ export const toggleRouteActive: RequestHandler = async (req, res) => {
       authReq.user.companyId === company._id.toString();
 
     if (!isOwner && !isAdmin) {
-      return res.status(403).json({
-        message: "No autorizado para modificar esta ruta",
-      });
+      await session.abortTransaction();
+      return res.status(403).json({ message: "No autorizado" });
     }
 
-    route.active = !route.active;
-    await route.save();
+    // Si vamos a activar, verificar que la empresa esté activa
+    if (!route.isActive && !company.isActive) {
+      await session.abortTransaction();
+      return res.status(409).json({ message: "No puedes activar una ruta si la empresa está inactiva" });
+    }
 
-    res.json(route);
+    const newStatus = !route.isActive;
+    route.isActive = newStatus;
+    
+    if (!newStatus) {
+        route.deactivatedAt = new Date();
+    } else {
+        route.deactivatedAt = undefined;
+    }
+    
+    await route.save({ session });
+
+    // 🔥 CASCADA: Si desactivamos ruta, desactivar viajes
+    if (!newStatus) {
+      await TripModel.updateMany(
+        { routeId: route._id }, // ✅ FK Correcta
+        { $set: { isActive: false, deactivatedAt: new Date() } },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+    return res.json(toRouteDTO(route));
   } catch (error) {
-    console.error("❌ Error toggleRouteActive:", error);
-    res.status(500).json({
-      message: "Error al cambiar estado de la ruta",
-    });
+    await session.abortTransaction();
+    console.error("❌ [toggleRouteActive] Error:", error);
+    return res.status(500).json({ message: "Error al cambiar estado" });
+  } finally {
+    session.endSession();
   }
 };
 
 /* =========================================================
    ELIMINAR RUTA (SOLO OWNER)
    ========================================================= */
+
 export const deleteRoute: RequestHandler = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const authReq = req as AuthRequest;
     const { routeId } = req.params;
 
     if (!authReq.user) {
+      await session.abortTransaction();
       return res.status(401).json({ message: "No autenticado" });
     }
 
-    const route = await RouteModel.findById(routeId).populate("company");
-
+    const route = await RouteModel.findById(routeId).session(session);
     if (!route) {
+      await session.abortTransaction();
       return res.status(404).json({ message: "Ruta no encontrada" });
     }
 
-    const company: any = route.company;
-
-    if (company.owner.toString() !== authReq.user.id) {
-      return res.status(403).json({
-        message: "No autorizado para eliminar esta ruta",
-      });
+    const company = await CompanyModel.findById(route.companyId).session(session);
+    if (!company || company.owner.toString() !== authReq.user.id) {
+      await session.abortTransaction();
+      return res.status(403).json({ message: "Solo el owner puede eliminar" });
     }
 
-    await RouteModel.findByIdAndDelete(routeId);
+    // Eliminar viajes asociados
+    await TripModel.deleteMany({ routeId: route._id }, { session }); // ✅ FK Correcta
+    
+    await RouteModel.findByIdAndDelete(routeId, { session });
 
-    res.json({ message: "Ruta eliminada correctamente" });
+    await session.commitTransaction();
+    return res.json({ message: "Ruta eliminada" });
   } catch (error) {
-    console.error("❌ Error deleteRoute:", error);
-    res.status(500).json({
-      message: "Error al eliminar ruta",
-    });
+    await session.abortTransaction();
+    console.error("❌ [deleteRoute] Error:", error);
+    return res.status(500).json({ message: "Error al eliminar ruta" });
+  } finally {
+    session.endSession();
   }
 };

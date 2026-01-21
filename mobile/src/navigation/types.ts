@@ -36,7 +36,13 @@ export type RootStackParamList = {
   AllRoutes: undefined;
   AllTrips: undefined;
   CreateRoute: { companyId: string };
-  Trips: { routeId: string; routeName: string; companyName: string };
+  Trips: {
+    routeId: string;
+    routeName: string;
+    companyName: string;
+    routeActive?: boolean;
+    companyActive?: boolean;
+  };
   CreateTrip: { routeId?: string; routeName?: string };
 
   // 🎟️ MODALES

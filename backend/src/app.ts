@@ -8,6 +8,7 @@ import companyRoutes from "./routes/company.routes.js";
 import routeRoutes from "./routes/route.routes.js";
 import reportRoutes from "./routes/report.routes.js";
 import scheduleRoutes from "./routes/schedule.routes.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
 
@@ -98,6 +99,16 @@ app.use(
     });
   }
 );
+
+/* ...todas las rutas arriba... */
+
+// 404 ya esta arriba
+// app.use((_req, res) => {
+//   res.status(404).json({ message: "Endpoint no encontrado" });
+// });
+
+// ❗️SIEMPRE AL FINAL
+app.use(errorHandler);
 
 export default app;
 

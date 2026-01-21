@@ -16,7 +16,7 @@ import { IconButton } from "react-native-paper";
 
 import AppContainer from "../components/ui/AppContainer";
 import PrimaryButton from "../components/ui/PrimaryButton";
-import { getTrips, deleteTrip, Trip } from "../services/trip.service";
+import { getTrips, deleteTrip, toggleTripActive, Trip } from "../services/trip.service";
 import { useAuth } from "../context/AuthContext";
 import { colors } from "../theme/colors";
 
@@ -45,7 +45,7 @@ export default function TripsScreen() {
    * Estos params vienen desde la pantalla anterior (rutas)
    * ⚠️ Más adelante los tiparemos con RootStackParamList
    */
-  const { routeId, routeName, companyName } = route.params;
+  const { routeId, routeName, companyName, routeActive = true, companyActive = true } = route.params;
 
   /**
    * Regla de negocio:
@@ -104,6 +104,15 @@ export default function TripsScreen() {
   /* =======================================================
      ACCIONES
      ======================================================= */
+
+  const handleToggle = async (tripId: string, currentStatus: boolean) => {
+    try {
+        await toggleTripActive(tripId, !currentStatus);
+        setTrips(prev => prev.map(t => (t._id === tripId || t.id === tripId) ? { ...t, isActive: !currentStatus } : t));
+    } catch (e) {
+        Alert.alert("Error", "No se pudo cambiar el estado. Verifica que la empresa y ruta estén activas.");
+    }
+  };
 
   /**
    * Eliminar viaje (solo owner/admin)
@@ -174,23 +183,43 @@ export default function TripsScreen() {
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.cardTitle}>
-            {routeName}
-          </Text>
           <Text style={styles.companyText}>
             {companyName}
           </Text>
+          {/* Status Text for mobile management */}
+          {isOwner && (
+               <Text style={{ fontSize: 10, color: item.isActive ? '#16a34a' : '#9ca3af', fontWeight: 'bold' }}>
+                   {item.isActive ? "ACTIVO" : "INACTIVO"}
+               </Text>
+          )}
         </View>
 
         {isOwner ? (
-          <IconButton
-            icon="delete-outline"
-            iconColor="#ef4444"
-            size={20}
-            onPress={() =>
-              handleDelete(item._id)
-            }
-          />
+          <View style={{ flexDirection: 'row' }}>
+             <IconButton
+                icon="power"
+                iconColor={
+                    (!routeActive || !companyActive) && !item.isActive
+                    ? "#d1d5db"
+                    : item.isActive ? "#10b981" : "#9ca3af"
+                }
+                size={20}
+                onPress={() => {
+                    if ((!routeActive || !companyActive) && !item.isActive) {
+                        const reason = !companyActive ? "Empresa inactiva" : "Ruta inactiva";
+                        Alert.alert("Bloqueado", `No puedes activar este viaje.\n\nMotivo: ${reason}`);
+                        return;
+                    }
+                    handleToggle(item._id || item.id, !!item.isActive);
+                }}
+             />
+             <IconButton
+                icon="delete-outline"
+                iconColor="#ef4444"
+                size={20}
+                onPress={() => handleDelete(item._id || item.id)}
+             />
+          </View>
         ) : (
           <View style={styles.priceTag}>
             <Text style={styles.priceText}>
@@ -238,6 +267,15 @@ export default function TripsScreen() {
 
   return (
     <AppContainer>
+      {isOwner && (!routeActive || !companyActive) && (
+          <View style={{ margin: 16, marginBottom: 0, padding: 10, backgroundColor: '#fff7ed', borderRadius: 8, borderWidth: 1, borderColor: '#ffedd5', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text>⚠️</Text>
+              <Text style={{ color: '#c2410c', fontSize: 13, flex: 1 }}>
+                 {!companyActive ? "La empresa está inactiva." : "La ruta está inactiva."} No puedes activar viajes.
+              </Text>
+          </View>
+      )}
+
       {loading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator
@@ -248,7 +286,7 @@ export default function TripsScreen() {
       ) : (
         <FlatList
           data={trips}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item, index) => item.id || item._id || index.toString()}
           refreshing={loading}
           onRefresh={loadTrips}
           contentContainerStyle={{

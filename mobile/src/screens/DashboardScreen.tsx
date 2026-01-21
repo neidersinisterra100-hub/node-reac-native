@@ -1,239 +1,4 @@
-// import React, { useEffect, useState } from 'react';
-// import { ScrollView, View, StyleSheet, TouchableOpacity, ActivityIndicator, useColorScheme } from 'react-native';
-// import { Text, Avatar, IconButton } from 'react-native-paper';
-// import { useNavigation } from '@react-navigation/native';
-// import { MaterialCommunityIcons } from '@expo/vector-icons';
-// import { LinearGradient } from 'expo-linear-gradient';
 
-// import { useAuth } from '../context/AuthContext';
-// import { getAllRoutes } from '../services/route.service';
-// import { tripService } from '../services/trip.service';
-// import { colors } from '../theme/colors';
-
-// export default function DashboardScreen() {
-//     const { user } = useAuth();
-//     const navigation = useNavigation<any>();
-//     const scheme = useColorScheme(); // 👈 Detectar esquema de color del sistema
-//     const isOwner = user?.role === 'owner' || user?.role === 'admin';
-
-//     const [loading, setLoading] = useState(true);
-//     const [routes, setRoutes] = useState<any[]>([]);
-//     const [trips, setTrips] = useState<any[]>([]);
-
-//     useEffect(() => {
-//         loadData();
-//     }, []);
-
-//     const loadData = async () => {
-//         try {
-//             setLoading(true);
-//             const routesData = await getAllRoutes();
-//             setRoutes(routesData.slice(0, 3));
-//             const tripsData = await tripService.getAll();
-//             setTrips(tripsData.slice(0, 3));
-//         } catch (e) {
-//             console.log("Error loading dashboard", e);
-//         } finally {
-//             setLoading(false);
-//         }
-//     };
-
-//     const renderRouteItem = (item: any) => (
-//         <TouchableOpacity
-//             key={item._id}
-//             style={[styles.listItem, { borderBottomColor: scheme === 'dark' ? '#1e293b' : '#f1f5f9' }]}
-//             onPress={() => navigation.navigate('AllRoutes')}
-//         >
-//             <View style={[styles.iconBox, { backgroundColor: scheme === 'dark' ? '#0f172a' : '#e0f2f1' }]}>
-//                 {/* Icono Marítimo: Brújula */}
-//                 <MaterialCommunityIcons name="compass-rose" size={24} color={colors.primary} />
-//             </View>
-//             <View style={{ flex: 1, marginLeft: 12 }}>
-//                 <Text style={[styles.itemTitle, { color: scheme === 'dark' ? '#e2e8f0' : '#1e293b' }]}>
-//                     {item.origin} → {item.destination}
-//                 </Text>
-//                 <Text style={styles.itemSubtitle}>
-//                     {typeof item.company === 'object' ? item.company.name : 'Naviera'}
-//                 </Text>
-//             </View>
-//             <MaterialCommunityIcons name="chevron-right" size={20} color={scheme === 'dark' ? '#475569' : '#ccc'} />
-//         </TouchableOpacity>
-//     );
-
-//     const renderTripItem = (item: any) => {
-//         const origin = item.route?.origin || 'Puerto Origen';
-//         const dest = item.route?.destination || 'Puerto Destino';
-
-//         return (
-//             <TouchableOpacity
-//                 key={item._id}
-//                 style={[styles.listItem, { borderBottomColor: scheme === 'dark' ? '#1e293b' : '#f1f5f9' }]}
-//                 onPress={() => navigation.navigate('AllTrips')}
-//             >
-//                 <View style={[styles.iconBox, { backgroundColor: scheme === 'dark' ? '#064e3b' : '#e8f5e9' }]}>
-//                     {/* Icono Marítimo: Barco */}
-//                     <MaterialCommunityIcons name="ferry" size={24} color={scheme === 'dark' ? '#34d399' : '#2e7d32'} />
-//                 </View>
-//                 <View style={{ flex: 1, marginLeft: 12 }}>
-//                     <Text style={[styles.itemTitle, { color: scheme === 'dark' ? '#e2e8f0' : '#1e293b' }]}>
-//                         {origin} → {dest}
-//                     </Text>
-//                     <Text style={styles.itemSubtitle}>
-//                         {new Date(item.date).toLocaleDateString()} • {item.departureTime}
-//                     </Text>
-//                 </View>
-//                 <View style={{ alignItems: 'flex-end' }}>
-//                     <Text style={[styles.statusBadge, { color: item.active ? (scheme === 'dark' ? '#34d399' : '#2e7d32') : '#ef4444' }]}>
-//                         {item.active ? 'Zarpando' : 'Cancelado'}
-//                     </Text>
-//                 </View>
-//             </TouchableOpacity>
-//         );
-//     };
-
-//     return (
-//         <View
-//             style={[
-//                 styles.container,
-//                 {
-//                     // 👈 CORRECCIÓN CRÍTICA: Estilo dinámico directo aquí
-//                     backgroundColor: scheme === "dark" ? "#020617" : "#f8fafc",
-//                 },
-//             ]}
-//         >
-//             {/* Header con Gradiente Marítimo */}
-//             <LinearGradient
-//                 colors={['#0c4a6e', '#0284c7']} // Tonos Océano Profundo
-//                 start={{ x: 0, y: 0 }}
-//                 end={{ x: 1, y: 1 }}
-//                 style={styles.header}
-//             >
-//                 <View style={styles.headerTop}>
-//                     <View style={styles.userInfo}>
-//                         <Avatar.Text
-//                             size={48}
-//                             label={user?.name?.substring(0, 2).toUpperCase() || "CP"}
-//                             style={{ backgroundColor: 'white' }}
-//                             color="#0c4a6e"
-//                         />
-//                         <View style={{ marginLeft: 12 }}>
-//                             <Text style={styles.userName}>{user?.name?.toUpperCase()}</Text>
-//                             <Text style={styles.userEmail}>{user?.email}</Text>
-//                         </View>
-//                     </View>
-//                     <View style={styles.headerIcons}>
-//                         <IconButton icon="bell-outline" iconColor="white" size={26} onPress={() => { }} />
-//                         <IconButton
-//                             icon="dots-vertical"
-//                             iconColor="white"
-//                             size={26}
-//                             onPress={() => navigation.navigate("Menu")}
-//                         />
-//                     </View>
-//                 </View>
-//                 <Text style={styles.pageTitle}>Panel de Navegación</Text>
-//             </LinearGradient>
-
-//             <ScrollView
-//                 contentContainerStyle={styles.scrollContent}
-//                 showsVerticalScrollIndicator={false}
-//             >
-//                 {/* Accesos Rápidos - BOTONES GRANDES Y COLORIDOS */}
-//                 <View style={styles.shortcutsRow}>
-//                     <TouchableOpacity onPress={() => navigation.navigate("AllRoutes")} style={styles.shortcutBtn}>
-//                         <LinearGradient colors={['#0ea5e9', '#0284c7']} style={styles.shortcutIconBg}>
-//                             <MaterialCommunityIcons name="map-search-outline" size={28} color="white" />
-//                         </LinearGradient>
-//                         <Text style={[styles.shortcutText, { color: scheme === 'dark' ? '#cbd5e1' : '#475569' }]}>Rutas</Text>
-//                     </TouchableOpacity>
-
-//                     <TouchableOpacity onPress={() => navigation.navigate("AllTrips")} style={styles.shortcutBtn}>
-//                         <LinearGradient colors={['#10b981', '#059669']} style={styles.shortcutIconBg}>
-//                             <MaterialCommunityIcons name="sail-boat" size={28} color="white" />
-//                         </LinearGradient>
-//                         <Text style={[styles.shortcutText, { color: scheme === 'dark' ? '#cbd5e1' : '#475569' }]}>Zarpes</Text>
-//                     </TouchableOpacity>
-
-//                     <TouchableOpacity onPress={() => navigation.navigate("MyTickets")} style={styles.shortcutBtn}>
-//                         <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.shortcutIconBg}>
-//                             <MaterialCommunityIcons name="ticket-confirmation-outline" size={28} color="white" />
-//                         </LinearGradient>
-//                         <Text style={[styles.shortcutText, { color: scheme === 'dark' ? '#cbd5e1' : '#475569' }]}>Bordos</Text>
-//                     </TouchableOpacity>
-
-//                     {isOwner && (
-//                         <TouchableOpacity onPress={() => navigation.navigate("MyCompanies")} style={styles.shortcutBtn}>
-//                             <LinearGradient colors={['#8b5cf6', '#7c3aed']} style={styles.shortcutIconBg}>
-//                                 <MaterialCommunityIcons name="domain" size={28} color="white" />
-//                             </LinearGradient>
-//                             <Text style={[styles.shortcutText, { color: scheme === 'dark' ? '#cbd5e1' : '#475569' }]}>Navieras</Text>
-//                         </TouchableOpacity>
-//                     )}
-//                 </View>
-
-//                 {loading ? (
-//                     <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
-//                 ) : (
-//                     <>
-//                         {/* Card 1: Rutas Marítimas */}
-//                         <View style={[styles.cardContainer, { backgroundColor: scheme === 'dark' ? '#1e293b' : 'white' }]}>
-//                             <LinearGradient
-//                                 colors={['#0284c7', '#0369a1']}
-//                                 start={{ x: 0, y: 0 }}
-//                                 end={{ x: 1, y: 0 }}
-//                                 style={styles.cardHeaderGradient}
-//                             >
-//                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-//                                     <MaterialCommunityIcons name="waves" size={22} color="white" style={{ marginRight: 8 }} />
-//                                     <Text style={styles.cardTitleWhite}>Rutas Marítimas</Text>
-//                                 </View>
-//                                 <TouchableOpacity onPress={() => navigation.navigate('AllRoutes')}>
-//                                     <Text style={styles.seeAllWhite}>Ver carta</Text>
-//                                 </TouchableOpacity>
-//                             </LinearGradient>
-
-//                             <View style={styles.listContent}>
-//                                 {routes.length > 0 ? routes.map(renderRouteItem) : (
-//                                     <Text style={[styles.emptyText, { color: scheme === 'dark' ? '#94a3b8' : '#94a3b8' }]}>
-//                                         No hay rutas navegables registradas
-//                                     </Text>
-//                                 )}
-//                             </View>
-//                         </View>
-
-//                         {/* Card 2: Próximos Zarpes */}
-//                         <View style={[styles.cardContainer, { marginTop: 24, backgroundColor: scheme === 'dark' ? '#1e293b' : 'white' }]}>
-//                             <LinearGradient
-//                                 colors={['#059669', '#047857']}
-//                                 start={{ x: 0, y: 0 }}
-//                                 end={{ x: 1, y: 0 }}
-//                                 style={styles.cardHeaderGradient}
-//                             >
-//                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-//                                     <MaterialCommunityIcons name="anchor" size={22} color="white" style={{ marginRight: 8 }} />
-//                                     <Text style={styles.cardTitleWhite}>Próximos Zarpes</Text>
-//                                 </View>
-//                                 <TouchableOpacity onPress={() => navigation.navigate('AllTrips')}>
-//                                     <Text style={styles.seeAllWhite}>Ver itinerario</Text>
-//                                 </TouchableOpacity>
-//                             </LinearGradient>
-
-//                             <View style={styles.listContent}>
-//                                 {trips.length > 0 ? trips.map(renderTripItem) : (
-//                                     <Text style={[styles.emptyText, { color: scheme === 'dark' ? '#94a3b8' : '#94a3b8' }]}>
-//                                         No hay zarpes programados
-//                                     </Text>
-//                                 )}
-//                             </View>
-//                         </View>
-//                     </>
-//                 )}
-
-//                 <View style={{ height: 40 }} />
-//             </ScrollView>
-//         </View>
-//     );
-// }
 
 // const styles = StyleSheet.create({
 //     container: {
@@ -416,7 +181,7 @@ export default function DashboardScreen() {
 
     const renderRouteItem = (item: any) => (
         <TouchableOpacity
-            key={item._id}
+            key={item.id || item._id || Math.random().toString()}
             style={styles.listItem}
             onPress={() => navigation.navigate('AllRoutes')}
         >
@@ -436,10 +201,11 @@ export default function DashboardScreen() {
     const renderTripItem = (item: any) => {
         const origin = item.route?.origin || 'Origen';
         const dest = item.route?.destination || 'Destino';
+        const isActive = item.isActive ?? item.active;
 
         return (
             <TouchableOpacity
-                key={item._id}
+                key={item.id || item._id || Math.random().toString()}
                 style={styles.listItem}
                 onPress={() => navigation.navigate('AllTrips')}
             >
@@ -453,8 +219,8 @@ export default function DashboardScreen() {
                     </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.statusBadge, { color: item.active ? '#2e7d32' : '#c62828' }]}>
-                        {item.active ? 'Activo' : 'Cancelado'}
+                    <Text style={[styles.statusBadge, { color: isActive ? '#2e7d32' : '#c62828' }]}>
+                        {isActive ? 'Activo' : 'Cancelado'}
                     </Text>
                 </View>
             </TouchableOpacity>

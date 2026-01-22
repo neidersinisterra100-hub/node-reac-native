@@ -49,7 +49,7 @@ export const buyTicket: RequestHandler = async (req, res) => {
       return res.status(404).json({ message: "Viaje no encontrado" });
     }
 
-    if (!trip.active) {
+    if (!trip.isActive) {
       return res
         .status(400)
         .json({ message: "Viaje inactivo o cancelado" });

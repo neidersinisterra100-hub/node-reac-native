@@ -20,7 +20,7 @@ export interface RouteDTO {
   isActive: boolean;
   createdAt: Date;
 }
-
+ 
 function toRouteDTO(route: RouteDocument): RouteDTO {
   return {
     id: route._id.toString(),
@@ -225,5 +225,31 @@ export const deleteRoute: RequestHandler = async (req, res) => {
     return res.status(500).json({ message: "Error al eliminar ruta" });
   } finally {
     session.endSession();
+  }
+};
+
+export const getRoutesByRole: RequestHandler = async (req, res) => {
+  try {
+    const authReq = req as AuthRequest;
+
+    const filter: any = {};
+
+    if (authReq.user?.role === "admin" && authReq.user.companyId) {
+      filter.companyId = authReq.user.companyId;
+    }
+
+    if (authReq.user?.role === "owner") {
+      filter.companyId = { $exists: true };
+    }
+
+    if (!authReq.user) {
+      filter.isActive = true;
+    }
+
+    const routes = await RouteModel.find(filter).sort({ createdAt: -1 });
+    return res.json(routes);
+  } catch (error) {
+    console.error("❌ [getRoutesByRole]", error);
+    return res.status(500).json({ message: "Error al obtener rutas" });
   }
 };

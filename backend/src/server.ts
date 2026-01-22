@@ -7,6 +7,7 @@ import app from "./app.js";
 import { connectMongo } from "./config/mongo.js";
 
 const PORT = Number(process.env.PORT) || 3000;
+console.log("🔥 BACKEND REAL ARRANCÓ DESDE ESTE ARCHIVO");
 
 /**
  * Arranca el servidor SOLO si Mongo conecta.

@@ -32,6 +32,11 @@ export default function AllTripsScreen() {
         loadTrips();
     }, []);
 
+    useEffect(() => {
+        console.log("🧪 Trip en mobile:", trips[0]);
+    }, [trips]);
+
+
     const handlePressTrip = (trip: Trip) => {
         if (trip.route && typeof trip.route === 'object') {
             navigation.navigate("ConfirmTicketModal", {
@@ -61,10 +66,10 @@ export default function AllTripsScreen() {
                         <Ship size={24} color="#4f46e5" />
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.cardTitle}>{routeName}</Text>
-                        <Text style={styles.companyText}>
+                        <Text style={styles.cardTitle}>
                             {item.company && typeof item.company === 'object' ? item.company.name : 'Empresa'}
                         </Text>
+                        <Text style={styles.companyText}>{routeName}</Text>
                     </View>
                     <View style={styles.priceTag}>
                         <Text style={styles.priceText}>${item.price}</Text>

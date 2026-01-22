@@ -9,34 +9,63 @@ import { api } from "./api";
  * - availableSeats NO viene del backend aún
  * - capacity SÍ existe y debe enviarse al crear
  */
+export interface Route {
+  id?: string;
+  _id?: string;
+  origin: string;
+  destination: string;
+}
+
+export interface Company {
+  id?: string;
+  _id?: string;
+  name: string;
+}
+
 export interface Trip {
   id: string;
   _id?: string;
 
-  route:
-  | string
-  | {
-    id?: string;
-    _id?: string;
-    origin: string;
-    destination: string;
-  };
-
-  company:
-  | string
-  | {
-    id?: string;
-    _id?: string;
-    name: string;
-  };
+  route: Route | string;
+  company: Company | string;
 
   date: string;
   departureTime: string;
   price: number;
-  capacity: number; // 🔑 CLAVE
+  capacity: number;
   transportType: string;
   isActive: boolean;
 }
+
+
+// export interface Trip {
+//   id: string;
+//   _id?: string;
+
+//   route:
+//   | string
+//   | {
+//     id?: string;
+//     _id?: string;
+//     origin: string;
+//     destination: string;
+//   };
+
+//   company:
+//   | string
+//   | {
+//     id?: string;
+//     _id?: string;
+//     name: string;
+//   };
+
+//   date: string;
+//   departureTime: string;
+//   price: number;
+//   capacity: number; // 🔑 CLAVE
+//   transportType: string;
+//   isActive: boolean;
+// }
 
 /* ================= GET TRIPS ================= */
 /**
@@ -48,13 +77,30 @@ export interface Trip {
  */
 export async function getTrips(): Promise<Trip[]> {
   try {
-    const { data } = await api.get<Trip[]>("/trips/manage");
-    return data;
+    const { data } = await api.get<any[]>("/trips/manage");
+
+    const invalid = data.find(t => !t.route);
+    if (invalid) {
+      console.error("🚨 BACKEND ROTO: Trip sin route", invalid);
+    }
+
+    return data as Trip[];
   } catch {
-    const { data } = await api.get<Trip[]>("/trips");
-    return data;
+    const { data } = await api.get<any[]>("/trips");
+    return data as Trip[];
   }
 }
+
+
+// export async function getTrips(): Promise<Trip[]> {
+//   try {
+//     const { data } = await api.get<Trip[]>("/trips/manage");
+//     return data;
+//   } catch {
+//     const { data } = await api.get<Trip[]>("/trips");
+//     return data;
+//   }
+// }
 
 /* ================= CREATE TRIP ================= */
 /**

@@ -6,8 +6,8 @@ import { Types } from "mongoose";
    ========================================================= */
 export type TripPlain = {
   _id: Types.ObjectId;
-  routeId: Types.ObjectId;
-  companyId: Types.ObjectId;
+  routeId: Types.ObjectId | any;
+  companyId: Types.ObjectId | any;
   date: string;
   departureTime: string;
   price: number;
@@ -20,98 +20,57 @@ export type TripPlain = {
 /* =========================================================
    PUBLIC TRIPS SERVICE
    ========================================================= */
+import { RouteModel } from "../models/route.model.js";
+import { CompanyModel } from "../models/company.model.js";
+
+/* =========================================================
+   PUBLIC TRIPS SERVICE
+   ========================================================= */
 export async function getPublicTripsService() {
   const trips = await TripModel.find({ isActive: true })
-    .populate("routeId")
-    .populate("companyId")
+    .populate({ path: "routeId", model: RouteModel })
+    .populate({ path: "companyId", model: CompanyModel })
     .sort({ createdAt: -1 })
     .lean();
 
-  return trips;
+  /**
+   * 🛡️ Filtro Robusto (Defensive Programming)
+   * 
+   * Aunque la base de datos debería tener la cascada aplicada,
+   * este filtro asegura que NUNCA se muestren viajes si:
+   * 1. La empresa está inactiva (company.isActive === false)
+   * 2. La ruta está inactiva (route.isActive === false)
+   * 3. La población falló (routeId o companyId son null)
+   */
+  const validTrips = trips.filter((trip: any) => {
+    // 1. Verificar existencia de padres
+    if (!trip.routeId || !trip.companyId) {
+      return false;
+    }
+
+    // 🛡️ Verificar que la población fue exitosa (que sea un objeto completo)
+    if (!trip.routeId.origin || !trip.companyId.name) {
+      return false; // Si solo tenemos el ID (string/ObjectId), filtrarlo
+    }
+
+    // 2. Verificar estado de la Empresa
+    // Nota: dependemos de que company.isActive esté populado
+    if (trip.companyId.isActive === false) {
+      return false;
+    }
+
+    // 3. Verificar estado de la Ruta
+    if (trip.routeId.isActive === false) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return validTrips;
 }
 
 /**
- * Viajes públicos:
- * - viaje activo
- * - ruta activa
- * - empresa activa
+ * Viajes públicos Legacy (Referencia)
  */
-// export async function getPublicTripsService() {
-//   const trips = await TripModel.find({ active: true })
-//     .populate({
-//       path: "route",
-//       match: { active: true },
-//       populate: {
-//         path: "company",
-//         match: { active: true },
-//         select: "name active",
-//       },
-//     })
-//     .populate({
-//       path: "company",
-//       match: { active: true },
-//       select: "name active",
-//     })
-//     .lean(); // ✅ CLAVE
-
-//   /**
-//    * 🛡️ Filtro final seguro
-//    * Ya NO hay ObjectId aquí
-//    */
-//   return trips.filter(
-//     (trip) =>
-//       trip.route !== null &&
-//       trip.company !== null
-//   );
-// }
-
-
-
-
-// import { RouteModel } from "../models/route.model.js";
-// import { TripModel } from "../models/trip.model.js";
-
-// type CreateTripInput = {
-//   origin: string;
-//   destination: string;
-//   date: string;
-//   departureTime: string;
-//   price: number;
-//   capacity?: number;
-// };
-
-// export async function createTripService(input: CreateTripInput) {
-//   const {
-//     origin,
-//     destination,
-//     date,
-//     departureTime,
-//     price,
-//     capacity,
-//   } = input;
-
-//   // 1️⃣ Buscar ruta existente
-//   let route = await RouteModel.findOne({
-//     origin,
-//     destination,
-//   });
-
-//   // 2️⃣ Crear ruta si no existe
-//   if (!route) {
-//     route = await RouteModel.create({
-//       origin,
-//       destination,
-//     });
-//   }
-
-//   // 3️⃣ Crear viaje
-//   const trip = await TripModel.create({
-//     route: route._id,
-//     date,
-//     departureTime,
-//     price,
-//     capacity,
-//   });
-
-//   return trip;
-// }
+// export async function getPublicTripsService() { ..._old_impl }

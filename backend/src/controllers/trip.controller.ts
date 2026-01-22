@@ -8,7 +8,6 @@ import { CompanyModel } from "../models/company.model.js";
 import { AuthRequest } from "../middlewares/requireAuth.js";
 import { TRANSPORT_TYPES } from "../constants/enums.js";
 import { getPublicTripsService } from "../services/trip.service.js";
-import type { TripDocument } from "../models/trip.model.js";
 
 /* =========================================================
    DTO
@@ -30,8 +29,18 @@ interface TripDTO {
 function toTripDTO(trip: any): TripDTO & { route?: any; company?: any } {
   return {
     id: trip._id.toString(),
-    routeId: trip.routeId?._id ? trip.routeId._id.toString() : trip.routeId?.toString(),
-    companyId: trip.companyId?._id ? trip.companyId._id.toString() : trip.companyId?.toString(),
+
+    // IDs planos (compatibilidad)
+    routeId:
+      typeof trip.routeId === "object"
+        ? trip.routeId._id?.toString()
+        : trip.routeId?.toString(),
+
+    companyId:
+      typeof trip.companyId === "object"
+        ? trip.companyId._id?.toString()
+        : trip.companyId?.toString(),
+
     date: trip.date,
     departureTime: trip.departureTime,
     price: trip.price,
@@ -39,10 +48,56 @@ function toTripDTO(trip: any): TripDTO & { route?: any; company?: any } {
     capacity: trip.capacity,
     isActive: trip.isActive,
     createdAt: trip.createdAt,
-    route: trip.routeId?._id ? trip.routeId : undefined,
-    company: trip.companyId?._id ? trip.companyId : undefined
+
+    // ✅ OBJETO ROUTE PARA MOBILE
+    route:
+      trip.routeId &&
+        typeof trip.routeId === "object" &&
+        "origin" in trip.routeId
+        ? {
+          id: trip.routeId._id?.toString(),
+          origin: trip.routeId.origin,
+          destination: trip.routeId.destination
+        }
+        : undefined,
+
+    // ✅ OBJETO COMPANY PARA MOBILE
+    company:
+      trip.companyId &&
+        typeof trip.companyId === "object" &&
+        "name" in trip.companyId
+        ? {
+          id: trip.companyId._id?.toString(),
+          name: trip.companyId.name
+        }
+        : undefined
   };
 }
+
+// function toTripDTO(trip: any): TripDTO & { route?: any; company?: any } {
+//   // DEBUG LOG: Detectar si falta data crítica
+//   if (!trip.routeId?._id && !trip.routeId?.origin) {
+//     // Si no tiene _id y tampoco es un objeto con origin, probablemente sea solo un ID string/ObjectId
+//     // console.log(`⚠️ Trip ${trip._id} has NO populated route! routeId raw:`, trip.routeId);
+//   }
+
+// return {
+//   id: trip._id.toString(),
+//   // Manejo robusto: si está populado usa _id, si no usa el valor directo
+//   routeId: trip.routeId?._id ? trip.routeId._id.toString() : trip.routeId?.toString(),
+//   companyId: trip.companyId?._id ? trip.companyId._id.toString() : trip.companyId?.toString(),
+//   date: trip.date,
+//   departureTime: trip.departureTime,
+//   price: trip.price,
+//   transportType: trip.transportType,
+//   capacity: trip.capacity,
+//   isActive: trip.isActive,
+//   createdAt: trip.createdAt,
+//   // Objetos completos para el frontend (Populated)
+//   route: trip.routeId?._id ? trip.routeId : undefined,
+//   company: trip.companyId?._id ? trip.companyId : undefined
+// };
+// }
 
 /* =========================================================
    ZOD SCHEMA
@@ -68,10 +123,27 @@ const createTripSchema = z.object({
    ========================================================= */
 
 export const getTrips: RequestHandler = async (_req, res) => {
+
   try {
-    const trips = await getPublicTripsService();
-    // Nota: getPublicTripsService debería retornar documentos o plain objects
-    // Asumimos que devuelve documentos para este ejemplo, si no, habría que ajustar
+    const trips = await TripModel.find({ isActive: true })
+      .populate({
+        path: "routeId",
+        select: "origin destination isActive"
+      })
+      .populate({
+        path: "companyId",
+        select: "name"
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // 🔍 DEBUG CLARO Y LEGAL
+    if (trips.length > 0) {
+      console.log("🧪 [getTrips] Trip con ruta:", trips[0].routeId);
+    } else {
+      console.log("🧪 [getTrips] No hay viajes activos");
+    }
+
     return res.json(trips.map(toTripDTO));
   } catch (error) {
     console.error("❌ [getTrips] Error:", error);
@@ -79,12 +151,26 @@ export const getTrips: RequestHandler = async (_req, res) => {
   }
 };
 
+
+
+// export const getTrips: RequestHandler = async (_req, res) => {
+//   try {
+//     const trips = await getPublicTripsService();
+//     return res.json(trips.map(toTripDTO));
+//   } catch (error) {
+//     console.error("❌ [getTrips] Error:", error);
+//     return res.status(500).json({ message: "Error al obtener viajes" });
+//   }
+// };
+
 /* =========================================================
    LISTAR VIAJES PARA GESTIÓN (OWNER / ADMIN)
    ========================================================= */
 
 export const getManageTrips: RequestHandler = async (req, res) => {
+  
   try {
+    
     const authReq = req as AuthRequest;
     if (!authReq.user) {
       return res.status(401).json({ message: "No autenticado" });
@@ -110,14 +196,43 @@ export const getManageTrips: RequestHandler = async (req, res) => {
 
     const companyIds = companies.map((c) => c._id);
 
-    const trips = await TripModel.find({
-      companyId: { $in: companyIds } // ✅ FK Correcta
+    // Búsqueda optimizada con .lean()
+    let trips = await TripModel.find({
+      companyId: { $in: companyIds }
     })
-      .populate("routeId")
-      .populate("companyId")
+      .populate({
+        path: "routeId",
+        select: "origin destination isActive"
+      })
+      .populate({
+        path: "companyId",
+        select: "name"
+      })
       .sort({ createdAt: -1 });
 
-    return res.json(trips.map(toTripDTO));
+    // .populate({ path: "routeId", model: RouteModel })
+    // .populate({ path: "companyId", model: CompanyModel })
+    // .sort({ createdAt: -1 })
+    // .lean();
+    console.log("🧪 [getManageTrips] trip.routeId:", trips[0]?.routeId);
+
+    // 🛡️ FALLBACK: Si populate falló (a veces pasa en dev con hot-reload), intentar manual
+    if (trips.length > 0 && trips[0].routeId && !(trips[0].routeId as any).origin) {
+      console.log("⚠️ [getManageTrips] Populate inicial falló, re-intentando manual...");
+      trips = await TripModel.populate(trips, { path: "routeId", model: RouteModel });
+      trips = await TripModel.populate(trips, { path: "companyId", model: CompanyModel });
+    }
+
+    // 🛡️ FILTRO DE SEGURIDAD
+    // Eliminar viajes cuya Ruta o Empresa ya no existen (populate = null o falló)
+    const validTrips = trips.filter((t: any) => {
+      const hasRoute = t.routeId && t.routeId.origin;
+      const hasCompany = t.companyId && t.companyId.name;
+      if (!hasRoute) console.log(`⚠️ Filtrando trip ${t._id} por falta de ruta poblada.`);
+      return hasRoute && hasCompany;
+    });
+
+    return res.json(validTrips.map(toTripDTO));
   } catch (error) {
     console.error("❌ [getManageTrips] Error:", error);
     return res.status(500).json({ message: "Error al obtener viajes" });
@@ -183,20 +298,24 @@ export const createTrip: RequestHandler = async (req, res) => {
       [
         {
           routeId: new Types.ObjectId(routeId),
-          companyId: company._id, // ✅ FK Correcta
+          companyId: company._id,
           createdBy: new Types.ObjectId(authReq.user.id),
           date,
           departureTime,
           price,
           capacity,
           transportType,
-          isActive: true // ✅ CORRECTO
+          isActive: true
         }
       ],
       { session }
     );
 
     await session.commitTransaction();
+
+    // 🛡️ IMPORTANTE: Popular para que el frontend reciba data completa
+    await trip.populate(["routeId", "companyId"]);
+
     return res.status(201).json(toTripDTO(trip));
   } catch (error) {
     await session.abortTransaction();
@@ -225,8 +344,8 @@ export const toggleTripActive: RequestHandler = async (req, res) => {
       return res.status(404).json({ message: "Viaje no encontrado" });
     }
 
-    const company = await CompanyModel.findById(trip.companyId); // ✅ FK Correcta
-    const route = await RouteModel.findById(trip.routeId); // ✅ FK Correcta
+    const company = await CompanyModel.findById(trip.companyId);
+    const route = await RouteModel.findById(trip.routeId);
 
     if (!company || !route) {
       return res.status(400).json({ message: "Datos relacionados inválidos" });
@@ -262,6 +381,9 @@ export const toggleTripActive: RequestHandler = async (req, res) => {
 
     await trip.save();
 
+    // 🛡️ IMPORTANTE: Popular para que el frontend reciba data completa
+    await trip.populate(["routeId", "companyId"]);
+
     return res.json(toTripDTO(trip));
   } catch (error) {
     console.error("❌ [toggleTripActive] Error:", error);
@@ -292,7 +414,7 @@ export const deleteTrip: RequestHandler = async (req, res) => {
       return res.status(404).json({ message: "Viaje no encontrado" });
     }
 
-    const company = await CompanyModel.findById(trip.companyId).session(session); // ✅ FK Correcta
+    const company = await CompanyModel.findById(trip.companyId).session(session);
     if (!company || company.owner.toString() !== authReq.user.id) {
       await session.abortTransaction();
       return res.status(403).json({ message: "No autorizado" });
@@ -334,7 +456,7 @@ export const getCompanyTrips: RequestHandler = async (req, res) => {
 
     const hasPrivileges = isOwner || isAdmin;
 
-    const filter: Record<string, unknown> = { companyId: company._id }; // ✅ FK Correcta
+    const filter: Record<string, unknown> = { companyId: company._id };
 
     if (!hasPrivileges) {
       if (!company.isActive) {
@@ -343,10 +465,13 @@ export const getCompanyTrips: RequestHandler = async (req, res) => {
       filter.isActive = true;
     }
 
+    // Búsqueda optimizada con .lean()
     const trips = await TripModel.find(filter)
       .populate("routeId")
       .populate("companyId")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
     return res.json(trips.map(toTripDTO));
   } catch (error) {
     console.error("❌ [getCompanyTrips] Error:", error);

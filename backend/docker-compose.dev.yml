@@ -24,36 +24,8 @@ services:
       - .env
     depends_on:
       - mongo
-    command: npm run dev
+    command: sh -c "npm install && npm run dev"
     restart: unless-stopped
 
 volumes:
   mongo_data:
-
-
-# version: "3.9"
-
-# services:
-#   mongo:
-#     image: mongo:8.0
-#     container_name: mongo-dev
-#     command: [ "mongod", "--replSet", "rs0", "--bind_ip_all" ]
-#     ports:
-#       - "27017:27017"
-#     volumes:
-#       - mongo_data:/data/db
-#     restart: unless-stopped
-
-#   backend:
-#     build: .
-#     container_name: backend-api
-#     ports:
-#       - "3000:3000"
-#     env_file:
-#       - .env
-#     depends_on:
-#       - mongo
-#     restart: unless-stopped
-
-# volumes:
-#   mongo_data:

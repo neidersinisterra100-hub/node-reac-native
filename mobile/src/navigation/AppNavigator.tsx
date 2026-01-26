@@ -21,6 +21,7 @@ import CompanyRoutesScreen from "../screens/CompanyRoutesScreen";
 import CompanyLegalInfoScreen from "../screens/CompanyLegalInfoScreen";
 
 import CreateTripScreen from "../screens/CreateTripScreen";
+import TripSeatsScreen from "../screens/TripSeatsScreen";
 import CreateRouteScreen from "../screens/CreateRouteScreen";
 
 import AllRoutesScreen from "../screens/AllRoutesScreen";
@@ -112,6 +113,7 @@ export default function AppNavigator() {
             <Stack.Screen name="AllRoutes" component={AllRoutesScreen} />
             <Stack.Screen name="AllTrips" component={AllTripsScreen} />
             <Stack.Screen name="Trips" component={TripsScreen} />
+            <Stack.Screen name="TripSeats" component={TripSeatsScreen} />
             <Stack.Screen
               name="CreateRoute"
               component={CreateRouteScreen}

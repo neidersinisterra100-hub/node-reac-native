@@ -45,6 +45,9 @@ export type RootStackParamList = {
   };
   CreateTrip: { routeId?: string; routeName?: string };
 
+  // 💺 ASIENTOS
+  TripSeats: { tripId: string };
+
   // 🎟️ MODALES
   ConfirmTicketModal: {
     tripId: string;

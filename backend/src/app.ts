@@ -8,6 +8,7 @@ import companyRoutes from "./routes/company.routes.js";
 import routeRoutes from "./routes/route.routes.js";
 import reportRoutes from "./routes/report.routes.js";
 import scheduleRoutes from "./routes/schedule.routes.js";
+import seatRoutes from "./routes/seat.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
@@ -57,6 +58,7 @@ app.use("/api/trips", tripRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/schedules", scheduleRoutes);
+app.use("/api", seatRoutes);
 
 /* =========================================================
    404 — ENDPOINT NO ENCONTRADO

@@ -141,7 +141,7 @@ export default function ValidateTicketScreen() {
 
   return (
     <AppContainer>
-      <AppHeader title="Validar Ticket" />
+      <AppHeader title="Validar Ticket" showBack />
 
       {/* ================= MODAL CÁMARA ================= */}
       <Modal

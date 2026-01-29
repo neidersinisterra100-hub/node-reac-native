@@ -11,7 +11,7 @@ import type { RouteDocument } from "../models/route.model.js";
 /* =========================================================
    DTO
    ========================================================= */
- 
+
 export interface RouteDTO {
   id: string;
   origin: string;
@@ -20,7 +20,7 @@ export interface RouteDTO {
   isActive: boolean;
   createdAt: Date;
 }
- 
+
 function toRouteDTO(route: RouteDocument): RouteDTO {
   return {
     id: route._id.toString(),
@@ -85,6 +85,9 @@ export const createRoute: RequestHandler = async (req, res) => {
       origin,
       destination,
       companyId: company._id, // ✅ FK Correcta
+      departmentId: company.departmentId, // 🔥 Derivado desde empresa
+      municipioId: company.municipioId, // 🔥 Derivado
+      cityId: company.cityId, // 🔥 Derivado
       createdBy: new Types.ObjectId(authReq.user.id),
       isActive: true, // ✅ CORRECTO
     });
@@ -154,13 +157,13 @@ export const toggleRouteActive: RequestHandler = async (req, res) => {
 
     const newStatus = !route.isActive;
     route.isActive = newStatus;
-    
+
     if (!newStatus) {
-        route.deactivatedAt = new Date();
+      route.deactivatedAt = new Date();
     } else {
-        route.deactivatedAt = undefined;
+      route.deactivatedAt = undefined;
     }
-    
+
     await route.save({ session });
 
     // 🔥 CASCADA: Si desactivamos ruta, desactivar viajes
@@ -214,7 +217,7 @@ export const deleteRoute: RequestHandler = async (req, res) => {
 
     // Eliminar viajes asociados
     await TripModel.deleteMany({ routeId: route._id }, { session }); // ✅ FK Correcta
-    
+
     await RouteModel.findByIdAndDelete(routeId, { session });
 
     await session.commitTransaction();
@@ -242,7 +245,7 @@ export const getRoutesByRole: RequestHandler = async (req, res) => {
       filter.companyId = { $exists: true };
     }
 
-    if (!authReq.user) {
+    if (!authReq.user || authReq.user.role === 'user') {
       filter.isActive = true;
     }
 

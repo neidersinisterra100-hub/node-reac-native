@@ -2,6 +2,7 @@ import mongoose, { Schema, model, Types, Document } from 'mongoose';
 
 export interface ISchedule extends Document {
   date: Date;
+  departmentId: Types.ObjectId;
   company: Types.ObjectId;
   admin: Types.ObjectId;
   owner: Types.ObjectId;
@@ -11,6 +12,7 @@ export interface ISchedule extends Document {
 const ScheduleSchema = new Schema<ISchedule>(
   {
     date: { type: Date, required: true },
+    departmentId: { type: Schema.Types.ObjectId, ref: 'Department', required: true, index: true },
     company: { type: Schema.Types.ObjectId, ref: 'Company', required: true },
     admin: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },

@@ -1,506 +1,282 @@
+import React, { useState } from "react";
 import {
   View,
-  StyleSheet,
-  Pressable,
-  Platform,
+  Text,
+  TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
   Alert,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
-import { useState } from "react";
-import { Text, TextInput } from "react-native-paper";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import { styled } from "nativewind";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
+import { ScreenContainer } from "../components/ui/ScreenContainer";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
 import { createTrip } from "../services/trip.service";
-import AppContainer from "../components/ui/AppContainer";
-import PrimaryButton from "../components/ui/PrimaryButton";
-import AppHeader from "../components/ui/AppHeader";
-import { colors } from "../theme/colors";
 
-type RouteParams = {
-  routeId: string;
-  routeName?: string;
-};
+import {
+  Calendar,
+  Clock,
+  Users,
+  Ship,
+  ArrowLeft,
+} from "lucide-react-native";
+
+import { TextInput } from "react-native-paper";
+
+const StyledText = styled(Text);
+const StyledView = styled(View);
+
+/* =========================================================
+   TIPADO DE RUTA
+   ========================================================= */
+
+type CreateTripRouteProp = RouteProp<
+  { params: { routeId: string; routeName?: string } },
+  "params"
+>;
+
+/* =========================================================
+   CONSTANTES DE DOMINIO
+   ========================================================= */
+
+// 🔒 Enum controlado (alineado con backend)
+const TRANSPORT_TYPES = [
+  { label: "Lancha", value: "lancha" },
+  { label: "Lancha rápida", value: "lancha rapida" },
+];
 
 export default function CreateTripScreen() {
-  const route = useRoute();
   const navigation = useNavigation();
-  const { routeId, routeName } = route.params as RouteParams;
+  const route = useRoute<CreateTripRouteProp>();
 
+  const { routeId, routeName } = route.params;
+
+  /* =====================================================
+     ESTADO
+     ===================================================== */
+
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
   const [price, setPrice] = useState("");
-  const [capacity, setCapacity] = useState(""); // 🔑 CLAVE
-  const [transportType, setTransportType] = useState("lancha");
+  const [capacity, setCapacity] = useState("");
 
-  const [date, setDate] = useState<Date | null>(null);
-  const [time, setTime] = useState<Date | null>(null);
-  const [showDate, setShowDate] = useState(false);
-  const [showTime, setShowTime] = useState(false);
+  // 🔒 Valor controlado
+  const [transportType, setTransportType] =
+    useState<"lancha" | "lancha rapida">("lancha");
 
   const [loading, setLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
-  /* ================= HANDLERS ================= */
+  /* =====================================================
+     SUBMIT
+     ===================================================== */
 
   const handleSubmit = async () => {
-    if (!price || !capacity || !date || !time) {
-      Alert.alert("Error", "Completa todos los campos");
-      return;
-    }
-
-    const capacityNumber = Number(capacity);
-    const priceNumber = Number(price);
-
-    if (capacityNumber <= 0 || priceNumber < 0) {
+    if (!price || !capacity) {
       Alert.alert(
-        "Error",
-        "La capacidad debe ser mayor a 0 y el precio válido"
+        "Datos incompletos",
+        "Por favor completa precio y capacidad."
       );
       return;
     }
 
     setLoading(true);
 
-    const finalDate = date.toISOString().split("T")[0];
-    const finalTime = time.toTimeString().slice(0, 5);
-
     try {
-      await createTrip({
+      const payload = {
         routeId,
-        date: finalDate,
-        departureTime: finalTime,
-        price: priceNumber,
-        capacity: capacityNumber, // 🔑 CLAVE
+        date: date.toISOString().split("T")[0], // YYYY-MM-DD
+        departureTime: time.toTimeString().slice(0, 5), // HH:mm
+        price: Number(price),
+        capacity: Number(capacity),
         transportType,
-      });
+      };
+
+      await createTrip(payload);
 
       Alert.alert("Éxito", "Viaje creado correctamente", [
         { text: "OK", onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message ||
-          "No se pudo crear el viaje"
-      );
+      const status = error?.response?.status;
+
+      if (status === 401) {
+        Alert.alert(
+          "Sesión expirada",
+          "Vuelve a iniciar sesión."
+        );
+      } else if (status === 403) {
+        Alert.alert(
+          "Sin permisos",
+          "Solo el owner puede crear viajes."
+        );
+      } else if (status === 409) {
+        Alert.alert(
+          "Conflicto",
+          error?.response?.data?.message
+        );
+      } else {
+        Alert.alert(
+          "Error",
+          error?.response?.data?.message ||
+            "No se pudo crear el viaje."
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  /* =====================================================
+     UI
+     ===================================================== */
+
   return (
-    <AppContainer>
-      <AppHeader title="Programar Zarpe" neon />
+    <ScreenContainer withPadding={false}>
+      {/* HEADER */}
+      <StyledView className="bg-nautic-primary pt-12 pb-6 px-6 rounded-b-[24px] mb-4 flex-row items-center gap-4">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          className="bg-white/20 p-2 rounded-full"
+        >
+          <ArrowLeft size={24} color="white" />
+        </TouchableOpacity>
+
+        <View style={{ flex: 1 }}>
+          <StyledText className="text-white text-xl font-bold">
+            Programar Zarpe
+          </StyledText>
+          <StyledText className="text-white/70 text-sm">
+            {routeName || "Nueva salida"}
+          </StyledText>
+        </View>
+      </StyledView>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={styles.sectionTitle}>Nueva Salida</Text>
-          <Text style={styles.subtitle}>
-            {routeName || "Ruta seleccionada"}
-          </Text>
-
-          <View style={styles.form}>
-            {/* ===== FECHA ===== */}
-            <View style={styles.inputContainer}>
-              <Pressable onPress={() => setShowDate(true)}>
-                <View pointerEvents="none">
-                  <TextInput
-                    mode="outlined"
-                    label="Fecha de Salida"
-                    value={
-                      date
-                        ? format(date, "dd 'de' MMMM, yyyy", {
-                            locale: es,
-                          })
-                        : ""
-                    }
-                    outlineColor={colors.border}
-                    activeOutlineColor={colors.accent}
-                    style={styles.input}
-                    right={
-                      <TextInput.Icon
-                        icon="calendar"
-                        color={colors.textSecondary}
-                      />
-                    }
-                  />
-                </View>
-              </Pressable>
-              {showDate && (
-                <DateTimePicker
-                  value={date ?? new Date()}
-                  mode="date"
-                  minimumDate={new Date()}
-                  onChange={(_, selected) => {
-                    setShowDate(false);
-                    if (selected) setDate(selected);
-                  }}
-                />
-              )}
-            </View>
-
-            {/* ===== HORA ===== */}
-            <View style={styles.inputContainer}>
-              <Pressable onPress={() => setShowTime(true)}>
-                <View pointerEvents="none">
-                  <TextInput
-                    mode="outlined"
-                    label="Hora de Zarpe"
-                    value={time ? format(time, "HH:mm") : ""}
-                    outlineColor={colors.border}
-                    activeOutlineColor={colors.accent}
-                    style={styles.input}
-                    right={
-                      <TextInput.Icon
-                        icon="clock-outline"
-                        color={colors.textSecondary}
-                      />
-                    }
-                  />
-                </View>
-              </Pressable>
-              {showTime && (
-                <DateTimePicker
-                  value={time ?? new Date()}
-                  mode="time"
-                  onChange={(_, selected) => {
-                    setShowTime(false);
-                    if (selected) setTime(selected);
-                  }}
-                />
-              )}
-            </View>
-
-            {/* ===== PRECIO ===== */}
-            <View style={styles.inputContainer}>
+        <ScrollView contentContainerStyle={{ padding: 20 }}>
+          <Card className="p-4 mb-4 space-y-4">
+            {/* FECHA */}
+            <TouchableOpacity onPress={() => setShowDatePicker(true)}>
               <TextInput
                 mode="outlined"
-                label="Precio del Ticket"
-                value={price}
-                onChangeText={setPrice}
-                keyboardType="numeric"
-                outlineColor={colors.border}
-                activeOutlineColor={colors.accent}
-                style={styles.input}
-                left={<TextInput.Affix text="$ " />}
-              />
-            </View>
-
-            {/* ===== CAPACIDAD ===== */}
-            <View style={styles.inputContainer}>
-              <TextInput
-                mode="outlined"
-                label="Capacidad (pasajeros)"
-                value={capacity}
-                onChangeText={setCapacity}
-                keyboardType="numeric"
-                outlineColor={colors.border}
-                activeOutlineColor={colors.accent}
-                style={styles.input}
+                label="Fecha de salida"
+                value={format(date, "dd 'de' MMMM, yyyy", {
+                  locale: es,
+                })}
+                editable={false}
                 right={
                   <TextInput.Icon
-                    icon="account-group"
-                    color={colors.textSecondary}
+                    icon={() => (
+                      <Calendar size={20} color="#64748B" />
+                    )}
                   />
                 }
               />
-            </View>
+            </TouchableOpacity>
 
-            {/* ===== TIPO ===== */}
-            <View style={styles.inputContainer}>
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                minimumDate={new Date()}
+                onChange={(_, selected) => {
+                  setShowDatePicker(false);
+                  if (selected) setDate(selected);
+                }}
+              />
+            )}
+
+            {/* HORA */}
+            <TouchableOpacity onPress={() => setShowTimePicker(true)}>
               <TextInput
                 mode="outlined"
-                label="Tipo de Embarcación"
-                value={transportType}
-                onChangeText={setTransportType}
-                outlineColor={colors.border}
-                activeOutlineColor={colors.accent}
-                style={styles.input}
+                label="Hora de zarpe"
+                value={format(time, "HH:mm")}
+                editable={false}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      <Clock size={20} color="#64748B" />
+                    )}
+                  />
+                }
               />
-            </View>
+            </TouchableOpacity>
 
-            <View style={{ marginTop: 24 }}>
-              <PrimaryButton
-                label={loading ? "Creando..." : "Publicar Viaje"}
-                onPress={handleSubmit}
-                loading={loading}
+            {showTimePicker && (
+              <DateTimePicker
+                value={time}
+                mode="time"
+                onChange={(_, selected) => {
+                  setShowTimePicker(false);
+                  if (selected) setTime(selected);
+                }}
               />
-            </View>
-          </View>
+            )}
+
+            {/* PRECIO */}
+            <TextInput
+              mode="outlined"
+              label="Precio por persona"
+              keyboardType="numeric"
+              value={price}
+              onChangeText={setPrice}
+              left={<TextInput.Affix text="$ " />}
+            />
+
+            {/* CAPACIDAD */}
+            <TextInput
+              mode="outlined"
+              label="Capacidad (pax)"
+              keyboardType="numeric"
+              value={capacity}
+              onChangeText={setCapacity}
+              right={
+                <TextInput.Icon
+                  icon={() => (
+                    <Users size={20} color="#64748B" />
+                  )}
+                />
+              }
+            />
+
+            {/* TRANSPORTE */}
+            <TextInput
+              mode="outlined"
+              label="Embarcación"
+              value={
+                TRANSPORT_TYPES.find(
+                  (t) => t.value === transportType
+                )?.label
+              }
+              editable={false}
+              right={
+                <TextInput.Icon
+                  icon={() => (
+                    <Ship size={20} color="#64748B" />
+                  )}
+                />
+              }
+            />
+          </Card>
+
+          <Button
+            title="Publicar viaje"
+            onPress={handleSubmit}
+            loading={loading}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
-    </AppContainer>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollContent: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 24,
-  },
-  form: {
-    gap: 16,
-  },
-  inputContainer: {
-    marginBottom: 4,
-  },
-  input: {
-    backgroundColor: "white",
-  },
-});
-
-
-
-// import {
-//   View,
-//   StyleSheet,
-//   Pressable,
-//   Platform,
-//   ScrollView,
-//   KeyboardAvoidingView,
-//   Alert
-// } from "react-native";
-// import { useState } from "react";
-// import { Text, TextInput } from "react-native-paper";
-// import DateTimePicker from "@react-native-community/datetimepicker";
-// import { useRoute, useNavigation } from "@react-navigation/native";
-// import { format } from "date-fns";
-// import { es } from "date-fns/locale";
-
-// import { createTrip } from "../services/trip.service";
-// import AppContainer from "../components/ui/AppContainer";
-// import PrimaryButton from "../components/ui/PrimaryButton";
-// import AppHeader from "../components/ui/AppHeader";
-// import { colors } from "../theme/colors";
-
-// type RouteParams = {
-//   routeId: string;
-//   routeName?: string;
-// };
-
-// export default function CreateTripScreen() {
-//   const route = useRoute();
-//   const navigation = useNavigation();
-//   const { routeId, routeName } = route.params as RouteParams;
-
-//   const [price, setPrice] = useState("");
-//   const [transportType, setTransportType] = useState("Lancha Rápida"); // Default
-
-//   // 🔹 Fechas
-//   const [date, setDate] = useState<Date | null>(null);
-//   const [time, setTime] = useState<Date | null>(null);
-//   const [showDate, setShowDate] = useState(false);
-//   const [showTime, setShowTime] = useState(false);
-
-//   const [loading, setLoading] = useState(false);
-
-//   /* ================= HANDLERS ================= */
-
-//   const handleSubmit = async () => {
-//     if (!price || !date || !time || !transportType) {
-//       Alert.alert("Error", "Completa todos los campos");
-//       return;
-//     }
-
-//     setLoading(true);
-
-//     // Formato fecha: YYYY-MM-DD
-//     const finalDate = date.toISOString().split("T")[0];
-    
-//     // Formato hora: HH:mm
-//     const finalTime = time.toTimeString().slice(0, 5);
-
-//     try {
-//       await createTrip({
-//         routeId,
-//         date: finalDate,
-//         departureTime: finalTime,
-//         price: Number(price),
-//         transportType,
-//       });
-
-//       Alert.alert("Éxito", "Viaje creado correctamente", [
-//           { text: "OK", onPress: () => navigation.goBack() }
-//       ]);
-
-//     } catch (error: any) {
-//       Alert.alert(
-//         "Error",
-//         error?.response?.data?.message || "No se pudo crear el viaje"
-//       );
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <AppContainer>
-//         {/* Header con Neón */}
-//         <AppHeader title="Programar Zarpe" neon={true} />
-
-//         <KeyboardAvoidingView 
-//             behavior={Platform.OS === "ios" ? "padding" : "height"}
-//             style={{ flex: 1 }}
-//         >
-//             <ScrollView 
-//                 contentContainerStyle={styles.scrollContent} 
-//                 showsVerticalScrollIndicator={false}
-//             >
-                
-//                 <Text style={styles.sectionTitle}>Nueva Salida</Text>
-//                 <Text style={styles.subtitle}>{routeName || "Ruta seleccionada"}</Text>
-
-//                 <View style={styles.form}>
-                    
-//                     {/* ===== FECHA ===== */}
-//                     <View style={styles.inputContainer}>
-//                         <Pressable onPress={() => setShowDate(true)}>
-//                             <View pointerEvents="none">
-//                                 <TextInput
-//                                     mode="outlined"
-//                                     label="Fecha de Salida"
-//                                     value={date ? format(date, "dd 'de' MMMM, yyyy", { locale: es }) : ""}
-//                                     placeholder="Seleccionar fecha"
-//                                     outlineColor={colors.border}
-//                                     activeOutlineColor={colors.accent}
-//                                     style={styles.input}
-//                                     theme={{ colors: { primary: colors.accent } }}
-//                                     right={<TextInput.Icon icon="calendar" color={colors.textSecondary} />}
-//                                 />
-//                             </View>
-//                         </Pressable>
-//                         {showDate && (
-//                             <DateTimePicker
-//                                 value={date ?? new Date()}
-//                                 mode="date"
-//                                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-//                                 minimumDate={new Date()}
-//                                 onChange={(_, selected) => {
-//                                     setShowDate(false);
-//                                     if (selected) setDate(selected);
-//                                 }}
-//                             />
-//                         )}
-//                     </View>
-
-//                     {/* ===== HORA ===== */}
-//                     <View style={styles.inputContainer}>
-//                         <Pressable onPress={() => setShowTime(true)}>
-//                             <View pointerEvents="none">
-//                                 <TextInput
-//                                     mode="outlined"
-//                                     label="Hora de Zarpe"
-//                                     value={time ? format(time, "hh:mm a") : ""}
-//                                     placeholder="Seleccionar hora"
-//                                     outlineColor={colors.border}
-//                                     activeOutlineColor={colors.accent}
-//                                     style={styles.input}
-//                                     theme={{ colors: { primary: colors.accent } }}
-//                                     right={<TextInput.Icon icon="clock-outline" color={colors.textSecondary} />}
-//                                 />
-//                             </View>
-//                         </Pressable>
-//                         {showTime && (
-//                             <DateTimePicker
-//                                 value={time ?? new Date()}
-//                                 mode="time"
-//                                 display="default"
-//                                 onChange={(_, selected) => {
-//                                     setShowTime(false);
-//                                     if (selected) setTime(selected);
-//                                 }}
-//                             />
-//                         )}
-//                     </View>
-
-//                     {/* ===== PRECIO ===== */}
-//                     <View style={styles.inputContainer}>
-//                         <TextInput
-//                             mode="outlined"
-//                             label="Precio del Ticket"
-//                             value={price}
-//                             onChangeText={setPrice}
-//                             placeholder="Ej: 45000"
-//                             keyboardType="numeric"
-//                             outlineColor={colors.border}
-//                             activeOutlineColor={colors.accent}
-//                             style={styles.input}
-//                             theme={{ colors: { primary: colors.accent } }}
-//                             left={<TextInput.Affix text="$ " />}
-//                         />
-//                     </View>
-
-//                     {/* ===== TIPO TRANSPORTE ===== */}
-//                     <View style={styles.inputContainer}>
-//                         <TextInput
-//                             mode="outlined"
-//                             label="Tipo de Embarcación"
-//                             value={transportType}
-//                             onChangeText={setTransportType}
-//                             placeholder="Ej: Lancha Rápida"
-//                             outlineColor={colors.border}
-//                             activeOutlineColor={colors.accent}
-//                             style={styles.input}
-//                             theme={{ colors: { primary: colors.accent } }}
-//                             right={<TextInput.Icon icon="ferry" color={colors.textSecondary} />}
-//                         />
-//                     </View>
-
-//                     <View style={{ marginTop: 24 }}>
-//                         <PrimaryButton
-//                             label={loading ? "Creando..." : "Publicar Viaje"}
-//                             onPress={handleSubmit}
-//                             loading={loading}
-//                         />
-//                     </View>
-
-//                 </View>
-//             </ScrollView>
-//         </KeyboardAvoidingView>
-//     </AppContainer>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   scrollContent: {
-//     padding: 20,
-//     paddingTop: 10, // Ajustado porque AppContainer ya tiene SafeArea
-//   },
-//   sectionTitle: {
-//       fontSize: 24,
-//       fontWeight: 'bold',
-//       color: colors.primary,
-//       marginBottom: 4,
-//   },
-//   subtitle: {
-//       fontSize: 14,
-//       color: colors.textSecondary,
-//       marginBottom: 24,
-//   },
-//   form: {
-//       gap: 16,
-//   },
-//   inputContainer: {
-//       marginBottom: 4,
-//   },
-//   input: {
-//       backgroundColor: "white",
-//   }
-// });

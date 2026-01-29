@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import { AuthRequest } from "../middlewares/requireAuth.js";
 import { TicketModel } from "../models/ticket.model.js";
 import { TripModel } from "../models/trip.model.js";
+import { CompanyModel } from "../models/company.model.js";
 
 /* =========================================================
    REPORTE DE VENTAS (PLAN PRO)
@@ -13,14 +14,30 @@ export const getSalesReport: RequestHandler = async (req, res) => {
     const authReq = req as AuthRequest;
 
     /* ---------- Seguridad TypeScript ---------- */
-    if (!authReq.user || !authReq.user.companyId) {
+    if (!authReq.user) {
       return res.status(401).json({
-        message: "Usuario no autenticado o sin empresa",
+        message: "Usuario no autenticado",
       });
     }
 
     const { from, to } = req.query;
-    const companyId = authReq.user.companyId;
+    let companyIds: mongoose.Types.ObjectId[] = [];
+
+    // Si el usuario tiene companyId en el token (admin), usar ese
+    if (authReq.user.companyId) {
+      companyIds = [new mongoose.Types.ObjectId(authReq.user.companyId)];
+    } else {
+      // Si es owner, buscar todas sus empresas
+      const companies = await CompanyModel.find({
+        owner: authReq.user.id,
+      }).select("_id");
+
+      if (companies.length === 0) {
+        return res.json([]); // No tiene empresas, retornar array vacío
+      }
+
+      companyIds = companies.map(c => c._id as mongoose.Types.ObjectId);
+    }
 
     if (!from || !to) {
       return res.status(400).json({
@@ -45,7 +62,7 @@ export const getSalesReport: RequestHandler = async (req, res) => {
       { $unwind: "$tripData" },
       {
         $match: {
-          "tripData.company": new mongoose.Types.ObjectId(companyId),
+          "tripData.company": { $in: companyIds },
           status: { $in: ["active", "used"] },
           createdAt: { $gte: startDate, $lte: endDate },
         },
@@ -82,17 +99,33 @@ export const getOccupancyReport: RequestHandler = async (req, res) => {
     const authReq = req as AuthRequest;
 
     /* ---------- Seguridad ---------- */
-    if (!authReq.user || !authReq.user.companyId) {
+    if (!authReq.user) {
       return res.status(401).json({
-        message: "Usuario no autenticado o sin empresa",
+        message: "Usuario no autenticado",
       });
     }
 
-    const companyId = authReq.user.companyId;
+    let companyIds: mongoose.Types.ObjectId[] = [];
+
+    // Si el usuario tiene companyId en el token (admin), usar ese
+    if (authReq.user.companyId) {
+      companyIds = [new mongoose.Types.ObjectId(authReq.user.companyId)];
+    } else {
+      // Si es owner, buscar todas sus empresas
+      const companies = await CompanyModel.find({
+        owner: authReq.user.id,
+      }).select("_id");
+
+      if (companies.length === 0) {
+        return res.json([]); // No tiene empresas, retornar array vacío
+      }
+
+      companyIds = companies.map(c => c._id as mongoose.Types.ObjectId);
+    }
 
     /* ---------- Obtener viajes ---------- */
     const trips = await TripModel.find({
-      company: companyId,
+      company: { $in: companyIds },
       active: true,
     }).select("date route capacity");
 

@@ -1,211 +1,156 @@
-import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { Ship, Calendar, Clock } from "lucide-react-native";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { styled } from "nativewind";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
 import { tripService, Trip } from "../services/trip.service";
-import { useAuth } from "../context/AuthContext";
+
+const StyledView = styled(View);
+const StyledText = styled(Text);
 
 export default function AllTripsScreen() {
-    const navigation = useNavigation<any>();
-    const { user } = useAuth();
-    const [trips, setTrips] = useState<Trip[]>([]);
-    const [loading, setLoading] = useState(false);
+  const navigation = useNavigation<any>();
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(false);
 
-    const loadTrips = async () => {
-        try {
-            setLoading(true);
-            const data = await tripService.getAll();
-            setTrips(data);
-        } catch {
-            Alert.alert("Error", "No se pudieron cargar los viajes");
-        } finally {
-            setLoading(false);
-        }
-    };
+  const loadTrips = async () => {
+    try {
+      setLoading(true);
+      const data = await tripService.getAll();
+      setTrips(data);
+    } catch {
+      Alert.alert("Error", "No se pudieron cargar los viajes");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    useEffect(() => {
-        loadTrips();
-    }, []);
+  useEffect(() => {
+    loadTrips();
+  }, []);
 
-    useEffect(() => {
-        console.log("🧪 Trip en mobile:", trips[0]);
-    }, [trips]);
+  const handlePressTrip = (trip: Trip) => {
+    if (trip.route && typeof trip.route === "object") {
+      navigation.navigate("ConfirmTicketModal", {
+        tripId: trip._id ?? trip.id,
+        routeName: `${trip.route.origin} - ${trip.route.destination}`,
+        price: trip.price,
+        date: trip.date,
+        time: trip.departureTime,
+      });
+    } else {
+      Alert.alert("Error", "Información de ruta incompleta");
+    }
+  };
 
-
-    const handlePressTrip = (trip: Trip) => {
-        if (trip.route && typeof trip.route === 'object') {
-            navigation.navigate("ConfirmTicketModal", {
-                tripId: trip._id,
-                routeName: `${trip.route.origin} - ${trip.route.destination}`,
-                price: trip.price,
-                date: trip.date,
-                time: trip.departureTime
-            });
-        } else {
-            Alert.alert("Error", "Información de ruta incompleta");
-        }
-    };
-
-    const renderItem = ({ item }: { item: Trip }) => {
-        const routeName = item.route && typeof item.route === 'object'
-            ? `${item.route.origin} - ${item.route.destination}`
-            : (typeof item.route === 'string' ? `ID: ${item.route.substring(0, 8)}` : 'Ruta no definida');
-
-        return (
-            <TouchableOpacity
-                style={styles.card}
-                onPress={() => handlePressTrip(item)}
-            >
-                <View style={styles.cardHeader}>
-                    <View style={styles.iconBox}>
-                        <Ship size={24} color="#4f46e5" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.cardTitle}>
-                            {item.company && typeof item.company === 'object' ? item.company.name : 'Empresa'}
-                        </Text>
-                        <Text style={styles.companyText}>{routeName}</Text>
-                    </View>
-                    <View style={styles.priceTag}>
-                        <Text style={styles.priceText}>${item.price}</Text>
-                    </View>
-                </View>
-
-                <View style={styles.detailsRow}>
-                    <View style={styles.detailItem}>
-                        <Calendar size={14} color="#6b7280" />
-                        <Text style={styles.detailText}>
-                            {item.date ? format(new Date(item.date), "dd MMM", { locale: es }) : "N/A"}
-                        </Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                        <Clock size={14} color="#6b7280" />
-                        <Text style={styles.detailText}>{item.departureTime}</Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                        <Ship size={14} color="#6b7280" />
-                        <Text style={styles.detailText}>{item.transportType}</Text>
-                    </View>
-                </View>
-            </TouchableOpacity>
-        );
-    };
+  const renderItem = ({ item }: { item: Trip }) => {
+    const routeName =
+      item.route && typeof item.route === "object"
+        ? `${item.route.origin} - ${item.route.destination}`
+        : "Ruta no definida";
 
     return (
-        <AppContainer>
-            {/* 
-        Cambios: 
-        1. showBack={true}
-        2. showAvatar={false} 
-      */}
-            <AppHeader
-                title="Próximos Zarpes"
-                neon={true}
-                showBack={true}
-                showAvatar={false}
-            />
+      <TouchableOpacity
+        onPress={() => handlePressTrip(item)}
+        className="
+          bg-white dark:bg-dark-surface
+          border border-gray-200 dark:border-dark-border
+          rounded-2xl p-4 mb-4
+        "
+      >
+        {/* ===== HEADER ===== */}
+        <StyledView className="flex-row items-center mb-3 space-x-3">
+          <StyledView className="bg-indigo-100 dark:bg-indigo-900 p-3 rounded-xl">
+            <Ship className="text-indigo-600 dark:text-indigo-400" size={24} />
+          </StyledView>
 
-            {loading ? (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color="#ff6b00" />
-                </View>
-            ) : (
-                <FlatList
-                    data={trips}
-                    keyExtractor={(item, index) => item._id || item.id || index.toString()}
-                    refreshing={loading}
-                    onRefresh={loadTrips}
-                    contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
-                    showsVerticalScrollIndicator={false}
-                    ListEmptyComponent={
-                        <View style={{ alignItems: 'center', marginTop: 40 }}>
-                            <View style={styles.emptyIcon}>
-                                <Ship size={32} color="#9ca3af" />
-                            </View>
-                            <Text style={{ color: '#6b7280', textAlign: 'center' }}>
-                                No hay viajes programados.
-                            </Text>
-                        </View>
-                    }
-                    renderItem={renderItem}
-                />
-            )}
-        </AppContainer>
+          <StyledView className="flex-1">
+            <StyledText className="text-slate-800 dark:text-dark-text font-bold">
+              {item.company && typeof item.company === "object"
+                ? item.company.name
+                : "Empresa"}
+            </StyledText>
+
+            <StyledText className="text-slate-500 dark:text-dark-textMuted text-xs">
+              {routeName}
+            </StyledText>
+          </StyledView>
+
+          <StyledView className="bg-emerald-50 dark:bg-emerald-900 px-3 py-1 rounded-lg">
+            <StyledText className="text-emerald-600 dark:text-emerald-400 font-bold">
+              ${item.price}
+            </StyledText>
+          </StyledView>
+        </StyledView>
+
+        {/* ===== DETAILS ===== */}
+        <StyledView className="flex-row justify-between border-t border-gray-100 dark:border-dark-border pt-3">
+          <StyledView className="flex-row items-center space-x-1">
+            <Calendar size={14} className="text-slate-500 dark:text-dark-textMuted" />
+            <StyledText className="text-xs text-slate-600 dark:text-dark-textMuted">
+              {format(new Date(item.date), "dd MMM", { locale: es })}
+            </StyledText>
+          </StyledView>
+
+          <StyledView className="flex-row items-center space-x-1">
+            <Clock size={14} className="text-slate-500 dark:text-dark-textMuted" />
+            <StyledText className="text-xs text-slate-600 dark:text-dark-textMuted">
+              {item.departureTime}
+            </StyledText>
+          </StyledView>
+
+          <StyledView className="flex-row items-center space-x-1">
+            <Ship size={14} className="text-slate-500 dark:text-dark-textMuted" />
+            <StyledText className="text-xs text-slate-600 dark:text-dark-textMuted">
+              {item.transportType}
+            </StyledText>
+          </StyledView>
+        </StyledView>
+      </TouchableOpacity>
     );
-}
+  };
 
-const styles = StyleSheet.create({
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 12,
-    },
-    iconBox: {
-        backgroundColor: '#eef2ff',
-        padding: 12,
-        borderRadius: 12,
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#1f2937',
-    },
-    companyText: {
-        fontSize: 12,
-        color: '#6b7280',
-    },
-    priceTag: {
-        backgroundColor: '#ecfdf5',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    priceText: {
-        color: '#059669',
-        fontWeight: 'bold',
-    },
-    detailsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        borderTopWidth: 1,
-        borderTopColor: '#f3f4f6',
-        paddingTop: 12,
-    },
-    detailItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    detailText: {
-        fontSize: 12,
-        color: '#4b5563',
-    },
-    emptyIcon: {
-        width: 64,
-        height: 64,
-        backgroundColor: '#f3f4f6',
-        borderRadius: 32,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 16,
-    }
-});
+  return (
+    <AppContainer>
+      <AppHeader
+        title="Próximos Zarpes"
+        neon
+        showBack
+        showAvatar={false}
+      />
+
+      {loading ? (
+        <StyledView className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#00B4D8" />
+        </StyledView>
+      ) : (
+        <FlatList
+          data={trips}
+          keyExtractor={(item, index) =>
+            item._id || item.id || index.toString()
+          }
+          refreshing={loading}
+          onRefresh={loadTrips}
+          contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <StyledView className="items-center mt-10">
+              <StyledView className="w-16 h-16 bg-gray-100 dark:bg-dark-surface rounded-full items-center justify-center mb-4">
+                <Ship size={32} className="text-slate-400" />
+              </StyledView>
+              <StyledText className="text-slate-500 dark:text-dark-textMuted">
+                No hay viajes programados.
+              </StyledText>
+            </StyledView>
+          }
+          renderItem={renderItem}
+        />
+      )}
+    </AppContainer>
+  );
+}

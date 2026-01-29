@@ -13,6 +13,27 @@ const routeSchema = new mongoose.Schema(
       trim: true
     },
 
+    // 🔥 DENORMALIZACIÓN JERÁRQUICA
+    departmentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department",
+      required: true,
+      index: true
+    },
+    municipioId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Municipio",
+      required: true,
+      index: true
+    },
+
+    cityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "City",
+      required: true,
+      index: true
+    },
+
     // 🔥 CLAVE PARA LA CASCADA
     companyId: {
       type: mongoose.Schema.Types.ObjectId, // ✅ CORRECTO
@@ -45,6 +66,9 @@ const routeSchema = new mongoose.Schema(
 export interface RouteDocument extends mongoose.Document {
   origin: string;
   destination: string;
+  departmentId: mongoose.Types.ObjectId;
+  municipioId: mongoose.Types.ObjectId;
+  cityId: mongoose.Types.ObjectId;
   companyId: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
   isActive: boolean;

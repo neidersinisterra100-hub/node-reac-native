@@ -11,6 +11,27 @@ const tripSchema = new Schema(
       index: true
     },
 
+    // 🔥 DENORMALIZACIÓN FULL
+    departmentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Department",
+      required: true,
+      index: true
+    },
+    municipioId: {
+      type: Schema.Types.ObjectId,
+      ref: "Municipio",
+      required: true,
+      index: true
+    },
+
+    cityId: {
+      type: Schema.Types.ObjectId,
+      ref: "City",
+      required: true,
+      index: true
+    },
+
     // 🔥 CLAVE PARA BLOQUEO POR EMPRESA
     companyId: {
       type: Schema.Types.ObjectId, // ✅ CORRECTO

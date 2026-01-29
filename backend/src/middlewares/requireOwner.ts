@@ -1,20 +1,17 @@
-import { RequestHandler } from "express";
-import { AuthRequest } from "./requireAuth.js";
+import { Request, Response, NextFunction } from "express";
 
-export const requireOwner: RequestHandler = (
-  req,
-  res,
-  next
+export const requireOwner = (
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
-  const authReq = req as AuthRequest;
-
-  if (!authReq.user) {
+  if (!req.user) {
     return res.status(401).json({
       message: "No autenticado",
     });
   }
 
-  if (authReq.user.role !== "owner") {
+  if (req.user.role !== "owner") {
     return res.status(403).json({
       message: "Solo owners pueden realizar esta acción",
     });

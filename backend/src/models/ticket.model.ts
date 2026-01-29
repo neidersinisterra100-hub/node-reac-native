@@ -18,6 +18,9 @@ export interface TicketDocument extends Document {
   /* =========================
      RELACIONES
      ========================= */
+  departmentId: Types.ObjectId;
+  municipioId: Types.ObjectId;
+  cityId: Types.ObjectId;
   trip: Types.ObjectId;
   passenger: Types.ObjectId;
 
@@ -80,6 +83,31 @@ const TicketSchema = new Schema<TicketDocument>(
     /* =========================
        RELACIONES
        ========================= */
+
+    /* =========================
+       RELACIONES
+       ========================= */
+
+    departmentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Department",
+      required: true,
+      index: true
+    },
+
+    municipioId: {
+      type: Schema.Types.ObjectId,
+      ref: "Municipio",
+      required: true,
+      index: true
+    },
+
+    cityId: {
+      type: Schema.Types.ObjectId,
+      ref: "City",
+      required: true,
+      index: true
+    },
 
     trip: {
       type: Schema.Types.ObjectId, // ✅ CORRECTO

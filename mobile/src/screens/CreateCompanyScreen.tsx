@@ -24,7 +24,15 @@ import {
 } from "../services/company.service";
 import { useAuth } from "../context/AuthContext";
 import { colors } from "../theme/colors";
-import { Users, Building2, ShieldCheck } from "lucide-react-native";
+import { Users, Building2, ShieldCheck, Map } from "lucide-react-native";
+import { getAllMunicipios, Municipio } from "../services/municipio.service";
+import { getAllCities, City } from "../services/city.service";
+import { departmentService } from "../services/department.service";
+import { Department } from "../types/department";
+import { Picker } from '@react-native-picker/picker'; // Optional or use custom modal. Mobile picker better.
+// Actually, using a simple modal list is better for custom UI if picker not installed.
+// Or simple buttons. Let's start with simple map iteration for dropdown simulation or just simple list if few.
+// Better: Add Local state for lists.
 
 /** 
  * Tipo específico para el formulario
@@ -67,7 +75,49 @@ export default function CreateCompanyScreen() {
         adminName: "",
         adminEmail: "",
         adminPassword: "",
+        departmentId: "",
+        municipioId: "",
+        cityId: ""
     });
+
+    // Location Data
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [municipios, setMunicipios] = useState<Municipio[]>([]);
+    const [cities, setCities] = useState<City[]>([]);
+    const [filteredMunicipios, setFilteredMunicipios] = useState<Municipio[]>([]);
+    const [filteredCities, setFilteredCities] = useState<City[]>([]);
+
+    useState(() => {
+        loadLocations();
+    });
+
+    async function loadLocations() {
+        try {
+            const [deptData, muniData, cityData] = await Promise.all([
+                departmentService.getAll(true),
+                getAllMunicipios(true),
+                getAllCities()
+            ]);
+            setDepartments(deptData);
+            setMunicipios(muniData);
+            setCities(cityData);
+        } catch (e) {
+            console.log("Error loading locations", e);
+        }
+    }
+
+    const handleDepartmentChange = (deptId: string) => {
+        setFormData(prev => ({ ...prev, departmentId: deptId, municipioId: "", cityId: "" }));
+        const filtered = municipios.filter(m => (m as any).departmentId === deptId && m.isActive);
+        setFilteredMunicipios(filtered);
+        setFilteredCities([]);
+    };
+
+    const handleMunicipioChange = (muniId: string) => {
+        setFormData(prev => ({ ...prev, municipioId: muniId, cityId: "" }));
+        const filtered = cities.filter(c => c.municipioId === muniId && c.isActive);
+        setFilteredCities(filtered);
+    };
 
     const handleInputChange = (field: keyof CreateCompanyForm, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -83,6 +133,11 @@ export default function CreateCompanyScreen() {
     const handleCreate = async () => {
         if (!formData.name.trim()) {
             Alert.alert("Nombre requerido", "Ingresa el nombre de la empresa");
+            return;
+        }
+
+        if (!formData.municipioId || !formData.cityId) {
+            Alert.alert("Ubicación requerida", "Selecciona Municipio y Ciudad");
             return;
         }
 
@@ -152,12 +207,85 @@ export default function CreateCompanyScreen() {
                             onChangeText={(text) => handleInputChange("legalRepresentative", text)}
                         />
 
-                        <Text style={styles.label}>Nro. Licencia / Habilitación</Text>
                         <TextInput
                             style={styles.input}
                             value={formData.licenseNumber}
                             onChangeText={(text) => handleInputChange("licenseNumber", text)}
                         />
+
+                        {/* ===== UBICACIÓN ===== */}
+                        <View style={{ marginTop: 10, marginBottom: 10 }}>
+                            <View style={styles.cardHeader}>
+                                <Map size={20} color={colors.primary} />
+                                <Text style={styles.cardTitle}>Ubicación Principal</Text>
+                            </View>
+
+                            <Text style={styles.label}>Departamento *</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                                {departments.map(d => (
+                                    <View key={d._id} style={{ marginRight: 8 }}>
+                                        <View onTouchEnd={() => handleDepartmentChange(d._id)}
+                                            style={[
+                                                styles.selectionChip,
+                                                (formData as any).departmentId === d._id && styles.selectionChipActive
+                                            ]}>
+                                            <Text style={[
+                                                styles.chipText,
+                                                (formData as any).departmentId === d._id && styles.chipTextActive
+                                            ]}>{d.name}</Text>
+                                        </View>
+                                    </View>
+                                ))}
+                            </ScrollView>
+
+                            <Text style={styles.label}>Municipio *</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                                {filteredMunicipios.length > 0 ? (
+                                    filteredMunicipios.map(m => (
+                                        <View key={m._id} style={{ marginRight: 8 }}>
+                                            <View onTouchEnd={() => handleMunicipioChange(m._id)}
+                                                style={[
+                                                    styles.selectionChip,
+                                                    formData.municipioId === m._id && styles.selectionChipActive
+                                                ]}>
+                                                <Text style={[
+                                                    styles.chipText,
+                                                    formData.municipioId === m._id && styles.chipTextActive
+                                                ]}>{m.name}</Text>
+                                            </View>
+                                        </View>
+                                    ))
+                                ) : (
+                                    <Text style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+                                        {(formData as any).departmentId ? "No hay municipios registrados" : "Selecciona un departamento primero"}
+                                    </Text>
+                                )}
+                            </ScrollView>
+
+                            <Text style={styles.label}>Ciudad / Puerto *</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                                {filteredCities.length > 0 ? (
+                                    filteredCities.map(c => (
+                                        <View key={c._id} style={{ marginRight: 8 }}>
+                                            <View onTouchEnd={() => handleInputChange("cityId", c._id)}
+                                                style={[
+                                                    styles.selectionChip,
+                                                    formData.cityId === c._id && styles.selectionChipActive
+                                                ]}>
+                                                <Text style={[
+                                                    styles.chipText,
+                                                    formData.cityId === c._id && styles.chipTextActive
+                                                ]}>{c.name}</Text>
+                                            </View>
+                                        </View>
+                                    ))
+                                ) : (
+                                    <Text style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+                                        {formData.municipioId ? "No hay ciudades registradas" : "Selecciona un municipio primero"}
+                                    </Text>
+                                )}
+                            </ScrollView>
+                        </View>
                     </View>
 
                     {/* ===== ADMINISTRADOR ===== */}
@@ -362,5 +490,26 @@ const styles = StyleSheet.create({
         color: "#4b5563",
         flex: 1,
         marginRight: 8,
+    },
+    selectionChip: {
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: "#f3f4f6",
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+    },
+    selectionChipActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    chipText: {
+        fontSize: 14,
+        color: "#4b5563",
+        fontWeight: "500",
+    },
+    chipTextActive: {
+        color: "white",
+        fontWeight: "bold",
     },
 });

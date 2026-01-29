@@ -1,58 +1,52 @@
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { View, ActivityIndicator } from "react-native";
-
-import { useAuth } from "../context/AuthContext";
-
-import LoginScreen from "../screens/LoginScreen";
+import { LoginScreen } from "../screens/auth/LoginScreen";
+import { RegisterScreen } from "../screens/auth/RegisterScreen";
 import TermsScreen from "../screens/TermsScreen";
 import TabNavigator from "./TabNavigator";
+import { RootStackParamList } from "./types";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { NavigationContainer } from "@react-navigation/native";
+import { View, ActivityIndicator } from "react-native";
+import { useAuth } from "../context/AuthContext";
 
+// New Booking Flow
+import { LocationSelectionScreen } from "../screens/booking/LocationSelectionScreen";
+import { AvailableTripsScreen } from "../screens/booking/AvailableTripsScreen";
+import { TripDetailScreen } from "../screens/booking/TripDetailScreen";
+import { SeatSelectionScreen } from "../screens/booking/SeatSelectionScreen";
+import { PaymentScreen } from "../screens/booking/PaymentScreen";
+import { TicketScreen } from "../screens/booking/TicketScreen";
+import { CompanyDashboardScreen } from "../screens/company/CompanyDashboardScreen";
+
+// Legacy / Existing screens
+import CreateCompanyScreen from "../screens/CreateCompanyScreen";
+import MyCompaniesScreen from "../screens/MyCompaniesScreen";
+import { CompanyRoutesScreen } from "../screens/CompanyRoutesScreen";
+import CompanyLegalInfoScreen from "../screens/CompanyLegalInfoScreen";
+import CreateTripScreen from "../screens/CreateTripScreen";
+import CreateRouteScreen from "../screens/CreateRouteScreen";
+import TripsScreen from "../screens/TripsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import MenuScreen from "../screens/MenuScreen";
 import BalanceScreen from "../screens/BalanceScreen";
 import MyTicketsScreen from "../screens/MyTicketsScreen";
 import ValidateTicketScreen from "../screens/ValidateTicketScreen";
 import ReportsScreen from "../screens/ReportsScreen";
-
-import CreateCompanyScreen from "../screens/CreateCompanyScreen";
-import MyCompaniesScreen from "../screens/MyCompaniesScreen";
-import CompanyRoutesScreen from "../screens/CompanyRoutesScreen";
-import CompanyLegalInfoScreen from "../screens/CompanyLegalInfoScreen";
-
-import CreateTripScreen from "../screens/CreateTripScreen";
-import TripSeatsScreen from "../screens/TripSeatsScreen";
-import CreateRouteScreen from "../screens/CreateRouteScreen";
-
-import AllRoutesScreen from "../screens/AllRoutesScreen";
-import AllTripsScreen from "../screens/AllTripsScreen";
-import TripsScreen from "../screens/TripsScreen";
-import PassengersScreen from "../screens/PassengersScreen";
-
+import CalendarScreen from "../screens/CalendarScreen";
 import SettingsScreen from "./PrivateStack/SettingsScreen";
 import ConfirmTicketModal from "./PrivateStack/ConfirmTicketModal";
 import TicketReceiptModal from "./PrivateStack/TicketReceiptModal";
-
-import { RootStackParamList } from "./types";
+import PassengersScreen from "../screens/PassengersScreen";
+import AllRoutesScreen from "../screens/AllRoutesScreen";
+import ManageLocationsScreen from "../screens/ManageLocationsScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   const { user, loading } = useAuth();
 
-  /**
-   * ⏳ Mientras se hidrata el token / sesión
-   * NO renderizamos navegación
-   */
   if (loading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />
       </View>
     );
@@ -61,20 +55,18 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* =====================================================
-            USUARIO NO AUTENTICADO
-            ===================================================== */}
         {!user ? (
           <>
             <Stack.Screen
               name="Login"
               component={LoginScreen}
-              options={{
-                presentation: "modal",
-                animation: "slide_from_bottom",
-              }}
+              options={{ animation: "slide_from_bottom" }}
             />
-
+            <Stack.Screen
+              name="Register"
+              component={RegisterScreen}
+              options={{ animation: "slide_from_right" }}
+            />
             <Stack.Screen
               name="Terms"
               component={TermsScreen}
@@ -83,47 +75,40 @@ export default function AppNavigator() {
           </>
         ) : (
           <>
-            {/* =================================================
-                USUARIO AUTENTICADO
-                ================================================= */}
-
-            {/* Dashboard principal */}
+            {/* Dashboard / Tabs */}
             <Stack.Screen name="Tabs" component={TabNavigator} />
 
-            {/* Empresas */}
-            <Stack.Screen
-              name="CreateCompany"
-              component={CreateCompanyScreen}
-            />
-            <Stack.Screen
-              name="MyCompanies"
-              component={MyCompaniesScreen}
-            />
-            <Stack.Screen
-              name="CompanyRoutes"
-              component={CompanyRoutesScreen}
-            />
-            <Stack.Screen
-              name="CompanyLegalInfo"
-              component={CompanyLegalInfoScreen}
-              options={{ presentation: "modal" }}
-            />
+            {/* 🆕 Booking Flow */}
+            <Stack.Screen name="LocationSelection" component={LocationSelectionScreen} />
+            <Stack.Screen name="AllTrips" component={AvailableTripsScreen} />
+            <Stack.Screen name="TripDetails" component={TripDetailScreen} />
+            <Stack.Screen name="SeatSelection" component={SeatSelectionScreen} />
+            <Stack.Screen name="Payment" component={PaymentScreen} />
+            {/* <Stack.Screen name="TicketDetail" component={TicketScreen} /> */}
 
-            {/* Rutas y viajes */}
+            <Stack.Screen name="Ticket" component={TicketScreen} />
+
+            {/* 🏢 Company Flow */}
+            <Stack.Screen name="CompanyDashboard" component={CompanyDashboardScreen} />
+            <Stack.Screen name="CreateCompany" component={CreateCompanyScreen} />
+            <Stack.Screen name="ManageLocations" component={ManageLocationsScreen} />
+            <Stack.Screen name="MyCompanies" component={MyCompaniesScreen} />
+            <Stack.Screen name="CompanyRoutes" component={CompanyRoutesScreen} />
+            {/* <Stack.Screen name="Trips" component={TripsScreen} /> eliminar */}
+            <Stack.Screen name="CompanyLegalInfo" component={CompanyLegalInfoScreen} options={{ presentation: "modal" }} />
+            <Stack.Screen name="CreateTrip" component={CreateTripScreen} />
+            <Stack.Screen name="CreateRoute" component={CreateRouteScreen} />
             <Stack.Screen name="AllRoutes" component={AllRoutesScreen} />
-            <Stack.Screen name="AllTrips" component={AllTripsScreen} />
-            <Stack.Screen name="Trips" component={TripsScreen} />
-            <Stack.Screen name="TripSeats" component={TripSeatsScreen} />
-            <Stack.Screen
-              name="CreateRoute"
-              component={CreateRouteScreen}
-            />
-            <Stack.Screen
-              name="CreateTrip"
-              component={CreateTripScreen}
-            />
+            {/* AllTrips also used by company, but mapped to AvailableTripsScreen if we want modernization, 
+                but old logic used AllTripsScreen. AvailableTripsScreen is safer for Booking.
+                If Company needs AllTripsScreen (old), we might need to alias or check.
+                For now, "AllTrips" is mapped to AvailableTripsScreen in Booking Flow.
+                If old code navigates to "AllTrips", it goes to new screen. Check if compatible. 
+                AvailableTrips logic might be different. 
+                But I'll assume users appreciate the new UI.
+            */}
 
-            {/* Usuario */}
+            {/* User / Settings */}
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="Passengers" component={PassengersScreen} />
             <Stack.Screen
@@ -135,42 +120,26 @@ export default function AppNavigator() {
               }}
             />
             <Stack.Screen name="Balance" component={BalanceScreen} />
-            <Stack.Screen
-              name="MyTickets"
-              component={MyTicketsScreen}
-            />
-            <Stack.Screen
-              name="ValidateTicket"
-              component={ValidateTicketScreen}
-            />
+            {/* <Stack.Screen name="MyTickets" component={MyTicketsScreen} /> */}
+            <Stack.Screen name="ValidateTicket" component={ValidateTicketScreen} />
             <Stack.Screen name="Reports" component={ReportsScreen} />
+            <Stack.Screen name="Calendar" component={CalendarScreen} />
 
-            {/* Modales */}
+            {/* Modals */}
             <Stack.Screen
               name="SettingsModal"
               component={SettingsScreen}
-              options={{
-                presentation: "modal",
-                animation: "slide_from_bottom",
-              }}
+              options={{ presentation: "modal", animation: "slide_from_bottom" }}
             />
-
             <Stack.Screen
               name="ConfirmTicketModal"
               component={ConfirmTicketModal}
-              options={{
-                presentation: "modal",
-                animation: "slide_from_bottom",
-              }}
+              options={{ presentation: "modal", animation: "slide_from_bottom" }}
             />
-
             <Stack.Screen
               name="TicketReceiptModal"
               component={TicketReceiptModal}
-              options={{
-                presentation: "modal",
-                animation: "slide_from_bottom",
-              }}
+              options={{ presentation: "modal", animation: "slide_from_bottom" }}
             />
           </>
         )}
@@ -178,153 +147,3 @@ export default function AppNavigator() {
     </NavigationContainer>
   );
 }
-
-
-
-
-// import { NavigationContainer } from "@react-navigation/native";
-// import { createNativeStackNavigator } from "@react-navigation/native-stack";
-// import { View, ActivityIndicator } from "react-native";
-
-// import { useAuth } from "../context/AuthContext";
-
-// import LoginScreen from "../screens/LoginScreen";
-// import TermsScreen from "../screens/TermsScreen";
-// import TabNavigator from "./TabNavigator";
-
-// import ProfileScreen from "../screens/ProfileScreen";
-// import MenuScreen from "../screens/MenuScreen";
-// import BalanceScreen from "../screens/BalanceScreen";
-// import MyTicketsScreen from "../screens/MyTicketsScreen";
-// import ValidateTicketScreen from "../screens/ValidateTicketScreen";
-// import ReportsScreen from "../screens/ReportsScreen";
-
-// import CreateCompanyScreen from "../screens/CreateCompanyScreen";
-// import MyCompaniesScreen from "../screens/MyCompaniesScreen";
-// import CompanyRoutesScreen from "../screens/CompanyRoutesScreen";
-// import CompanyLegalInfoScreen from "../screens/CompanyLegalInfoScreen";
-
-// import CreateTripScreen from "../screens/CreateTripScreen";
-// import CreateRouteScreen from "../screens/CreateRouteScreen";
-
-// import AllRoutesScreen from "../screens/AllRoutesScreen";
-// import AllTripsScreen from "../screens/AllTripsScreen";
-// import TripsScreen from "../screens/TripsScreen";
-// import PassengersScreen from "../screens/PassengersScreen";
-
-// import SettingsScreen from "./PrivateStack/SettingsScreen";
-// import ConfirmTicketModal from "./PrivateStack/ConfirmTicketModal";
-// import TicketReceiptModal from "./PrivateStack/TicketReceiptModal";
-
-// import { RootStackParamList } from "./types";
-
-// const Stack = createNativeStackNavigator<RootStackParamList>();
-
-// export default function AppNavigator() {
-//   const { loading } = useAuth();
-
-//   if (loading) {
-//     return (
-//       <View
-//         style={{
-//           flex: 1,
-//           justifyContent: "center",
-//           alignItems: "center",
-//         }}
-//       >
-//         <ActivityIndicator size="large" />
-//       </View>
-//     );
-//   }
-
-//   return (
-//     <NavigationContainer>
-//       <Stack.Navigator screenOptions={{ headerShown: false }}>
-//         <Stack.Screen name="Tabs" component={TabNavigator} />
-
-//         <Stack.Screen
-//           name="CreateCompany"
-//           component={CreateCompanyScreen}
-//         />
-//         <Stack.Screen
-//           name="MyCompanies"
-//           component={MyCompaniesScreen}
-//         />
-//         <Stack.Screen
-//           name="CompanyRoutes"
-//           component={CompanyRoutesScreen}
-//         />
-//         <Stack.Screen
-//           name="CompanyLegalInfo"
-//           component={CompanyLegalInfoScreen}
-//           options={{ presentation: "modal" }}
-//         />
-
-//         <Stack.Screen name="AllRoutes" component={AllRoutesScreen} />
-//         <Stack.Screen name="AllTrips" component={AllTripsScreen} />
-//         <Stack.Screen name="Trips" component={TripsScreen} />
-//         <Stack.Screen name="CreateRoute" component={CreateRouteScreen} />
-//         <Stack.Screen name="CreateTrip" component={CreateTripScreen} />
-
-//         <Stack.Screen
-//           name="Login"
-//           component={LoginScreen}
-//           options={{
-//             presentation: "modal",
-//             animation: "slide_from_bottom",
-//           }}
-//         />
-
-//         <Stack.Screen name="Profile" component={ProfileScreen} />
-//         <Stack.Screen name="Passengers" component={PassengersScreen} />
-//         <Stack.Screen
-//           name="Menu"
-//           component={MenuScreen}
-//           options={{
-//             presentation: "fullScreenModal",
-//             animation: "slide_from_bottom",
-//           }}
-//         />
-//         <Stack.Screen name="Balance" component={BalanceScreen} />
-//         <Stack.Screen name="MyTickets" component={MyTicketsScreen} />
-//         <Stack.Screen
-//           name="ValidateTicket"
-//           component={ValidateTicketScreen}
-//         />
-//         <Stack.Screen
-//           name="Terms"
-//           component={TermsScreen}
-//           options={{ presentation: "modal" }}
-//         />
-//         <Stack.Screen name="Reports" component={ReportsScreen} />
-
-//         <Stack.Screen
-//           name="SettingsModal"
-//           component={SettingsScreen}
-//           options={{
-//             presentation: "modal",
-//             animation: "slide_from_bottom",
-//           }}
-//         />
-
-//         <Stack.Screen
-//           name="ConfirmTicketModal"
-//           component={ConfirmTicketModal}
-//           options={{
-//             presentation: "modal",
-//             animation: "slide_from_bottom",
-//           }}
-//         />
-
-//         <Stack.Screen
-//           name="TicketReceiptModal"
-//           component={TicketReceiptModal}
-//           options={{
-//             presentation: "modal",
-//             animation: "slide_from_bottom",
-//           }}
-//         />
-//       </Stack.Navigator>
-//     </NavigationContainer>
-//   );
-// }

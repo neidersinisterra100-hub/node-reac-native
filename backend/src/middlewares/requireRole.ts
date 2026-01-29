@@ -1,57 +1,50 @@
 import { RequestHandler } from "express";
-import { AuthRequest } from "./requireAuth.js";
 import { UserRole } from "../types/auth.js";
 
-/**
- * Middleware para permitir acceso solo a ciertos roles
- * Ej: requireRole("owner"), requireRole("admin", "owner")
- */
+/* =========================================================
+   REQUIRE ROLE
+   ---------------------------------------------------------
+   Middleware genérico para restringir acceso por rol.
+   
+   Reglas:
+   - requireAuth DEBE ejecutarse antes
+   - Usa req.user (inyectado por JWT)
+   
+   Ejemplos:
+   - requireRole("owner")
+   - requireRole("admin", "owner")
+   ========================================================= */
+
 export const requireRole =
   (...allowedRoles: UserRole[]): RequestHandler =>
   (req, res, next) => {
-    const authReq = req as AuthRequest;
-
-    if (!authReq.user) {
+    /* =====================================================
+       SEGURIDAD BASE
+       ===================================================== */
+    if (!req.user) {
       return res.status(401).json({
         message: "No autenticado",
       });
     }
 
-    /**
-     * 🔒 Normalizamos por seguridad
-     * (por si el token viene en MAYÚSCULAS)
-     */
-    const role = authReq.user.role.toLowerCase() as UserRole;
+    /* =====================================================
+       NORMALIZACIÓN DE ROL
+       -----------------------------------------------------
+       - Protege contra tokens mal formados
+       ===================================================== */
+    const role = req.user.role.toLowerCase() as UserRole;
 
+    /* =====================================================
+       VALIDACIÓN DE PERMISOS
+       ===================================================== */
     if (!allowedRoles.includes(role)) {
       return res.status(403).json({
         message: "Permisos insuficientes",
       });
     }
 
+    /* =====================================================
+       TODO OK
+       ===================================================== */
     next();
   };
-
-
-
-// import { RequestHandler } from "express";
-// import { AuthRequest } from "./requireAuth.js";
-// import { UserRole } from "../types/auth.js";
-
-// export const requireRole =
-//   (...allowedRoles: UserRole[]): RequestHandler =>
-//   (req, res, next) => {
-//     const authReq = req as AuthRequest;
-
-//     if (!authReq.user) {
-//       return res.status(401).json({ message: "No autenticado" });
-//     }
-
-//     if (!allowedRoles.includes(authReq.user.role)) {
-//       return res
-//         .status(403)
-//         .json({ message: "Permisos insuficientes" });
-//     }
-
-//     next();
-//   };

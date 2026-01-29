@@ -22,6 +22,9 @@ export interface Company {
   active?: boolean;   // Compat
   isActive?: boolean; // ✅ Match DTO
   isVerified?: boolean;
+  departmentId?: string; // New
+  municipioId?: string;
+  cityId?: string;
   compliance?: CompanyCompliance;
   admins?: string[];  // Lista de IDs de admins
   createdAt: string;
@@ -32,6 +35,9 @@ export interface CreateCompanyInput {
   name: string;
   nit?: string;
   legalRepresentative?: string;
+  departmentId: string; // New
+  municipioId: string;
+  cityId: string;
   licenseNumber?: string;
   insurancePolicyNumber?: string;
   compliance?: CompanyCompliance;

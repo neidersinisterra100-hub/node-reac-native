@@ -56,7 +56,7 @@ export default function HistoryScreen() {
 
   return (
     <AppContainer>
-      <AppHeader title="Historial" hideLogo />
+      <AppHeader title="Historial" hideLogo showBack />
 
       <ScrollView contentContainerStyle={styles.content}>
         {loading && (

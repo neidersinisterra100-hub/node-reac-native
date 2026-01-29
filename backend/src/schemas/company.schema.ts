@@ -18,6 +18,16 @@ export const createCompanySchema = z.object({
 
   insurancePolicyNumber: z.string().optional(),
 
+  // ✅ Location fields (REQUIRED)
+  departmentId: z.string().min(1, "Departamento requerido"),
+  municipioId: z.string().min(1, "Municipio requerido"),
+  cityId: z.string().min(1, "Ciudad requerida"),
+
+  // ✅ Admin fields (OPTIONAL for with-admin endpoint)
+  adminName: z.string().optional(),
+  adminEmail: z.string().email().optional(),
+  adminPassword: z.string().min(6).optional(),
+
   compliance: z
     .object({
       hasLegalConstitution: z.boolean().optional(),

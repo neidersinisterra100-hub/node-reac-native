@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
+import { View, FlatList, Alert, ActivityIndicator } from "react-native";
 import {
   Text,
   Button,
@@ -16,6 +10,7 @@ import {
   Portal,
 } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { styled } from "nativewind";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
@@ -27,13 +22,8 @@ import {
   getTripsForPassengerControl,
 } from "../services/ticket.service";
 
-/* =========================================================
-   TYPES (UI ONLY)
-   ========================================================= */
+/* ================= TYPES (UI ONLY) ================= */
 
-/**
- * Trip (vista de control)
- */
 type Trip = {
   _id: string;
   route: {
@@ -44,9 +34,6 @@ type Trip = {
   departureTime: string;
 };
 
-/**
- * Passenger (ticket simplificado)
- */
 type Passenger = {
   _id: string;
   seatNumber: number;
@@ -54,9 +41,8 @@ type Passenger = {
   passengerName?: string;
 };
 
-/* =========================================================
-   SCREEN
-   ========================================================= */
+const StyledView = styled(View);
+const StyledText = styled(Text);
 
 export default function PassengersScreen() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -68,9 +54,6 @@ export default function PassengersScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [manualName, setManualName] = useState("");
 
-  /* =====================================================
-     CARGAR VIAJES DISPONIBLES (OWNER / ADMIN)
-     ===================================================== */
   const loadTrips = async () => {
     try {
       const data = await getTripsForPassengerControl();
@@ -81,9 +64,6 @@ export default function PassengersScreen() {
     }
   };
 
-  /* =====================================================
-     CARGAR PASAJEROS DEL VIAJE
-     ===================================================== */
   const loadPassengers = async (tripId: string) => {
     try {
       setLoading(true);
@@ -97,9 +77,6 @@ export default function PassengersScreen() {
     }
   };
 
-  /* =====================================================
-     REGISTRO MANUAL DE PASAJERO
-     ===================================================== */
   const handleRegisterManualPassenger = async () => {
     if (!selectedTrip || !manualName.trim()) return;
 
@@ -122,15 +99,12 @@ export default function PassengersScreen() {
     loadTrips();
   }, []);
 
-  /* =====================================================
-     RENDER
-     ===================================================== */
   return (
     <AppContainer>
-      <AppHeader title="Pasajeros" />
+      <AppHeader title="Pasajeros" showBack />
 
       {/* ================= SELECTOR DE VIAJE ================= */}
-      <View style={styles.selector}>
+      <StyledView className="p-4">
         <Menu
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
@@ -154,7 +128,7 @@ export default function PassengersScreen() {
             />
           ))}
         </Menu>
-      </View>
+      </StyledView>
 
       {/* ================= LISTA DE PASAJEROS ================= */}
       {loading ? (
@@ -165,26 +139,26 @@ export default function PassengersScreen() {
           keyExtractor={(item) => item._id}
           contentContainerStyle={{ padding: 16 }}
           ListEmptyComponent={
-            <Text style={{ textAlign: "center", marginTop: 40 }}>
+            <StyledText className="text-center mt-10 text-gray-500">
               No hay pasajeros registrados
-            </Text>
+            </StyledText>
           }
           renderItem={({ item }) => (
-            <View style={styles.passengerCard}>
+            <StyledView className="bg-white rounded-xl p-4 mb-3 flex-row justify-between items-center shadow-sm elevation-1">
               <View>
-                <Text style={styles.passengerName}>
+                <StyledText className="text-base font-bold text-gray-900">
                   {item.passengerName || "Pasajero manual"}
-                </Text>
-                <Text style={styles.seat}>
+                </StyledText>
+                <StyledText className="text-gray-500 mt-1">
                   Asiento #{item.seatNumber}
-                </Text>
+                </StyledText>
               </View>
               <MaterialCommunityIcons
                 name="seat"
                 size={28}
                 color={colors.primary}
               />
-            </View>
+            </StyledView>
           )}
         />
       )}
@@ -193,7 +167,7 @@ export default function PassengersScreen() {
       {selectedTrip && (
         <Button
           mode="contained"
-          style={styles.addButton}
+          style={{ margin: 16 }}
           onPress={() => setModalVisible(true)}
         >
           Registrar pasajero manual
@@ -205,11 +179,11 @@ export default function PassengersScreen() {
         <Modal
           visible={modalVisible}
           onDismiss={() => setModalVisible(false)}
-          contentContainerStyle={styles.modal}
+          contentContainerStyle={{ backgroundColor: "white", padding: 20, margin: 20, borderRadius: 12 }}
         >
-          <Text style={styles.modalTitle}>
+          <StyledText className="text-lg font-bold mb-3 text-gray-900">
             Registrar pasajero
-          </Text>
+          </StyledText>
 
           <TextInput
             label="Nombre del pasajero"
@@ -231,45 +205,3 @@ export default function PassengersScreen() {
     </AppContainer>
   );
 }
-
-/* =========================================================
-   STYLES
-   ========================================================= */
-
-const styles = StyleSheet.create({
-  selector: {
-    padding: 16,
-  },
-  passengerCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    elevation: 2,
-  },
-  passengerName: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  seat: {
-    color: "#6b7280",
-    marginTop: 4,
-  },
-  addButton: {
-    margin: 16,
-  },
-  modal: {
-    backgroundColor: "white",
-    padding: 20,
-    margin: 20,
-    borderRadius: 12,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-  },
-});

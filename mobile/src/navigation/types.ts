@@ -1,5 +1,9 @@
 import { Company } from "../services/company.service";
+import { Trip } from "../services/trip.service";
 
+/* ===========================
+   TABS
+=========================== */
 export type RootTabParamList = {
   Home: undefined;
   History: undefined;
@@ -7,35 +11,82 @@ export type RootTabParamList = {
   Passengers: undefined;
 };
 
+/* ===========================
+   STACK
+=========================== */
 export type RootStackParamList = {
+  /* ---------- CORE ---------- */
   Tabs: undefined;
-  Reports: undefined;
-  Home: undefined;
   Login: undefined;
-  Passengers: undefined;
-  SettingsModal: undefined;
+  Register: undefined;
+  Terms: undefined;
+  Home: undefined;
+
+  /* ---------- USER ---------- */
   Profile: undefined;
   Menu: undefined;
   Balance: undefined;
-  MyTickets: undefined;
-  ValidateTicket: undefined;
-  Terms: undefined; // 👈 Nueva Ruta
+  Calendar: undefined;
+  Reports: undefined;
+  Passengers: undefined;
+  SettingsModal: undefined;
 
-  // 🏢 EMPRESAS
+  /* ---------- BOOKING (NUEVO FLUJO) ---------- */
+  LocationSelection: undefined;
+
+  AllTrips:
+    | {
+        origin?: string;
+        destination?: string;
+      }
+    | undefined;
+
+  TripDetails: {
+    tripId: string;
+    trip?: Trip;
+  };
+
+ SeatSelection: {
+  tripId: string;
+  routeName: string;
+  price: number;
+  date: string;
+  time: string;
+};
+
+
+  // Payment: {
+  //   tripId: string;
+  //   seatNumber: number;
+  // };
+
+  Ticket: {
+    ticketId: string;
+    seatNumber: number;
+    transactionId?: string;
+  };
+
+  /* ---------- USER HISTORY ---------- */
+  MyTickets: undefined;
+
+  TicketDetail: {
+    ticketId: string;
+    seatNumber: number;
+    transactionId?: string;
+  };
+
+  /* ---------- COMPANY / OWNER ---------- */
+  CompanyDashboard: undefined;
+
   CreateCompany: undefined;
+  ManageLocations: undefined;
   MyCompanies: undefined;
+
   CompanyRoutes: {
     companyId: string;
     companyName: string;
   };
-  CompanyLegalInfo: {
-    company: Company;
-  };
 
-  // 🛣️ / 🚍
-  AllRoutes: undefined;
-  AllTrips: undefined;
-  CreateRoute: { companyId: string };
   Trips: {
     routeId: string;
     routeName: string;
@@ -43,18 +94,31 @@ export type RootStackParamList = {
     routeActive?: boolean;
     companyActive?: boolean;
   };
-  CreateTrip: { routeId?: string; routeName?: string };
 
-  // 💺 ASIENTOS
-  TripSeats: { tripId: string };
+  CreateRoute: {
+    companyId: string;
+  };
 
-  // 🎟️ MODALES
+  CreateTrip: {
+    routeId?: string;
+    routeName?: string;
+  };
+
+  CompanyLegalInfo: {
+    company: Company;
+  };
+
+  AllRoutes: undefined;
+
+  /* ---------- LEGACY (NO BORRAR AÚN) ---------- */
   ConfirmTicketModal: {
     tripId: string;
     routeName: string;
     price: number;
     date: string;
     time: string;
+    // seatNumber?: string;
+    seatNumber?: number;
   };
 
   TicketReceiptModal: {
@@ -63,4 +127,6 @@ export type RootStackParamList = {
     date: string;
     code: string;
   };
+
+  ValidateTicket: undefined;
 };

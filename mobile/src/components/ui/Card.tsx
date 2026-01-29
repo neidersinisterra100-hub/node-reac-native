@@ -1,18 +1,85 @@
-import { View, StyleSheet } from "react-native";
-import { colors } from "../../theme/colors";
-import { spacing } from "../../theme/spacing";
+import React from "react";
+import { View, TouchableOpacity, ViewStyle } from "react-native";
+import { styled } from "nativewind";
+import { useTheme } from "../../context/ThemeContext";
 
-export default function Card({ children }: { children: React.ReactNode }) {
-  return <View style={styles.card}>{children}</View>;
+const StyledView = styled(View);
+const StyledTouchable = styled(TouchableOpacity);
+
+/* =========================================================
+   PROPS BASE
+   ========================================================= */
+
+interface BaseCardProps {
+  children: React.ReactNode;
+  className?: string;
+  style?: ViewStyle;
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-});
+/* =========================================================
+   CARD (NO PRESIONABLE)
+   ========================================================= */
+
+export function Card({
+  children,
+  className = "",
+  style,
+}: BaseCardProps) {
+  const { isDark } = useTheme();
+
+  return (
+    <StyledView
+      className={`
+        rounded-2xl
+        border
+        p-4
+        shadow-sm
+        mb-4
+
+        ${isDark ? "bg-dark-surface border-dark-border" : "bg-white border-slate-200"}
+        ${className}
+      `}
+      style={[{ elevation: 2 }, style]}
+    >
+      {children}
+    </StyledView>
+  );
+}
+
+/* =========================================================
+   PRESSABLE CARD
+   ========================================================= */
+
+interface PressableCardProps extends BaseCardProps {
+  onPress: () => void;
+}
+
+export function PressableCard({
+  children,
+  className = "",
+  style,
+  onPress,
+}: PressableCardProps) {
+  const { isDark } = useTheme();
+
+  return (
+    <StyledTouchable
+      onPress={onPress}
+      activeOpacity={0.9}
+      className={`
+        rounded-2xl
+        border
+        p-4
+        shadow-sm
+        mb-4
+
+        ${isDark ? "bg-dark-surface border-dark-border" : "bg-white border-slate-200"}
+        ${className}
+      `}
+      style={[{ elevation: 2 }, style]}
+    >
+      {children}
+    </StyledTouchable>
+  );
+}
+

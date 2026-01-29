@@ -13,6 +13,9 @@ export interface CompanyDocument extends Document {
   name: string;
 
   // Relaciones
+  departmentId: Types.ObjectId; // New ref
+  municipioId: Types.ObjectId;
+  cityId: Types.ObjectId;
   owner: Types.ObjectId;
   admins: Types.ObjectId[];
 
@@ -77,6 +80,26 @@ const CompanySchema = new Schema<CompanyDocument>(
     /* =========================
        RELACIONES
        ========================= */
+    departmentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Department",
+      required: true,
+      index: true
+    },
+    municipioId: {
+      type: Schema.Types.ObjectId,
+      ref: "Municipio",
+      required: true,
+      index: true
+    },
+
+    cityId: {
+      type: Schema.Types.ObjectId,
+      ref: "City",
+      required: true,
+      index: true
+    },
+
     owner: {
       type: Schema.Types.ObjectId, // ✅ CORRECTO
       ref: "User",

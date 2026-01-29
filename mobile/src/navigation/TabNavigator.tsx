@@ -1,114 +1,96 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { useNavigation } from "@react-navigation/native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React from "react";
+import { View, Text } from "react-native";
+import {
+  Home,
+  FileText,
+  User,
+  Users,
+  LayoutDashboard,
+} from "lucide-react-native";
+import { styled } from "nativewind";
 
-import HomeScreen from "./publicStack/HomeScreen";
-import DashboardScreen from "../screens/DashboardScreen";
-import MyCompaniesScreen from "../screens/MyCompaniesScreen";
-import HistoryScreen from "../screens/HistoryScreen";
-import ProfileStack from "./ProfileStack";
+// Import new screens
+import { LocationSelectionScreen } from "../screens/booking/LocationSelectionScreen"; // User Home
+import { CompanyDashboardScreen } from "../screens/company/CompanyDashboardScreen"; // Owner Home
+import { MyTripsScreen } from "../screens/profile/MyTripsScreen"; // New History
+import ProfileScreen from "../screens/ProfileScreen";
+import PassengersScreen from "../screens/PassengersScreen";
 
-import { colors } from "../theme/colors";
 import { RootTabParamList } from "./types";
 import { useAuth } from "../context/AuthContext";
-import PassengersScreen from "../screens/PassengersScreen";
+
+const StyledView = styled(View);
+const StyledText = styled(Text);
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
-const HomeWrapper = () => {
-  const { user } = useAuth();
-  return user ? <DashboardScreen /> : <HomeScreen />;
-};
-
 export default function TabNavigator() {
   const { user } = useAuth();
-  const navigation = useNavigation<any>();
+  const isOwner = user?.role === 'owner' || user?.role === 'admin';
 
   return (
     <Tab.Navigator
-      initialRouteName="Home"
-      screenOptions={({ route }) => ({
+      screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: "#FFF",
-          borderTopColor: colors.border,
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#F1F5F9",
+          borderTopWidth: 1,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
         },
-        tabBarIcon: ({ color, size }) => {
-          let iconName: keyof typeof MaterialCommunityIcons.glyphMap;
-          switch (route.name) {
-            case "Home":
-              iconName = user ? "view-dashboard" : "home-outline";
-              break;
-            case "History":
-              iconName = "history";
-              break;
-            case "Passengers":
-              iconName = "account-group-outline";
-              break;
-            case "Profile":
-              iconName = "account-outline";
-              break;
-            default:
-              iconName = "circle";
-          }
-          return (
-            <MaterialCommunityIcons
-              name={iconName}
-              color={color}
-              size={size}
-            />
-          );
+        tabBarShowLabel: true,
+        tabBarActiveTintColor: "#0B4F9C",
+        tabBarInactiveTintColor: "#94A3B8",
+        tabBarLabelStyle: {
+          fontSize: 10,
+          marginTop: 2,
         },
-      })}
+      }}
     >
       <Tab.Screen
         name="Home"
-        component={HomeWrapper}
-        options={{ title: user ? "Dashboard" : "Inicio" }}
+        // @ts-ignore - Component type compatibility
+        component={CompanyDashboardScreen}
+        options={{
+          tabBarLabel: isOwner ? "Dashboard" : "Inicio",
+          tabBarIcon: ({ color, size }) => (
+            isOwner ? <LayoutDashboard color={color} size={size} /> : <Home color={color} size={size} />
+          ),
+        }}
       />
 
       <Tab.Screen
         name="History"
-        component={HistoryScreen}
-        options={{ title: "Historial" }}
-        listeners={{
-          tabPress: (e) => {
-            if (!user) {
-              e.preventDefault();
-              navigation.navigate("Login");
-            }
-          },
+        component={MyTripsScreen}
+        options={{
+          tabBarLabel: "Mis Viajes",
+          tabBarIcon: ({ color, size }) => (
+            <FileText color={color} size={size} />
+          ),
         }}
       />
 
       <Tab.Screen
         name="Passengers"
         component={PassengersScreen}
-        options={{ title: "Pasajeros" }}
-        listeners={{
-          tabPress: (e) => {
-            if (!user) {
-              e.preventDefault();
-              navigation.navigate("Login");
-            }
-          },
+        options={{
+          tabBarLabel: "Pasajeros",
+          tabBarIcon: ({ color, size }) => (
+            <Users color={color} size={size} />
+          ),
         }}
       />
 
       <Tab.Screen
         name="Profile"
-        component={ProfileStack}
-        options={{ title: "Perfil" }}
-        listeners={{
-          tabPress: (e) => {
-            if (!user) {
-              e.preventDefault();
-              navigation.navigate("Login");
-            }
-          },
+        component={ProfileScreen}
+        options={{
+          tabBarLabel: "Perfil",
+          tabBarIcon: ({ color, size }) => (
+            <User color={color} size={size} />
+          ),
         }}
       />
     </Tab.Navigator>

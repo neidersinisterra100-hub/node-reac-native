@@ -1,10 +1,16 @@
 import { View, Text, StyleSheet } from "react-native";
 
+import AppContainer from "../components/ui/AppContainer";
+import AppHeader from "../components/ui/AppHeader";
+
 export default function TicketScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Comprar ticket aquí</Text>
-    </View>
+    <AppContainer>
+      <AppHeader title="Ticket" showBack />
+      <View style={styles.container}>
+        <Text style={styles.text}>Comprar ticket aquí</Text>
+      </View>
+    </AppContainer>
   );
 }
 

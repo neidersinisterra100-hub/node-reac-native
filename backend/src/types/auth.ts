@@ -9,7 +9,7 @@
  * - owner → dueño de una o varias empresas
  * - admin → administrador de una empresa
  */
-export type UserRole = "user" | "owner" | "admin";
+export type UserRole = "user" | "owner" | "admin" | "super_owner";
 
 /* =========================================================
    USUARIO AUTENTICADO (JWT PAYLOAD NORMALIZADO)
@@ -25,30 +25,30 @@ export type UserRole = "user" | "owner" | "admin";
  * - Incluir SOLO lo necesario para el backend
  */
 export interface AuthUser {
-  /**
-   * ID del usuario (normalizado a string)
-   * Viene de user._id.toString()
-   */
-  id: string;
+   /**
+    * ID del usuario (normalizado a string)
+    * Viene de user._id.toString()
+    */
+   id: string;
 
-  /**
-   * Email del usuario
-   * Necesario para:
-   * - Pagos (Wompi)
-   * - Notificaciones
-   * - Auditoría
-   */
-  email: string;
+   /**
+    * Email del usuario
+    * Necesario para:
+    * - Pagos (Wompi)
+    * - Notificaciones
+    * - Auditoría
+    */
+   email: string;
 
-  /**
-   * Rol del usuario
-   * Controla permisos en middlewares
-   */
-  role: UserRole;
+   /**
+    * Rol del usuario
+    * Controla permisos en middlewares
+    */
+   role: UserRole;
 
-  /**
-   * Empresa asociada (solo admin / owner)
-   * Opcional para no romper usuarios normales
-   */
-  companyId?: string;
+   /**
+    * Empresa asociada (solo admin / owner)
+    * Opcional para no romper usuarios normales
+    */
+   companyId?: string;
 }

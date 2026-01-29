@@ -1,28 +1,34 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { requireOwner } from "../middlewares/requireOwner.js";
+import { ownershipGuard } from "../middlewares/ownership.guard.js";
 import { blockLegacyFields } from "../middlewares/blockLegacyFields.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
+
+import {
+  createCompany,
+  // createCompanyWithAdmin,
+  getMyCompanies,
+  toggleCompanyActive,
+  deleteCompany,
+  // getCompanyAdmins,
+  // getPublicCompanies,
+
+  getCompany, // 👈 debe existir en controller
+} from "../controllers/company.controller.js";
+
+import { getCompanyRoutes } from "../controllers/route.controller.js";
 import {
   createCompanySchema,
   updateCompanySchema,
 } from "../schemas/company.schema.js";
 
-import {
-  createCompany,
-  createCompanyWithAdmin,
-  getMyCompanies,
-  toggleCompanyActive,
-  deleteCompany,
-  getCompanyAdmins,
-} from "../controllers/company.controller.js";
-
-import { getCompanyRoutes } from "../controllers/route.controller.js";
-
 const router = Router();
 
-/* ================= OWNER ================= */
+/* ================= PUBLIC ================= */
+// router.get("/", getPublicCompanies);
 
+/* ================= CREATE ================= */
 // Crear empresa
 router.post(
   "/",
@@ -40,16 +46,27 @@ router.post(
   requireOwner,
   blockLegacyFields,
   validateRequest(createCompanySchema),
-  createCompanyWithAdmin
+  // createCompanyWithAdmin
 );
 
-// Listar mis empresas
+/* ================= MY COMPANIES ================= */
 router.get("/my", requireAuth, getMyCompanies);
+
+/* ================= COMPANY (OWNERSHIP) ================= */
+
+// Obtener una empresa
+router.get(
+  "/:companyId",
+  requireAuth,
+  ownershipGuard,
+  getCompany
+);
 
 // Activar / desactivar empresa
 router.patch(
   "/:companyId",
   requireAuth,
+  ownershipGuard,
   blockLegacyFields,
   validateRequest(updateCompanySchema),
   toggleCompanyActive
@@ -59,14 +76,19 @@ router.patch(
 router.delete(
   "/:companyId",
   requireAuth,
-  requireOwner,
+  ownershipGuard,
   deleteCompany
 );
 
-// Rutas de una empresa
-router.get("/:companyId/routes", getCompanyRoutes);
-
 // Admins de una empresa
-router.get("/:companyId/admins", requireAuth, getCompanyAdmins);
+router.get(
+  "/:companyId/admins",
+  requireAuth,
+  ownershipGuard,
+  // getCompanyAdmins
+);
+
+// Rutas de una empresa (públicas o protegidas según tu negocio)
+router.get("/:companyId/routes", getCompanyRoutes);
 
 export default router;

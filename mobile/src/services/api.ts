@@ -1,6 +1,10 @@
 /* =========================================================
    API CONFIG — NAUTICGO
-   Cambiar de entorno = comentar / descomentar
+   ---------------------------------------------------------
+   Cliente HTTP centralizado
+   - Maneja entornos (local, tunnel, prod)
+   - Inyecta JWT automáticamente
+   - Soporta fallback Cloudflare → Render
    ========================================================= */
 
 import axios, {
@@ -11,52 +15,42 @@ import Constants from "expo-constants";
 import { loadSession } from "../utils/authStorage";
 
 /* =========================================================
-   🔧 SELECCIÓN DE ENTORNO (ELIGE UNO)
+   🔧 SELECCIÓN DE ENTORNO
+   ---------------------------------------------------------
+   ⚠️ SOLO UNO DEBE ESTAR ACTIVO
    ========================================================= */
 
 /**
- * 🟢 1️⃣ BACKEND LOCAL — WEB (React en navegador)
+ * 🟢 BACKEND LOCAL — WEB (solo navegador)
+ * ❌ NO funciona en Expo Go móvil
  */
 const BASE_API = "http://localhost:3000/api";
+
+/**
+ * 🟢 BACKEND LOCAL — MÓVIL FÍSICO / EXPO GO
+ * 👉 Usa la IP de tu computador
+ */
 // const BASE_API = "http://192.168.1.36:3000/api";
 
 /**
- * 🟢 2️⃣ BACKEND LOCAL — EXPO GO / MÓVIL FÍSICO
- * ⚠️ Usa la IP de tu computador
- */
-// const BASE_API = "http://192.168.1.12:3000/api";
-
-/**
- * 🟢 3️⃣ BACKEND LOCAL — ANDROID EMULATOR
+ * 🟢 ANDROID EMULATOR
  */
 // const BASE_API = "http://10.0.2.2:3000/api";
 
 /**
- * 🟢 4️⃣ BACKEND LOCAL — iOS SIMULATOR
+ * 🟢 iOS SIMULATOR
  */
 // const BASE_API = "http://localhost:3000/api";
 
 /**
- * 🟡 5️⃣ CLOUDFLARE TUNNEL (DEV REMOTO)
- * expone tu backend local
+ * 🟡 CLOUDFLARE TUNNEL (DEV REMOTO)
  */
 // const BASE_API = Constants.expoConfig?.extra?.api?.cloudflare;
 
 /**
- * 🔴 6️⃣ RENDER (PRODUCCIÓN)
+ * 🔴 RENDER (PRODUCCIÓN)
  */
 // const BASE_API = Constants.expoConfig?.extra?.api?.render;
-
-/* =========================================================
-   🔁 AUTO-DETECCIÓN EXPO (OPCIONAL)
-   👉 Descomenta SOLO si quieres que detecte IP solo
-   ========================================================= */
-
-// const debuggerHost = Constants.manifest2?.debuggerHost;
-// const localIP = debuggerHost?.split(":")[0];
-// const BASE_API = localIP
-//   ? `http://${localIP}:3000/api`
-//   : undefined;
 
 /* =========================================================
    🛑 VALIDACIÓN
@@ -80,7 +74,10 @@ export const api = axios.create({
 });
 
 /* =========================================================
-   REQUEST INTERCEPTOR (JWT)
+   REQUEST INTERCEPTOR — JWT
+   ---------------------------------------------------------
+   - Carga sesión desde AsyncStorage
+   - Inyecta Authorization automáticamente
    ========================================================= */
 
 api.interceptors.request.use(
@@ -99,8 +96,10 @@ api.interceptors.request.use(
 );
 
 /* =========================================================
-   RESPONSE INTERCEPTOR (FALLBACK OPCIONAL)
-   SOLO PARA CLOUDFLARE → RENDER
+   RESPONSE INTERCEPTOR — FALLBACK
+   ---------------------------------------------------------
+   - Si Cloudflare falla (502–504)
+   - Reintenta automáticamente contra Render
    ========================================================= */
 
 const RENDER_API =
@@ -142,6 +141,12 @@ api.interceptors.response.use(
 
 
 
+
+// /* =========================================================
+//    API CONFIG — NAUTICGO
+//    Cambiar de entorno = comentar / descomentar
+//    ========================================================= */
+
 // import axios, {
 //   InternalAxiosRequestConfig,
 //   AxiosError,
@@ -150,49 +155,76 @@ api.interceptors.response.use(
 // import { loadSession } from "../utils/authStorage";
 
 // /* =========================================================
-//    URLS DE API (DESDE app.config.ts)
+//    🔧 SELECCIÓN DE ENTORNO (ELIGE UNO)
 //    ========================================================= */
 
 // /**
-//  * Vienen desde:
-//  * app.config.ts → expo.extra.api
+//  * 🟢 1️⃣ BACKEND LOCAL — WEB (React en navegador)
 //  */
-// const extraApi =
-//   Constants.expoConfig?.extra?.api ||
-//   Constants.manifest?.extra?.api; // compatibilidad Expo Go
-
-// const EXPO_PUBLIC_API_URL_CLOUDFLARE: string | undefined =
-//   extraApi?.cloudflare;
-
-// const EXPO_PUBLIC_API_URL_RENDER: string | undefined =
-//   extraApi?.render;
-// console.log("🌐 API CONFIG:", extraApi);
+// const BASE_API = "http://localhost:3000/api";
+// // const BASE_API = "http://192.168.1.36:3000/api";
 
 // /**
-//  * Cloudflare primero, Render fallback
+//  * 🟢 2️⃣ BACKEND LOCAL — EXPO GO / MÓVIL FÍSICO
+//  * ⚠️ Usa la IP de tu computador
 //  */
-// const PRIMARY_API = EXPO_PUBLIC_API_URL_CLOUDFLARE || EXPO_PUBLIC_API_URL_RENDER;
+// // const BASE_API = "http://192.168.1.12:3000/api";
 
-// if (!PRIMARY_API) {
+// /**
+//  * 🟢 3️⃣ BACKEND LOCAL — ANDROID EMULATOR
+//  */
+// // const BASE_API = "http://10.0.2.2:3000/api";
+
+// /**
+//  * 🟢 4️⃣ BACKEND LOCAL — iOS SIMULATOR
+//  */
+// // const BASE_API = "http://localhost:3000/api";
+
+// /**
+//  * 🟡 5️⃣ CLOUDFLARE TUNNEL (DEV REMOTO)
+//  * expone tu backend local
+//  */
+// // const BASE_API = Constants.expoConfig?.extra?.api?.cloudflare;
+
+// /**
+//  * 🔴 6️⃣ RENDER (PRODUCCIÓN)
+//  */
+// // const BASE_API = Constants.expoConfig?.extra?.api?.render;
+
+// /* =========================================================
+//    🔁 AUTO-DETECCIÓN EXPO (OPCIONAL)
+//    👉 Descomenta SOLO si quieres que detecte IP solo
+//    ========================================================= */
+
+// // const debuggerHost = Constants.manifest2?.debuggerHost;
+// // const localIP = debuggerHost?.split(":")[0];
+// // const BASE_API = localIP
+// //   ? `http://${localIP}:3000/api`
+// //   : undefined;
+
+// /* =========================================================
+//    🛑 VALIDACIÓN
+//    ========================================================= */
+
+// if (!BASE_API) {
 //   throw new Error(
-//     "❌ No hay API configurada (Cloudflare ni Render)"
+//     "❌ BASE_API no configurada. Descomenta un entorno válido."
 //   );
 // }
+
+// console.log("🌐 [API] Base URL:", BASE_API);
 
 // /* =========================================================
 //    AXIOS INSTANCE
 //    ========================================================= */
 
 // export const api = axios.create({
-//   baseURL: PRIMARY_API,
+//   baseURL: BASE_API,
 //   timeout: 15000,
-//   headers: {
-//     "bypass-tunnel-reminder": "true",
-//   },
 // });
 
 // /* =========================================================
-//    REQUEST INTERCEPTOR (AUTH)
+//    REQUEST INTERCEPTOR (JWT)
 //    ========================================================= */
 
 // api.interceptors.request.use(
@@ -211,100 +243,43 @@ api.interceptors.response.use(
 // );
 
 // /* =========================================================
-//    RESPONSE INTERCEPTOR (FALLBACK AUTOMÁTICO)
+//    RESPONSE INTERCEPTOR (FALLBACK OPCIONAL)
+//    SOLO PARA CLOUDFLARE → RENDER
 //    ========================================================= */
+
+// const RENDER_API =
+//   Constants.expoConfig?.extra?.api?.render ?? null;
 
 // api.interceptors.response.use(
 //   (response) => response,
 //   async (error: AxiosError) => {
+//     const status = error.response?.status;
 //     const isNetworkError =
-//       !error.response ||
-//       error.code === "ERR_NETWORK" ||
-//       error.message?.includes("Network Error");
+//       !error.response || error.code === "ERR_NETWORK";
+
+//     const cloudflareFailure =
+//       status === 502 ||
+//       status === 503 ||
+//       status === 504;
 
 //     const config = error.config as any;
 
-//     const alreadyRetried = config?._retry;
-
-//     /**
-//      * Fallback:
-//      * - Error de red (DNS / túnel caído)
-//      * - No reintentado aún
-//      * - Existe Render
-//      * - Aún estamos en Cloudflare
-//      */
 //     if (
 //       isNetworkError &&
-//       !alreadyRetried &&
-//       EXPO_PUBLIC_API_URL_RENDER &&
-//       api.defaults.baseURL !== EXPO_PUBLIC_API_URL_RENDER
+//       cloudflareFailure &&
+//       RENDER_API &&
+//       api.defaults.baseURL !== RENDER_API &&
+//       !config?._retry
 //     ) {
 //       console.warn(
-//         "⚠️ Cloudflare caído, usando Render como fallback"
+//         "⚠️ [API] Fallback Cloudflare → Render"
 //       );
 
 //       config._retry = true;
-
-//       api.defaults.baseURL = EXPO_PUBLIC_API_URL_RENDER;
-
+//       api.defaults.baseURL = RENDER_API;
 //       return api(config);
 //     }
 
 //     return Promise.reject(error);
 //   }
 // );
-
-
-
-// import axios, {
-//   InternalAxiosRequestConfig,
-// } from "axios";
-// import { loadSession } from "../utils/authStorage";
-
-// /* =========================================================
-//    CONFIGURACIÓN BASE DEL API CLIENT
-//    ========================================================= */
-
-// const API_URL =
-//   process.env.EXPO_PUBLIC_API_URL ||
-//   "https://time-seventh-differently-laundry.trycloudflare.com/api";
-
-// export const api = axios.create({
-//   baseURL: API_URL,
-//   timeout: 15000,
-//   headers: {
-//     "bypass-tunnel-reminder": "true",
-    
-//   },
-// });
-
-// /* =========================================================
-//    INTERCEPTOR DE AUTENTICACIÓN (AXIOS v1+)
-//    ========================================================= */
-
-// /**
-//  * ⚠️ IMPORTANTE:
-//  * - Usar InternalAxiosRequestConfig
-//  * - NO AxiosRequestConfig
-//  */
-// api.interceptors.request.use(
-//   async (
-//     config: InternalAxiosRequestConfig
-//   ): Promise<InternalAxiosRequestConfig> => {
-//     const session = await loadSession();
-
-//     if (session?.token) {
-//       /**
-//        * Axios garantiza que headers existe aquí
-//        * (InternalAxiosRequestConfig)
-//        */
-//       config.headers.Authorization = `Bearer ${session.token}`;
-//     }
-
-//     return config;
-//   },
-//   (error) => {
-//     return Promise.reject(error);
-//   }
-// );
-

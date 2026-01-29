@@ -1,17 +1,27 @@
-import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from "react-native";
+import {
+  View,
+  FlatList,
+  Alert,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+} from "react-native";
 import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { MapPin, Navigation } from "lucide-react-native";
+import { Navigation } from "lucide-react-native";
+import { styled } from "nativewind";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
 import { getAllRoutes, Route } from "../services/route.service";
 import { useAuth } from "../context/AuthContext";
-import { colors } from "../theme/colors";
+
+const StyledView = styled(View);
 
 export default function AllRoutesScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -32,26 +42,52 @@ export default function AllRoutesScreen() {
   }, []);
 
   const renderItem = ({ item }: { item: Route }) => {
-    const companyName = item.company && typeof item.company === 'object' ? (item.company as any).name : 'Empresa';
+    const companyName =
+      item.company && typeof item.company === "object"
+        ? (item.company as any).name
+        : "Empresa";
 
     return (
       <TouchableOpacity
-        style={styles.card}
-        onPress={() => navigation.navigate("Trips", {
-          routeId: item.id || item._id,
-          routeName: `${item.origin} - ${item.destination}`,
-          companyName: companyName
-        })}
+        onPress={() =>
+          navigation.navigate("AllTrips", {
+            origin: item.origin,
+            destination: item.destination,
+          })
+        }
+        className="
+          mb-4
+          rounded-2xl
+          border
+          border-slate-200
+          bg-white
+          p-4
+          shadow-sm
+
+          dark:border-dark-border
+          dark:bg-dark-surface
+        "
       >
-        <View style={styles.cardHeader}>
-          <View style={styles.iconBox}>
-            <Navigation size={24} color={colors.accent} />
+        <View className="flex-row items-center gap-3">
+          {/* Icono */}
+          <View className="rounded-xl bg-nautic-secondary p-3 dark:bg-dark-bg">
+            <Navigation size={22} className="text-nautic-accent" />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>{item.origin} → {item.destination}</Text>
-            <Text style={styles.companyText}>{companyName}</Text>
-            <Text style={styles.cardSubtitle}>
-              {user?.role === 'owner' ? 'Toca para gestionar viajes' : 'Ver horarios disponibles'}
+
+          {/* Texto */}
+          <View className="flex-1">
+            <Text className="text-base font-semibold text-slate-800 dark:text-dark-text">
+              {item.origin} → {item.destination}
+            </Text>
+
+            <Text className="text-sm font-medium text-nautic-primary dark:text-nautic-accent">
+              {companyName}
+            </Text>
+
+            <Text className="mt-1 text-xs text-slate-500 dark:text-dark-textMuted">
+              {user?.role === "owner"
+                ? "Toca para gestionar viajes"
+                : "Ver horarios disponibles"}
             </Text>
           </View>
         </View>
@@ -61,40 +97,29 @@ export default function AllRoutesScreen() {
 
   return (
     <AppContainer>
-      {/* 
-        Cambios: 
-        1. showBack={true}
-        2. showAvatar={false} 
-      */}
       <AppHeader
         title="Todas las Rutas"
-        neon={true}
-        showBack={true}
+        neon
+        showBack
         showAvatar={false}
       />
 
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <StyledView className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#00B4D8" />
+        </StyledView>
       ) : (
         <FlatList
           data={routes}
           keyExtractor={(item) => item.id || item._id || ""}
           refreshing={loading}
           onRefresh={loadRoutes}
-          contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+          contentContainerStyle={{
+            paddingTop: 10,
+            paddingBottom: 100,
+            paddingHorizontal: 16, // ✅ mismo ancho que Viajes
+          }}
           showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={{ alignItems: 'center', marginTop: 40 }}>
-              <View style={styles.emptyIcon}>
-                <MapPin size={32} color="#9ca3af" />
-              </View>
-              <Text style={{ color: '#6b7280', textAlign: 'center' }}>
-                No se encontraron rutas disponibles.
-              </Text>
-            </View>
-          }
           renderItem={renderItem}
         />
       )}
@@ -102,52 +127,121 @@ export default function AllRoutesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  iconBox: {
-    backgroundColor: '#e0f2f1',
-    padding: 12,
-    borderRadius: 12,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-  },
-  companyText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.primary,
-    marginBottom: 2,
-  },
-  cardSubtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  emptyIcon: {
-    width: 64,
-    height: 64,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  }
-});
+
+// import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator } from "react-native";
+// import { useEffect, useState } from "react";
+// import { useNavigation } from "@react-navigation/native";
+// import { Navigation } from "lucide-react-native";
+// import { styled } from "nativewind";
+
+// import AppContainer from "../components/ui/AppContainer";
+// import AppHeader from "../components/ui/AppHeader";
+// import { getAllRoutes, Route } from "../services/route.service";
+// import { useAuth } from "../context/AuthContext";
+
+// const StyledView = styled(View);
+
+// export default function AllRoutesScreen() {
+//   const navigation = useNavigation<any>();
+//   const { user } = useAuth();
+
+//   const [routes, setRoutes] = useState<Route[]>([]);
+//   const [loading, setLoading] = useState(false);
+
+//   const loadRoutes = async () => {
+//     try {
+//       setLoading(true);
+//       const data = await getAllRoutes();
+//       setRoutes(data);
+//     } catch {
+//       Alert.alert("Error", "No se pudieron cargar las rutas");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   useEffect(() => {
+//     loadRoutes();
+//   }, []);
+
+//   const renderItem = ({ item }: { item: Route }) => {
+//     const companyName =
+//       item.company && typeof item.company === "object"
+//         ? (item.company as any).name
+//         : "Empresa";
+
+//     return (
+//       <TouchableOpacity
+//         onPress={() =>
+//           navigation.navigate("Trips", {
+//             routeId: item.id || item._id,
+//             routeName: `${item.origin} - ${item.destination}`,
+//             companyName,
+//           })
+//         }
+//         className="
+//           mb-4
+//           rounded-2xl
+//           border
+//           border-slate-200
+//           bg-white
+//           p-4
+//           shadow-sm
+
+//           dark:border-dark-border
+//           dark:bg-dark-surface
+//         "
+//       >
+//         <View className="flex-row items-center gap-3">
+//           {/* Icono */}
+//           <View className="rounded-xl bg-nautic-secondary p-3 dark:bg-dark-bg">
+//             <Navigation size={22} className="text-nautic-accent" />
+//           </View>
+
+//           {/* Texto */}
+//           <View className="flex-1">
+//             <Text className="text-base font-semibold text-slate-800 dark:text-dark-text">
+//               {item.origin} → {item.destination}
+//             </Text>
+
+//             <Text className="text-sm font-medium text-nautic-primary dark:text-nautic-accent">
+//               {companyName}
+//             </Text>
+
+//             <Text className="mt-1 text-xs text-slate-500 dark:text-dark-textMuted">
+//               {user?.role === "owner"
+//                 ? "Toca para gestionar viajes"
+//                 : "Ver horarios disponibles"}
+//             </Text>
+//           </View>
+//         </View>
+//       </TouchableOpacity>
+//     );
+//   };
+
+//   return (
+//     <AppContainer>
+//       <AppHeader title="Todas las Rutas" neon showBack showAvatar={false} />
+
+//       {loading ? (
+//         <StyledView className="flex-1 items-center justify-center">
+//           <ActivityIndicator size="large" className="text-nautic-accent" />
+//         </StyledView>
+//       ) : (
+//         <FlatList
+//           data={routes}
+//           keyExtractor={(item) => item.id || item._id || ""}
+//           refreshing={loading}
+//           onRefresh={loadRoutes}
+//           contentContainerStyle={{
+//             paddingTop: 10,
+//             paddingBottom: 100,
+//             paddingHorizontal: 16, // 🔒 MISMO QUE VIAJES
+//           }}
+//           showsVerticalScrollIndicator={false}
+//           renderItem={renderItem}
+//         />
+//       )}
+//     </AppContainer>
+//   );
+// }

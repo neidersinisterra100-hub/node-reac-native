@@ -1,8 +1,9 @@
-import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator } from "react-native";
 import { IconButton } from "react-native-paper";
 import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { Building2, CheckCircle2, AlertCircle } from "lucide-react-native";
+import { styled } from "nativewind";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
@@ -17,6 +18,10 @@ import {
 } from "../services/company.service";
 import { useAuth } from "../context/AuthContext";
 import { colors } from "../theme/colors";
+
+const StyledView = styled(View);
+const StyledText = styled(Text);
+const StyledTouchableOpacity = styled(TouchableOpacity);
 
 export default function MyCompaniesScreen() {
     const navigation = useNavigation<any>();
@@ -54,7 +59,6 @@ export default function MyCompaniesScreen() {
         try {
             await toggleCompanyActive(id, !currentStatus);
             setCompanies(prev => prev.map(c => (c.id === id || c._id === id) ? { ...c, isActive: !currentStatus } : c));
-            /* ... (Logic split, will do separate chunks) */
         } catch {
             Alert.alert("Error", "No se pudo cambiar el estado");
         }
@@ -79,66 +83,60 @@ export default function MyCompaniesScreen() {
     };
 
     const renderItem = ({ item }: { item: Company }) => (
-        <TouchableOpacity
-            style={[styles.card, !item.isActive && isOwner && styles.cardInactive]}
+        <StyledTouchableOpacity
+            className={`bg-white rounded-2xl mb-4 border border-gray-200 shadow-sm elevation-1 overflow-hidden ${!item.isActive && isOwner ? 'bg-gray-50' : ''}`}
             onPress={() => navigation.navigate("CompanyRoutes", {
                 companyId: item.id || item._id || "",
                 companyName: item.name,
             })}
             activeOpacity={0.7}
         >
-            <View style={styles.cardContent}>
+            <StyledView className="p-4 flex-row gap-3">
                 {/* Icono de Empresa */}
-                <View style={styles.iconBox}>
+                <StyledView className="w-12 h-12 rounded-xl bg-blue-50 justify-center items-center">
                     <Building2 size={24} color={colors.primary} />
-                </View>
+                </StyledView>
 
                 {/* Información Principal */}
-                <View style={{ flex: 1 }}>
-                    <View style={styles.titleRow}>
-                        <Text style={styles.cardTitle}>{item.name}</Text>
+                <StyledView className="flex-1">
+                    <StyledView className="flex-row justify-between items-center mb-1">
+                        <StyledText className="text-base font-bold text-slate-800 flex-1 mr-2">{item.name}</StyledText>
 
                         {/* BADGE DE LEGALIDAD PROFESIONAL */}
-                        <View style={[
-                            styles.statusBadge,
-                            { backgroundColor: item.isActive ? '#dcfce7' : '#fee2e2' }
-                        ]}>
+                        <StyledView className={`flex-row items-center px-2 py-1 rounded-xl gap-1 ${item.isActive ? 'bg-green-100' : 'bg-red-100'}`}>
                             {item.active ? (
                                 <CheckCircle2 size={12} color="#166534" />
                             ) : (
                                 <AlertCircle size={12} color="#991b1b" />
                             )}
-                            <Text style={[
-                                styles.statusText,
-                                { color: item.isActive ? '#166534' : '#991b1b' }
-                            ]}>
+                            <StyledText className={`text-[10px] font-bold uppercase ${item.isActive ? 'text-green-800' : 'text-red-800'}`}>
                                 {item.isActive ? 'Verificada' : 'Pendiente'}
-                            </Text>
-                        </View>
-                    </View>
+                            </StyledText>
+                        </StyledView>
+                    </StyledView>
 
-                    <Text style={styles.nitText}>NIT: {item.nit || 'Sin registrar'}</Text>
+                    <StyledText className="text-xs text-slate-500 mb-1">NIT: {item.nit || 'Sin registrar'}</StyledText>
 
                     {isOwner && (
-                        <Text style={styles.balanceText}>
-                            Balance: <Text style={{ fontWeight: 'bold' }}>${item.balance?.toLocaleString() || '0'}</Text>
-                        </Text>
+                        <StyledText className="text-xs text-slate-900">
+                            Balance: <StyledText className="font-bold">${item.balance?.toLocaleString() || '0'}</StyledText>
+                        </StyledText>
                     )}
-                </View>
-            </View>
+                </StyledView>
+            </StyledView>
 
             {/* Acciones (Solo Owner) */}
             {isOwner && (
-                <View style={styles.actionsFooter}>
-                    <Text style={styles.actionLabel}>Acciones:</Text>
-                    <View style={styles.actionButtons}>
+                <StyledView className="flex-row items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-100">
+                    <StyledText className="text-xs text-slate-400 font-medium">Acciones:</StyledText>
+                    <StyledView className="flex-row items-center gap-2">
                         <TouchableOpacity
-                            style={[styles.actionBtn, { backgroundColor: item.isActive ? '#fef2f2' : '#f0fdf4' }]}
+                            className={`px-3 py-1.5 rounded-lg ${item.isActive ? 'bg-red-50' : 'bg-green-50'}`}
                             onPress={() => handleToggle(item.id || item._id || "", !!item.isActive)}
                         >
-                            <Text style={{ fontSize: 12, fontWeight: '600', color: item.isActive ? '#ef4444' : '#16a34a' }}>
+                            <StyledText className={`text-xs font-semibold ${item.isActive ? 'text-red-600' : 'text-green-600'}`}>
                                 {item.isActive ? 'Desactivar' : 'Activar'}
-                            </Text>
+                            </StyledText>
                         </TouchableOpacity>
 
                         <IconButton
@@ -148,33 +146,33 @@ export default function MyCompaniesScreen() {
                             style={{ margin: 0 }}
                             onPress={() => handleDelete(item.id || item._id || "")}
                         />
-                    </View>
-                </View>
+                    </StyledView>
+                </StyledView>
             )}
-        </TouchableOpacity>
+        </StyledTouchableOpacity>
     );
 
     return (
         <AppContainer>
             <AppHeader
-                title={isOwner ? "Mis Empresas" : "Empresas Disponibles"} // Cambiado "Navieras" a "Empresas"
+                title={isOwner ? "Mis Empresas" : "Empresas Disponibles"}
                 showBack={true}
                 showAvatar={false}
             />
 
             {errorMsg && (
-                <View style={styles.errorBox}>
-                    <Text style={{ color: '#dc2626' }}>{errorMsg}</Text>
+                <StyledView className="bg-red-50 p-4 rounded-lg mb-4 items-center">
+                    <StyledText className="text-red-600">{errorMsg}</StyledText>
                     <TouchableOpacity onPress={loadCompanies}>
-                        <Text style={{ color: '#b91c1c', fontWeight: 'bold', textDecorationLine: 'underline' }}>Reintentar</Text>
+                        <StyledText className="text-red-700 font-bold underline mt-1">Reintentar</StyledText>
                     </TouchableOpacity>
-                </View>
+                </StyledView>
             )}
 
             {loading ? (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <StyledView className="flex-1 justify-center items-center">
                     <ActivityIndicator size="large" color={colors.primary} />
-                </View>
+                </StyledView>
             ) : (
                 <FlatList
                     data={isOwner ? companies : companies.filter(c => c.isActive)}
@@ -185,18 +183,18 @@ export default function MyCompaniesScreen() {
                     showsVerticalScrollIndicator={false}
                     ListHeaderComponent={
                         isOwner ? (
-                            <View style={{ marginBottom: 20 }}>
+                            <StyledView className="mb-5">
                                 <PrimaryButton
-                                    label="Registrar Nueva Empresa" // Cambiado "Naviera" a "Empresa"
+                                    label="Registrar Nueva Empresa"
                                     onPress={() => navigation.navigate("CreateCompany")}
                                 />
-                            </View>
+                            </StyledView>
                         ) : null
                     }
                     ListEmptyComponent={
-                        <View style={{ alignItems: 'center', marginTop: 40 }}>
-                            <Text style={{ color: '#6b7280' }}>No hay empresas registradas.</Text>
-                        </View>
+                        <StyledView className="items-center mt-10">
+                            <StyledText className="text-gray-500">No hay empresas registradas.</StyledText>
+                        </StyledView>
                     }
                     renderItem={renderItem}
                 />
@@ -204,103 +202,3 @@ export default function MyCompaniesScreen() {
         </AppContainer>
     );
 }
-
-const styles = StyleSheet.create({
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 3,
-        overflow: 'hidden',
-    },
-    cardInactive: {
-        borderColor: '#e5e7eb',
-        backgroundColor: '#f9fafb',
-    },
-    cardContent: {
-        padding: 16,
-        flexDirection: 'row',
-        gap: 12,
-    },
-    iconBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        backgroundColor: '#e0f2fe',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    titleRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 4,
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#1e293b',
-        flex: 1,
-        marginRight: 8,
-    },
-    statusBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        gap: 4,
-    },
-    statusText: {
-        fontSize: 10,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-    },
-    nitText: {
-        fontSize: 12,
-        color: '#64748b',
-        marginBottom: 4,
-    },
-    balanceText: {
-        fontSize: 13,
-        color: '#0f172a',
-    },
-    actionsFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        backgroundColor: '#f8fafc',
-        borderTopWidth: 1,
-        borderTopColor: '#f1f5f9',
-    },
-    actionLabel: {
-        fontSize: 12,
-        color: '#94a3b8',
-        fontWeight: '500',
-    },
-    actionButtons: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    actionBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
-    },
-    errorBox: {
-        backgroundColor: '#fef2f2',
-        padding: 16,
-        borderRadius: 8,
-        marginBottom: 16,
-        alignItems: 'center'
-    }
-});

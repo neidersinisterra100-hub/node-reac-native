@@ -9,6 +9,9 @@ import routeRoutes from "./routes/route.routes.js";
 import reportRoutes from "./routes/report.routes.js";
 import scheduleRoutes from "./routes/schedule.routes.js";
 import seatRoutes from "./routes/seat.routes.js";
+import cityRoutes from "./routes/city.routes.js";
+import municipioRoutes from "./routes/municipio.routes.js";
+import departmentRoutes from "./routes/department.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
@@ -45,6 +48,12 @@ app.get("/", (_req, res) => {
    ========================================================= */
 app.use((req, _res, next) => {
   console.log("➡️", req.method, req.originalUrl);
+
+  // 🔍 Debug: Log body for company creation
+  if (req.originalUrl.includes('companies/with-admin') && req.method === 'POST') {
+    console.log("🔍 [Middleware] Body after express.json():", JSON.stringify(req.body, null, 2));
+  }
+
   next();
 });
 
@@ -59,6 +68,9 @@ app.use("/api/tickets", ticketRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/schedules", scheduleRoutes);
 app.use("/api", seatRoutes);
+app.use("/api/cities", cityRoutes);
+app.use("/api/municipios", municipioRoutes);
+app.use("/api/departments", departmentRoutes);
 
 /* =========================================================
    404 — ENDPOINT NO ENCONTRADO

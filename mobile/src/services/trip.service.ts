@@ -1,13 +1,11 @@
 import { api } from "./api";
 
-/* ================= TYPES ================= */
+/* =========================================================
+   DOMAIN TYPES — TRIPS
+   ========================================================= */
 
 /**
- * Trip
- *
- * ⚠️ Nota:
- * - availableSeats NO viene del backend aún
- * - capacity SÍ existe y debe enviarse al crear
+ * Route (puede venir como ID o como objeto poblado)
  */
 export interface Route {
   id?: string;
@@ -16,12 +14,30 @@ export interface Route {
   destination: string;
 }
 
+/**
+ * Company (puede venir como ID o como objeto poblado)
+ */
 export interface Company {
   id?: string;
   _id?: string;
   name: string;
 }
 
+/**
+ * Tipos de transporte válidos
+ * ⚠️ Deben coincidir con backend (Zod + enums)
+ */
+export type TransportType =
+  | "lancha"
+  | "lancha rapida";
+
+/**
+ * Trip
+ *
+ * Nota:
+ * - route / company pueden venir como string o como objeto
+ * - capacity es la capacidad TOTAL (no asientos disponibles)
+ */
 export interface Trip {
   id: string;
   _id?: string;
@@ -29,105 +45,61 @@ export interface Trip {
   route: Route | string;
   company: Company | string;
 
-  date: string;
-  departureTime: string;
+  date: string;           // YYYY-MM-DD
+  departureTime: string;  // HH:mm
   price: number;
   capacity: number;
-  transportType: string;
+  transportType: TransportType;
   isActive: boolean;
 }
 
+/* =========================================================
+   GET TRIPS
+   ---------------------------------------------------------
+   Regla:
+   - Owner / Admin → /trips/manage (solo sus empresas)
+   - Usuario público → /trips (solo activos)
+   
+   El frontend NO decide permisos.
+   El backend decide qué endpoint responde.
+   ========================================================= */
 
-// export interface Trip {
-//   id: string;
-//   _id?: string;
-
-//   route:
-//   | string
-//   | {
-//     id?: string;
-//     _id?: string;
-//     origin: string;
-//     destination: string;
-//   };
-
-//   company:
-//   | string
-//   | {
-//     id?: string;
-//     _id?: string;
-//     name: string;
-//   };
-
-//   date: string;
-//   departureTime: string;
-//   price: number;
-//   capacity: number; // 🔑 CLAVE
-//   transportType: string;
-//   isActive: boolean;
-// }
-
-/* ================= GET TRIPS ================= */
-/**
- * Reglas:
- * - Owner / admin → /trips/manage (SOLO sus empresas)
- * - Usuario / público → /trips (solo activos)
- *
- * 🔐 El backend decide qué devolver
- */
 export async function getTrips(): Promise<Trip[]> {
   try {
-    const { data } = await api.get<any[]>("/trips/manage");
-
-    const invalid = data.find(t => !t.route);
-    if (invalid) {
-      console.error("🚨 BACKEND ROTO: Trip sin route", invalid);
+    // 🔐 Intentar endpoint privado (owners/admins)
+    const { data } = await api.get<Trip[]>("/trips/manage");
+    return data;
+  } catch (error: any) {
+    // 🚫 Si no tiene permisos → usar endpoint público
+    if (
+      error?.response?.status === 401 ||
+      error?.response?.status === 403
+    ) {
+      const { data } = await api.get<Trip[]>("/trips");
+      return data;
     }
 
-    return data as Trip[];
-  } catch {
-    const { data } = await api.get<any[]>("/trips");
-    return data as Trip[];
+    // 🛟 Fallback defensivo
+    const { data } = await api.get<Trip[]>("/trips");
+    return data;
   }
 }
 
-
-// export async function getTrips(): Promise<Trip[]> {
-//   try {
-//     const { data } = await api.get<Trip[]>("/trips/manage");
-//     return data;
-//   } catch {
-//     const { data } = await api.get<Trip[]>("/trips");
-//     return data;
-//   }
-// }
-
-/* ================= CREATE TRIP ================= */
-/**
- * Solo owner (validado en backend)
- *
- * ⚠️ capacity es OBLIGATORIO
- * Si falta → backend responde 400 (correcto)
- */
-// export async function createTrip(data: {
-//   routeId: string;
-//   date: string;
-//   departureTime: string;
-//   price: number;
-//   capacity: number;
-//   transportType: string;
-// }) {
-//   const { data: trip } = await api.post("/trips", data);
-//   return trip;
-// }
+/* =========================================================
+   CREATE TRIP
+   ---------------------------------------------------------
+   - Solo owner (validado en backend)
+   - capacity es obligatoria
+   - NO se envían companyId ni cityId
+   ========================================================= */
 
 export async function createTrip(data: {
   routeId: string;
-  date: string;
-  departureTime: string;
+  date: string;           // YYYY-MM-DD
+  departureTime: string;  // HH:mm
   price: number;
-  capacity: number; // 🔑 CLAVE
-  transportType: string;
+  capacity: number;
+  transportType: TransportType;
 }): Promise<Trip> {
   const { data: trip } = await api.post<Trip>(
     "/trips",
@@ -136,22 +108,31 @@ export async function createTrip(data: {
   return trip;
 }
 
-/* ================= DELETE TRIP ================= */
-/**
- * Solo owner (validado en backend)
- */
-export async function deleteTrip(
-  tripId: string
-): Promise<void> {
+/* =========================================================
+   DELETE TRIP
+   ---------------------------------------------------------
+   - Solo owner
+   ========================================================= */
+
+export async function deleteTrip(tripId: string): Promise<void> {
   await api.delete(`/trips/${tripId}`);
 }
 
-/* ================= TOGGLE ACTIVE ================= */
-export async function toggleTripActive(tripId: string, isActive: boolean): Promise<void> {
-  await api.patch(`/trips/${tripId}`, { isActive });
+/* =========================================================
+   TOGGLE TRIP ACTIVE
+   ---------------------------------------------------------
+   ⚠️ IMPORTANTE:
+   - El backend hace toggle automático
+   - NO se envía payload
+   ========================================================= */
+
+export async function toggleTripActive(tripId: string): Promise<void> {
+  await api.patch(`/trips/${tripId}`);
 }
 
-/* ================= COMPAT ================= */
+/* =========================================================
+   COMPAT / EXPORT AGRUPADO
+   ========================================================= */
 
 export const tripService = {
   getAll: getTrips,

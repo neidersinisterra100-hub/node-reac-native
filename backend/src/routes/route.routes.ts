@@ -17,10 +17,14 @@ import {
 
 const router = Router();
 
-// 🔐 Todas las rutas requieren autenticación
+// 📤 Lecturas públicas (usuarios pueden ver rutas activas)
+router.get("/", getRoutesByRole);
+router.get("/company/:companyId", getCompanyRoutes);
+
+// 🔐 Mutaciones requieren autenticación
 router.use(requireAuth);
 
-// 🧱 Mutaciones (bloqueo legacy + validación)
+// 🧱 Crear ruta (bloqueo legacy + validación)
 router.post(
   "/",
   blockLegacyFields,
@@ -36,9 +40,5 @@ router.patch(
 );
 
 router.delete("/:routeId", deleteRoute);
-
-// 📤 Lecturas
-router.get("/", getRoutesByRole);
-router.get("/company/:companyId", getCompanyRoutes);
 
 export default router;

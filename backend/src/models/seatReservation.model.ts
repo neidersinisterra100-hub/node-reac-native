@@ -9,6 +9,13 @@ const seatReservationSchema = new Schema(
             index: true
         },
 
+        departmentId: {
+            type: Schema.Types.ObjectId,
+            ref: "Department",
+            required: true,
+            index: true
+        },
+
         seatNumber: {
             type: Number,
             required: true

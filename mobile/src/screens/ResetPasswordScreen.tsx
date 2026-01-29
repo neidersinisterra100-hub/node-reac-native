@@ -9,6 +9,7 @@ import {
 import { Text, TextInput } from "react-native-paper";
 
 import AppContainer from "../components/ui/AppContainer";
+import AppHeader from "../components/ui/AppHeader";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import { colors } from "../theme/colors";
 import { resetPassword } from "../services/auth.service";
@@ -65,6 +66,7 @@ export default function ResetPasswordScreen({ route }: Props) {
 
   return (
     <AppContainer>
+      <AppHeader title="Recuperar Contraseña" showBack />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}

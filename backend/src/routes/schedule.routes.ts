@@ -1,14 +1,23 @@
 import { Router } from "express";
-import { setAdminSchedule, getSchedule } from "../controllers/schedule.controller.js";
+import {
+  getPendingTrips,
+  applyScheduler,
+} from "../controllers/schedule.controller.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
-import { requireOwner } from "../middlewares/requireOwner.js";
 
 const router = Router();
 
-// Asignar turno (Solo Owner)
-router.post("/", requireAuth, requireOwner, setAdminSchedule);
+/**
+ * ⚠️ IMPORTANTE
+ * Estas rutas SOLO deben ser usadas por:
+ * - Usuario técnico (role = system)
+ * - n8n
+ */
 
-// Obtener calendario (Owner y Admin)
-router.get("/", requireAuth, getSchedule);
+// Obtener qué viajes activar / desactivar
+router.get("/pending-trips", requireAuth, getPendingTrips);
+
+// Aplicar cambios
+router.post("/apply", requireAuth, applyScheduler);
 
 export default router;

@@ -16,6 +16,11 @@ export const createRouteSchema = z.object({
     .transform((v) => v.trim().toUpperCase()),
 
   companyId: z.string().min(1, "companyId es obligatorio"),
+
+  // ✅ Location fields (OPTIONAL - derived from company if not provided)
+  departmentId: z.string().min(1).optional(),
+  municipioId: z.string().min(1).optional(),
+  cityId: z.string().min(1).optional(),
 });
 
 /* =========================================================

@@ -103,7 +103,7 @@ export default function CreateRouteScreen() {
 
   return (
     <AppContainer>
-      <AppHeader title="Crear ruta" />
+      <AppHeader title="Crear ruta" showBack />
 
       <View style={styles.container}>
         <FormField

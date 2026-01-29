@@ -1,64 +1,83 @@
-import { Schema, model } from "mongoose";
+// import mongoose, { Schema, model, Types, Document } from "mongoose";
 
-/* =========================================================
-   ROLES DE USUARIO
-   ========================================================= */
-export enum UserRole {
-  OWNER = "owner",
-  USER = "user",
-  ADMIN = "admin",
-}
+// /* =========================================================
+//    ROLES
+//    ========================================================= */
+// export type UserRole = "user" | "owner" | "admin" | "super_owner";
 
-/* =========================================================
-   ESQUEMA DE USUARIO
-   ========================================================= */
-const UserSchema = new Schema(
-  {
-    /* =========================
-       DATOS BÁSICOS
-       ========================= */
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+// /* =========================================================
+//    USER DOCUMENT (TS)
+//    ========================================================= */
+// export interface UserDocument extends Document {
+//   name: string;
+//   email: string;
+//   password: string;
+//   role: UserRole;
+//   verified: boolean;
 
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true, // 🧹 evita espacios invisibles
-    },
+//   // 🔥 CLAVE PARA JWT / OWNERSHIP
+//   companyId?: Types.ObjectId | null;
 
-    password: {
-      type: String,
-      required: true,
-    },
+//   // FUTURO
+//   managedCompanies?: Types.ObjectId[];
+// }
 
-    /* =========================
-       AUTORIZACIÓN
-       ========================= */
-    role: {
-      type: String,
-      enum: Object.values(UserRole),
-      default: UserRole.USER,
-    },
+// /* =========================================================
+//    SCHEMA
+//    ========================================================= */
+// const UserSchema = new Schema<UserDocument>(
+//   {
+//     name: {
+//       type: String,
+//       required: true,
+//       trim: true,
+//     },
 
-    /* =========================
-       VERIFICACIÓN DE EMAIL
-       ========================= */
-    verified: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  {
-    timestamps: true, // createdAt / updatedAt
-  }
-);
+//     email: {
+//       type: String,
+//       required: true,
+//       unique: true,
+//       lowercase: true,
+//       trim: true,
+//     },
 
-/* =========================================================
-   EXPORT
-   ========================================================= */
-export default model("User", UserSchema);
+//     password: {
+//       type: String,
+//       required: true,
+//     },
+
+//     role: {
+//       type: String,
+//       enum: ["user", "owner", "admin", "super_owner"],
+//       default: "user",
+//     },
+
+//     verified: {
+//       type: Boolean,
+//       default: false,
+//     },
+
+//     companyId: {
+//       type: Schema.Types.ObjectId,
+//       ref: "Company",
+//       default: null,
+//       index: true,
+//     },
+
+//     managedCompanies: [
+//       {
+//         type: Schema.Types.ObjectId,
+//         ref: "Company",
+//       },
+//     ],
+//   },
+//   {
+//     timestamps: true,
+//   }
+// );
+
+// /* =========================================================
+//    EXPORT ÚNICO
+//    ========================================================= */
+// export const UserModel =
+//   mongoose.models.User || model<UserDocument>("User", UserSchema);

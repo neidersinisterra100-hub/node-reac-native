@@ -1,145 +1,3 @@
-
-
-// const styles = StyleSheet.create({
-//     container: {
-//         flex: 1,
-//         // 👈 ELIMINADO backgroundColor fijo aquí para permitir el dinámico
-//     },
-//     header: {
-//         paddingTop: 50,
-//         paddingBottom: 40,
-//         paddingHorizontal: 20,
-//         borderBottomLeftRadius: 32,
-//         borderBottomRightRadius: 32,
-//         elevation: 8,
-//     },
-//     headerTop: {
-//         flexDirection: 'row',
-//         justifyContent: 'space-between',
-//         alignItems: 'center',
-//         marginBottom: 24,
-//     },
-//     userInfo: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//     },
-//     userName: {
-//         color: 'white',
-//         fontWeight: 'bold',
-//         fontSize: 18,
-//     },
-//     userEmail: {
-//         color: 'rgba(255,255,255,0.85)',
-//         fontSize: 13,
-//     },
-//     headerIcons: {
-//         flexDirection: 'row',
-//         gap: 4,
-//     },
-//     pageTitle: {
-//         color: 'white',
-//         fontSize: 26,
-//         fontWeight: '800',
-//         marginLeft: 4,
-//     },
-//     scrollContent: {
-//         padding: 20,
-//     },
-//     shortcutsRow: {
-//         flexDirection: 'row',
-//         justifyContent: 'space-between',
-//         marginBottom: 30,
-//         marginTop: -10,
-//     },
-//     shortcutBtn: {
-//         alignItems: 'center',
-//         width: '23%',
-//     },
-//     shortcutIconBg: {
-//         width: 56,
-//         height: 56,
-//         borderRadius: 18,
-//         justifyContent: 'center',
-//         alignItems: 'center',
-//         marginBottom: 8,
-//         elevation: 4,
-//         shadowColor: '#0ea5e9',
-//         shadowOffset: { width: 0, height: 4 },
-//         shadowOpacity: 0.3,
-//         shadowRadius: 5,
-//     },
-//     shortcutText: {
-//         fontSize: 11,
-//         fontWeight: '700',
-//         textAlign: 'center'
-//     },
-//     // Card Styles
-//     cardContainer: {
-//         borderRadius: 24,
-//         elevation: 4,
-//         shadowColor: '#000',
-//         shadowOffset: { width: 0, height: 2 },
-//         shadowOpacity: 0.08,
-//         shadowRadius: 8,
-//         overflow: 'hidden',
-//     },
-//     cardHeaderGradient: {
-//         flexDirection: 'row',
-//         justifyContent: 'space-between',
-//         alignItems: 'center',
-//         padding: 18,
-//     },
-//     cardTitleWhite: {
-//         fontSize: 17,
-//         fontWeight: 'bold',
-//         color: 'white',
-//     },
-//     seeAllWhite: {
-//         color: 'rgba(255,255,255,0.95)',
-//         fontWeight: '600',
-//         fontSize: 13,
-//         backgroundColor: 'rgba(255,255,255,0.2)',
-//         paddingHorizontal: 10,
-//         paddingVertical: 4,
-//         borderRadius: 10,
-//     },
-//     listContent: {
-//         padding: 8,
-//     },
-//     listItem: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         padding: 14,
-//         borderBottomWidth: 1,
-//     },
-//     iconBox: {
-//         width: 48,
-//         height: 48,
-//         borderRadius: 14,
-//         justifyContent: 'center',
-//         alignItems: 'center',
-//     },
-//     itemTitle: {
-//         fontSize: 15,
-//         fontWeight: '600',
-//     },
-//     itemSubtitle: {
-//         fontSize: 13,
-//         color: '#64748b',
-//         marginTop: 2,
-//     },
-//     statusBadge: {
-//         fontSize: 12,
-//         fontWeight: '700',
-//     },
-//     emptyText: {
-//         textAlign: 'center',
-//         padding: 30,
-//         fontStyle: 'italic'
-//     }
-// });
-
-
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, Avatar, IconButton } from 'react-native-paper';
@@ -475,30 +333,44 @@ const styles = StyleSheet.create({
     listItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f1f5f9',
+        padding: 16,
+        marginBottom: 12,
+        backgroundColor: 'white',
+        borderRadius: 16, // More rounded
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+        // Shadow for "Card" feel
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     iconBox: {
-        width: 48,
-        height: 48,
+        width: 50,
+        height: 50,
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
     },
     itemTitle: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 16,
+        fontWeight: '700',
         color: '#1e293b',
+        marginBottom: 2,
     },
     itemSubtitle: {
         fontSize: 13,
         color: '#64748b',
-        marginTop: 2,
+        fontWeight: '500',
     },
     statusBadge: {
         fontSize: 12,
         fontWeight: '700',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+        overflow: 'hidden', // for background color if needed, typically text color is enough
     },
     emptyText: {
         textAlign: 'center',

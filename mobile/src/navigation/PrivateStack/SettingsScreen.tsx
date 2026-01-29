@@ -41,7 +41,7 @@ export default function SettingsScreen() {
   };
 
   const handleReports = () => {
-      navigation.navigate("Reports");
+    navigation.navigate("Reports");
   };
 
   /* ================= ANDROID BACK HANDLER ================= */
@@ -109,29 +109,40 @@ export default function SettingsScreen() {
 
         {/* ===== APARIENCIA ===== */}
         <View style={styles.card}>
-            <View style={styles.row}>
-                <View style={styles.rowLeft}>
-                    <MaterialCommunityIcons name="theme-light-dark" size={24} color={colors.primary} />
-                    <Text style={[styles.itemText, { marginLeft: 12 }]}>Modo Oscuro</Text>
-                </View>
-                <Switch 
-                    value={isDark} 
-                    onValueChange={toggleTheme} 
-                    trackColor={{ false: "#767577", true: colors.primary }}
-                    thumbColor={isDark ? "#fff" : "#f4f3f4"}
-                />
+          <View style={styles.row}>
+            <View style={styles.rowLeft}>
+              <MaterialCommunityIcons name="theme-light-dark" size={24} color={colors.primary} />
+              <Text style={[styles.itemText, { marginLeft: 12 }]}>Modo Oscuro</Text>
             </View>
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              trackColor={{ false: "#767577", true: colors.primary }}
+              thumbColor={isDark ? "#fff" : "#f4f3f4"}
+            />
+          </View>
         </View>
 
         {/* ===== REPORTES ===== */}
         <View style={styles.card}>
-            <Text style={[typography.body, styles.bodyText, { marginBottom: 12 }]}>
-                Reportes y Métricas
-            </Text>
-            <PrimaryButton
-                label="Ver Reportes"
-                onPress={handleReports}
-            />
+          <Text style={[typography.body, styles.bodyText, { marginBottom: 12 }]}>
+            Reportes y Métricas
+          </Text>
+          <PrimaryButton
+            label="Ver Reportes"
+            onPress={handleReports}
+          />
+        </View>
+
+        {/* ===== CALENDARIO ===== */}
+        <View style={styles.card}>
+          <Text style={[typography.body, styles.bodyText, { marginBottom: 12 }]}>
+            Calendario de Turnos
+          </Text>
+          <PrimaryButton
+            label="Ver Calendario"
+            onPress={() => navigation.navigate("Calendar")}
+          />
         </View>
 
         {/* ===== GESTIÓN DE EMPRESAS ===== */}
@@ -213,18 +224,18 @@ const styles = StyleSheet.create({
     ...webTextFix,
   },
   row: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   rowLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   itemText: {
-      fontSize: 16,
-      color: colors.textPrimary,
-      fontWeight: "500",
-      ...webTextFix,
+    fontSize: 16,
+    color: colors.textPrimary,
+    fontWeight: "500",
+    ...webTextFix,
   }
 });

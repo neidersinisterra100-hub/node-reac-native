@@ -1,56 +1,138 @@
 import { Router } from "express";
 
-// ===============================
-// MIDDLEWARES
-// ===============================
+/* =========================================================
+   MIDDLEWARES
+   ========================================================= */
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { ownershipGuard } from "../middlewares/ownership.guard.js";
 import { blockLegacyFields } from "../middlewares/blockLegacyFields.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 
-// ===============================
-// VALIDACIÓN
-// ===============================
+/* =========================================================
+   VALIDACIÓN
+   ========================================================= */
 import { createTripSchema } from "../schemas/trip.schema.js";
 
-// ===============================
-// CONTROLLERS
-// ===============================
+/* =========================================================
+   CONTROLLERS
+   ========================================================= */
 import {
   createTrip,
-  getTrips,
+  getTrips,        // 👈 PÚBLICO (marketplace)
+  getTripById,
+  getManageTrips, // 👈 PRIVADO (admin / owner)
+  getCompanyTrips,
   toggleTripActive,
   deleteTrip,
-  getManageTrips,
-  getCompanyTrips,
 } from "../controllers/trip.controller.js";
+
+import { getTripSeats } from "../controllers/seat.controller.js";
 
 const router = Router();
 
 /* =========================================================
-   PÚBLICO
-   ---------------------------------------------------------
-   - Cualquier usuario puede consultar viajes disponibles
-   - Usado para marketplace / búsqueda
+   RUTAS PÚBLICAS (NO AUTH)
+   =========================================================
+   👉 CUALQUIER usuario (incluido role=user)
+   👉 Marketplace / búsqueda / compra
    ========================================================= */
 
+/**
+ * GET /api/trips
+ * ---------------------------------------------------------
+ * ✔️ Ruta pública
+ * ✔️ Usada por usuarios normales (role=user)
+ * ✔️ Devuelve SOLO viajes activos
+ */
 router.get("/", getTrips);
 
 /* =========================================================
-   PRIVADO (REQUIERE AUTH)
-   ---------------------------------------------------------
-   - A partir de aquí todos requieren JWT
+   ASIENTOS POR VIAJE (PÚBLICO)
+   =========================================================
+   👉 Necesario para mostrar asientos disponibles
+   antes de autenticación
+   ========================================================= */
+
+/**
+ * GET /api/trips/:tripId/seats
+ * ---------------------------------------------------------
+ * ✔️ Devuelve mapa de asientos
+ * ✔️ PÚBLICO (no requiere auth)
+ */
+router.get("/:tripId/seats", getTripSeats);
+
+/* =========================================================
+   A PARTIR DE AQUÍ: RUTAS PRIVADAS
+   =========================================================
+   ⚠️ TODAS requieren JWT válido
    ========================================================= */
 
 router.use(requireAuth);
 
 /* =========================================================
-   CREAR VIAJE
-   ---------------------------------------------------------
-   - Solo usuarios con ownership sobre la empresa
-   - Usa req.user.companyId
+   GESTIÓN / PANEL ADMINISTRATIVO
+   =========================================================
+   ⚠️ IMPORTANTE:
+   - role=user ❌ NO debe acceder aquí
+   - admin / owner ✔️ SÍ
    ========================================================= */
 
+/**
+ * GET /api/trips/manage
+ * ---------------------------------------------------------
+ * ✔️ SOLO admin / owner
+ * ❌ role=user será bloqueado por ownershipGuard
+ *
+ * 🔴 El frontend NO debe llamar esta ruta
+ *    si el usuario es role=user
+ */
+router.get(
+  "/manage",
+  ownershipGuard,
+  getManageTrips
+);
+
+/* =========================================================
+   DETALLE DE VIAJE
+   ========================================================= */
+
+/**
+ * GET /api/trips/:tripId
+ * ---------------------------------------------------------
+ * ✔️ Detalle de un viaje
+ * ✔️ Accesible para usuarios autenticados
+ *
+ * ⚠️ Debe ir DESPUÉS de rutas más específicas
+ */
+router.get("/:tripId", getTripById);
+
+/* =========================================================
+   VIAJES POR EMPRESA
+   ========================================================= */
+
+/**
+ * GET /api/trips/company/:companyId
+ * ---------------------------------------------------------
+ * ✔️ Protegido por ownership
+ * ✔️ Admin / Owner
+ */
+router.get(
+  "/company/:companyId",
+  ownershipGuard,
+  getCompanyTrips
+);
+
+/* =========================================================
+   CREACIÓN DE VIAJES
+   ========================================================= */
+
+/**
+ * POST /api/trips
+ * ---------------------------------------------------------
+ * ✔️ SOLO owner
+ * ✔️ Protegido por ownershipGuard
+ * ✔️ Valida esquema
+ */
 router.post(
   "/",
   ownershipGuard,
@@ -60,45 +142,25 @@ router.post(
 );
 
 /* =========================================================
-   GESTIÓN DE VIAJES
-   ---------------------------------------------------------
-   - Vista administrativa (panel)
-   - Usa empresa del JWT
+   MUTACIONES
    ========================================================= */
 
-router.get(
-  "/manage",
-  ownershipGuard,
-  getManageTrips
-);
-
-/* =========================================================
-   VIAJES DE UNA EMPRESA
-   ---------------------------------------------------------
-   - Parametrizado por companyId
-   - Protegido por ownership
-   ========================================================= */
-
-router.get(
-  "/company/:companyId",
-  ownershipGuard,
-  getCompanyTrips
-);
-
-/* =========================================================
-   MUTACIONES DE VIAJES
-   ---------------------------------------------------------
-   - Activar / desactivar
-   - Eliminar
-   - Siempre con ownership
-   ========================================================= */
-
+/**
+ * PATCH /api/trips/:tripId
+ * ---------------------------------------------------------
+ * Activa / desactiva viaje
+ */
 router.patch(
   "/:tripId",
   ownershipGuard,
   toggleTripActive
 );
 
+/**
+ * DELETE /api/trips/:tripId
+ * ---------------------------------------------------------
+ * Elimina viaje
+ */
 router.delete(
   "/:tripId",
   ownershipGuard,

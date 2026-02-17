@@ -1,5 +1,4 @@
-import { View, StyleSheet, Alert } from "react-native";
-import { Text, TextInput } from "react-native-paper";
+import { View, Alert } from "react-native";
 import { useState } from "react";
 import {
   useNavigation,
@@ -10,14 +9,10 @@ import {
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import FormField from "../components/ui/FormField";
 
 import { createRoute } from "../services/route.service";
 import { useAuth } from "../context/AuthContext";
-
-import { spacing } from "../theme/spacing";
-import { colors } from "../theme/colors";
-import { typography } from "../theme/typography";
-import FormField from "../components/ui/FormField";
 
 /* ================= TYPES ================= */
 
@@ -46,10 +41,7 @@ export default function CreateRouteScreen() {
   /* ================= GUARD ================= */
 
   if (!companyId) {
-    Alert.alert(
-      "Error",
-      "No se recibió la empresa"
-    );
+    Alert.alert("Error", "No se recibió la empresa");
     navigation.goBack();
     return null;
   }
@@ -82,17 +74,13 @@ export default function CreateRouteScreen() {
         companyId,
       });
 
-      Alert.alert(
-        "Ruta creada",
-        "La ruta se creó correctamente"
-      );
-
+      Alert.alert("Ruta creada", "La ruta se creó correctamente");
       navigation.goBack();
     } catch (error: any) {
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
-        "No se pudo crear la ruta"
+          "No se pudo crear la ruta"
       );
     } finally {
       setLoading(false);
@@ -105,7 +93,7 @@ export default function CreateRouteScreen() {
     <AppContainer>
       <AppHeader title="Crear ruta" showBack />
 
-      <View style={styles.container}>
+      <View className="px-5 py-6 gap-4">
         <FormField
           label="Origen"
           value={origin}
@@ -129,19 +117,3 @@ export default function CreateRouteScreen() {
     </AppContainer>
   );
 }
-
-/* ================= STYLES ================= */
-
-const styles = StyleSheet.create({
-  container: {
-    padding: spacing.lg,
-  },
-  label: {
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    marginBottom: spacing.md,
-    backgroundColor: "#FFF",
-  },
-});

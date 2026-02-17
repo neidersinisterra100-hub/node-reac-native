@@ -25,6 +25,12 @@ import {
 
 const router = Router();
 
+const notImplemented = (_req: any, res: any) => {
+  res.status(501).json({
+    message: "Endpoint pendiente de implementación",
+  });
+};
+
 /* ================= PUBLIC ================= */
 // router.get("/", getPublicCompanies);
 
@@ -46,7 +52,7 @@ router.post(
   requireOwner,
   blockLegacyFields,
   validateRequest(createCompanySchema),
-  // createCompanyWithAdmin
+  notImplemented
 );
 
 /* ================= MY COMPANIES ================= */
@@ -85,7 +91,7 @@ router.get(
   "/:companyId/admins",
   requireAuth,
   ownershipGuard,
-  // getCompanyAdmins
+  notImplemented
 );
 
 // Rutas de una empresa (públicas o protegidas según tu negocio)

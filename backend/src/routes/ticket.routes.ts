@@ -2,94 +2,116 @@
 // IMPORTS
 // ===============================
 
-// Router es el mini-servidor de Express.
-// Sirve para agrupar endpoints relacionados (tickets).
+/**
+ * Router
+ * ---------------------------------------------------------
+ * Mini-servidor de Express para agrupar rutas de tickets
+ */
 import { Router } from "express";
 
-// Controllers:
-// 👉 Aquí está la lógica que responde a cada endpoint.
-// Este archivo SOLO define rutas, NO lógica.
-import {
-  buyTicket,                 // Comprar un ticket
-  getMyTickets,              // Historial del usuario
-  validateTicket,            // Validar ticket (check-in)
-  getPassengersByTrip,       // Listar pasajeros por viaje
-  registerManualPassenger,   // Registrar pasajero manualmente
-} from "../controllers/ticket.controller.js";
-
-// Middlewares de seguridad:
-
-// requireAuth:
-// 👉 Verifica que el usuario esté autenticado (JWT válido)
-// 👉 Si falla, corta la request
-import { requireAuth } from "../middlewares/requireAuth.js";
-
-// requireOwnerOrAdmin:
-// 👉 Verifica roles (OWNER o ADMIN)
-// 👉 Se usa para operaciones sensibles
-import { requireOwnerOrAdmin } from "../middlewares/role.middleware.js";
-
-// ===============================
-// CREACIÓN DEL ROUTER
-// ===============================
-
-// Este router será montado en:
-// /api/tickets
-const router = Router();
-
 /* =========================================================
-   COMPRA DE TICKET (USUARIO)
+   CONTROLLERS
    ========================================================= */
 
 /**
+ * Lógica de negocio de tickets
+ * (este archivo SOLO define rutas)
+ */
+import {
+  buyTicket,               // Compra de ticket (usuario final)
+  getMyTickets,            // Historial del usuario
+  validateTicket,          // Validación / check-in
+  getPassengersByTrip,     // Pasajeros por viaje
+  registerManualPassenger, // Registro manual (muelle)
+} from "../controllers/ticket.controller.js";
+
+/* =========================================================
+   MIDDLEWARES
+   ========================================================= */
+
+/**
+ * requireAuth
+ * ---------------------------------------------------------
+ * - Verifica JWT
+ * - Inyecta req.user
+ */
+import { requireAuth } from "../middlewares/requireAuth.js";
+
+/**
+ * requireOwnerOrAdmin
+ * ---------------------------------------------------------
+ * - Permite SOLO owner / admin / super_owner
+ * - Usado para operaciones operativas
+ */
+import { requireOwnerOrAdmin } from "../middlewares/role.middleware.js";
+
+/**
+ * blockRoles
+ * ---------------------------------------------------------
+ * - Bloquea acciones por rol
+ * - Usado para impedir compra a staff
+ */
+import { blockRoles } from "../middlewares/blockRoles.js";
+
+/* =========================================================
+   ROUTER
+   ========================================================= */
+
+const router = Router();
+
+/* =========================================================
+   COMPRA DE TICKET (USUARIO FINAL)
+   ========================================================= */
+/**
  * POST /api/tickets/buy
  *
- * Flujo:
- * 1️⃣ requireAuth → valida JWT
- * 2️⃣ buyTicket → lógica de compra
- *
  * Quién puede usarlo:
- * - Usuarios autenticados
+ * - SOLO role "user"
+ *
+ * Bloqueado para:
+ * - owner
+ * - admin
+ * - super_owner
  */
 router.post(
   "/buy",
   requireAuth,
+  blockRoles(["owner", "admin", "super_owner"]),
   buyTicket
 );
 
 /* =========================================================
-   HISTORIAL DEL USUARIO
+   HISTORIAL DE TICKETS DEL USUARIO
    ========================================================= */
-
 /**
  * GET /api/tickets/my
  *
  * Devuelve:
- * - Todos los tickets del usuario autenticado
+ * - Tickets del usuario autenticado
  *
- * Seguridad:
- * - requireAuth asegura que solo vea SUS tickets
+ * Acceso:
+ * - SOLO role "user"
  */
 router.get(
   "/my",
   requireAuth,
+  blockRoles(["owner", "admin", "super_owner"]),
   getMyTickets
 );
 
 /* =========================================================
-   VALIDACIÓN DE TICKET (OWNER / ADMIN)
+   VALIDACIÓN DE TICKET (CHECK-IN)
    ========================================================= */
-
 /**
  * POST /api/tickets/validate
  *
- * Caso de uso:
- * - Check-in del pasajero
- * - Validar que el ticket sea válido
+ * Uso:
+ * - Escaneo / validación en muelle
  *
- * Seguridad:
- * - requireAuth → usuario autenticado
- * - requireOwnerOrAdmin → solo personal autorizado
+ * Acceso:
+ * - owner
+ * - admin
+ * - super_owner
  */
 router.post(
   "/validate",
@@ -99,21 +121,18 @@ router.post(
 );
 
 /* =========================================================
-   PASAJEROS POR VIAJE (OWNER / ADMIN)
+   PASAJEROS POR VIAJE
    ========================================================= */
 /**
  * GET /api/tickets/trip/:tripId/passengers
  *
  * Devuelve:
- * - Lista de pasajeros de un viaje específico
+ * - Lista de pasajeros del viaje
  *
- * Reglas de negocio implícitas:
- * - Admin → solo viajes de su empresa
- * - Owner → viajes de todas sus empresas
- *
- * Seguridad:
- * - Autenticación
- * - Autorización por rol
+ * Acceso:
+ * - owner
+ * - admin
+ * - super_owner
  */
 router.get(
   "/trip/:tripId/passengers",
@@ -123,18 +142,19 @@ router.get(
 );
 
 /* =========================================================
-   REGISTRO MANUAL DE PASAJERO (OWNER / ADMIN)
+   REGISTRO MANUAL DE PASAJERO
    ========================================================= */
-
 /**
  * POST /api/tickets/manual
  *
- * Caso de uso:
- * - Registrar pasajeros sin compra digital
- * - Venta física / registro en muelle
+ * Caso:
+ * - Venta física
+ * - Registro en muelle
  *
- * Seguridad:
- * - Solo OWNER o ADMIN
+ * Acceso:
+ * - owner
+ * - admin
+ * - super_owner
  */
 router.post(
   "/manual",
@@ -143,10 +163,8 @@ router.post(
   registerManualPassenger
 );
 
-// ===============================
-// EXPORTACIÓN DEL ROUTER
-// ===============================
+/* =========================================================
+   EXPORT
+   ========================================================= */
 
-// Este router es consumido por:
-// app.use("/api/tickets", ticketRoutes);
 export default router;

@@ -20,6 +20,17 @@ import {
 } from "../services/email.service.js";
 
 // ===============================
+// SECURITY
+// ===============================
+import { 
+  SecurityRequest,
+  incrementFailedAttempts,
+  resetFailedAttempts,
+  resetRateLimitsForEmail,
+} from "../middlewares/security/index.js";
+
+
+// ===============================
 // SECRETS
 // ===============================
 const JWT_SECRET = process.env.JWT_SECRET as string;
@@ -71,8 +82,11 @@ export async function register(req: Request, res: Response) {
 /* =========================================================
    LOGIN
    ========================================================= */
-export async function login(req: Request, res: Response) {
+export async function login(req: SecurityRequest, res: Response) {
   try {
+    console.log("[AUTH] Login attempt - IP:", req.security?.ip);
+    console.log("[AUTH] Login attempt - Device:", req.security?.deviceId?.substring(0, 16) + '...');
+    
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -83,18 +97,45 @@ export async function login(req: Request, res: Response) {
 
     const user = await UserModel.findOne({ email });
     if (!user) {
+      // Increment failed attempts even for non-existent users (timing attack prevention)
+      // Note: We don't actually increment since user doesn't exist, but we log it
+      console.log("[AUTH] Login failed - User not found");
+      if (req.security) {
+        req.security.auditResult = 'fail';
+      }
       return res.status(401).json({ message: "Credenciales inválidas" });
     }
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
+      // Increment failed login attempts
+      await incrementFailedAttempts(email);
+      console.log("[AUTH] Login failed - Invalid password");
+      if (req.security) {
+        req.security.auditResult = 'fail';
+      }
       return res.status(401).json({ message: "Credenciales inválidas" });
     }
 
     if (!user.verified) {
+      console.log("[AUTH] Login blocked - Email not verified");
+      if (req.security) {
+        req.security.auditResult = 'blocked';
+        req.security.auditMetadata = { reason: 'email_not_verified' };
+      }
       return res.status(403).json({
         message: "Debes verificar tu correo antes de iniciar sesión",
       });
+    }
+
+    // ✅ LOGIN SUCCESSFUL
+    // Reset failed attempts and rate limits
+    await resetFailedAttempts(email);
+    await resetRateLimitsForEmail(email);
+    
+    console.log("[AUTH] Login successful");
+    if (req.security) {
+      req.security.auditResult = 'success';
     }
 
     const tokenPayload = {
@@ -119,6 +160,12 @@ export async function login(req: Request, res: Response) {
     });
   } catch (error) {
     console.error("❌ LOGIN ERROR:", error);
+    if (req.security) {
+      req.security.auditResult = 'fail';
+      req.security.auditMetadata = { 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
     return res.status(500).json({
       message: "Error al iniciar sesión",
     });

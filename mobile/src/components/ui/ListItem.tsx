@@ -1,6 +1,6 @@
 import { View, StyleSheet } from "react-native";
 import { Text } from "react-native-paper";
-import Card from "./Card";
+import { Card } from "./Card";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";

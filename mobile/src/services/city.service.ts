@@ -5,6 +5,8 @@ export interface City {
     name: string;
     department: string;
     isActive: boolean;
+      // 🔑 CLAVE
+  municipio: string | { _id: string; name?: string };
 }
 
 export const getAllCities = async (): Promise<City[]> => {

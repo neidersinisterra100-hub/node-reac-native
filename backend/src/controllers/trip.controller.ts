@@ -8,12 +8,14 @@ import { z } from "zod";
 import { TripModel } from "../models/trip.model.js";
 import { RouteModel } from "../models/route.model.js";
 import { CompanyModel } from "../models/company.model.js";
+import { SeatReservationModel } from "../models/seatReservation.model.js";
 
 // ===============================
 // CONSTANTES / SERVICIOS
 // ===============================
 import { TRANSPORT_TYPES } from "../constants/enums.js";
 import { getPublicTripsService } from "../services/trip.service.js";
+import { TripWithSoldSeats } from "../types/trip.taypes.js";
 
 /* =========================================================
    DTO (Data Transfer Object)
@@ -46,13 +48,13 @@ function toTripDTO(trip: any): TripDTO & { route?: any; company?: any } {
 
     routeId:
       typeof trip.routeId === "object"
-        ? trip.routeId._id?.toString()
-        : trip.routeId?.toString(),
+        ? trip.routeId._id.toString()
+        : trip.routeId.toString(),
 
     companyId:
       typeof trip.companyId === "object"
-        ? trip.companyId._id?.toString()
-        : trip.companyId?.toString(),
+        ? trip.companyId._id.toString()
+        : trip.companyId.toString(),
 
     date: trip.date,
     departureTime: trip.departureTime,
@@ -62,27 +64,21 @@ function toTripDTO(trip: any): TripDTO & { route?: any; company?: any } {
     isActive: trip.isActive,
     createdAt: trip.createdAt,
 
-    // 📦 Info de ruta (para mobile / marketplace)
     route:
-      trip.routeId &&
-      typeof trip.routeId === "object" &&
-      "origin" in trip.routeId
+      trip.routeId && typeof trip.routeId === "object"
         ? {
-            id: trip.routeId._id?.toString(),
-            origin: trip.routeId.origin,
-            destination: trip.routeId.destination,
-          }
+          id: trip.routeId._id.toString(),
+          origin: trip.routeId.origin,
+          destination: trip.routeId.destination,
+        }
         : undefined,
 
-    // 🏢 Info de empresa
     company:
-      trip.companyId &&
-      typeof trip.companyId === "object" &&
-      "name" in trip.companyId
+      trip.companyId && typeof trip.companyId === "object"
         ? {
-            id: trip.companyId._id?.toString(),
-            name: trip.companyId.name,
-          }
+          id: trip.companyId._id.toString(),
+          name: trip.companyId.name,
+        }
         : undefined,
   };
 }
@@ -108,13 +104,6 @@ const createTripSchema = z.object({
     })
     .optional(),
 });
-
-/* =========================================================
-   LISTAR VIAJES (PÚBLICO)
-   ---------------------------------------------------------
-   - Marketplace / búsqueda
-   - Solo viajes activos
-   ========================================================= */
 
 export const getTrips: RequestHandler = async (_req, res) => {
   try {
@@ -143,6 +132,9 @@ export const getTrips: RequestHandler = async (_req, res) => {
    - requireAuth + ownershipGuard ya corrieron
    - Usa empresa del JWT o del ownership
    ========================================================= */
+/* =========================================================
+GET TRIPS (MANAGE)
+========================================================= */
 
 export const getManageTrips: RequestHandler = async (req, res) => {
   try {
@@ -155,11 +147,6 @@ export const getManageTrips: RequestHandler = async (req, res) => {
     const companyFilter: Record<string, unknown> = {};
 
     if (role === "admin") {
-      if (!companyId) {
-        return res.status(403).json({
-          message: "Admin sin empresa asignada",
-        });
-      }
       companyFilter._id = companyId;
     }
 
@@ -167,27 +154,42 @@ export const getManageTrips: RequestHandler = async (req, res) => {
       companyFilter.owner = userId;
     }
 
-    const companies = await CompanyModel.find(companyFilter).select("_id");
-    if (!companies.length) return res.json([]);
+    const companies = await CompanyModel.find(companyFilter)
+      .select("_id")
+      .lean();
 
-    const companyIds = companies.map((c) => c._id);
+    if (!companies.length) {
+      return res.json([]);
+    }
 
     const trips = await TripModel.find({
-      companyId: { $in: companyIds },
+      companyId: { $in: companies.map(c => c._id) },
     })
-      .populate({
-        path: "routeId",
-        select: "origin destination isActive",
-      })
-      .populate({
-        path: "companyId",
-        select: "name",
-      })
-      .sort({ createdAt: -1 });
+      .populate("routeId", "origin destination isActive")
+      .populate("companyId", "name")
+      .sort({ createdAt: -1 })
+      .lean();
 
-    return res.json(trips.map(toTripDTO));
+    let enrichedTrips;
+
+    try {
+      enrichedTrips = await attachSoldSeats(trips);
+    } catch (err) {
+      console.error("[attachSoldSeats]", err);
+      enrichedTrips = trips.map(t => ({
+        ...t,
+        soldSeats: 0,
+      }));
+    }
+
+    return res.json(
+      enrichedTrips.map(t => ({
+        ...toTripDTO(t),
+        soldSeats: t.soldSeats,
+      }))
+    );
   } catch (error) {
-    console.error("❌ [getManageTrips] Error:", error);
+    console.error("[getManageTrips]", error);
     return res.status(500).json({ message: "Error al obtener viajes" });
   }
 };
@@ -472,3 +474,77 @@ export const getCompanyTrips: RequestHandler = async (req, res) => {
     });
   }
 };
+
+export const getTripById: RequestHandler = async (req, res) => {
+  try {
+    const { tripId } = req.params;
+
+    // 🔒 Blindaje ANTES de tocar Mongo
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      return res.status(400).json({ message: "ID de viaje inválido" });
+    }
+
+    const trip = await TripModel.findById(tripId)
+      .populate("routeId")
+      .populate("companyId")
+      .lean();
+
+    if (!trip) {
+      return res.status(404).json({ message: "Viaje no encontrado" });
+    }
+
+    const soldSeats = await SeatReservationModel.countDocuments({
+      tripId,
+      status: "confirmed",
+    });
+
+    return res.json({
+      ...toTripDTO(trip),
+      soldSeats,
+    });
+  } catch (error) {
+    console.error("[getTripById]", error);
+    return res.status(500).json({ message: "Error al obtener viaje" });
+  }
+};
+
+
+/* =========================================================
+   SOLD SEATS (INTEGRADO)
+========================================================= */
+
+/**
+ * 🔥 Agrega soldSeats a una lista de viajes
+ * - Cuenta SOLO asientos confirmados
+ * - Evita N queries por viaje
+ */
+
+async function attachSoldSeats(
+  trips: any[]
+): Promise<TripWithSoldSeats[]> {
+  const tripIds = trips.map(t => t._id);
+
+  const stats = await SeatReservationModel.aggregate([
+    {
+      $match: {
+        tripId: { $in: tripIds },
+        status: "confirmed",
+      },
+    },
+    {
+      $group: {
+        _id: "$tripId",
+        soldSeats: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const map = new Map(
+    stats.map(s => [s._id.toString(), s.soldSeats])
+  );
+
+  return trips.map(trip => ({
+    ...trip,
+    soldSeats: map.get(trip._id.toString()) || 0,
+  }));
+}

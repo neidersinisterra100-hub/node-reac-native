@@ -1,20 +1,87 @@
 import { Request, Response, NextFunction } from "express";
 import { CompanyModel } from "../models/company.model.js";
 
+/**
+ * ownershipGuard
+ *
+ * Middleware de autorización por empresa.
+ *
+ * Este middleware NO autentica (eso lo hace requireAuth),
+ * aquí solo se valida:
+ * - rol
+ * - empresa objetivo
+ * - permisos sobre esa empresa
+ *
+ * Reglas:
+ * - role "user"        ❌ nunca pasa
+ * - role "admin"       ✅ solo si pertenece a la empresa
+ * - role "owner"       ✅ si es dueño de la empresa
+ * - role "super_owner" ✅ bypass total
+ */
 export const ownershipGuard = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    // 🔐 requireAuth ya se ejecutó
+    /* =========================
+       1. AUTENTICACIÓN BÁSICA
+       ========================= */
     if (!req.user) {
-      return res.status(401).json({ message: "No autenticado" });
+      return res.status(401).json({
+        message: "No autenticado",
+      });
     }
 
-    // 📌 Empresa objetivo:
-    // 1. param (/:companyId)
-    // 2. JWT (empresa activa del usuario)
+    /* =========================
+       2. SUPER OWNER (BYPASS)
+       =========================
+       - Puede operar sobre cualquier empresa
+       - Aún validamos que la empresa exista
+    */
+    if (req.user.role === "super_owner") {
+      const companyId =
+        req.params.companyId ?? req.user.companyId;
+
+      if (!companyId) {
+        return res.status(400).json({
+          message: "Empresa requerida",
+        });
+      }
+
+      const company = await CompanyModel.findById(companyId);
+
+      if (!company) {
+        return res.status(404).json({
+          message: "Empresa no encontrada",
+        });
+      }
+
+      req.company = company;
+      return next();
+    }
+
+    /* =========================
+       3. BLOQUEO EXPLÍCITO USER
+       =========================
+       Usuarios finales NO acceden a:
+       - /manage
+       - /company
+       - mutaciones
+    */
+    if (req.user.role === "user") {
+      return res.status(403).json({
+        message: "No tienes permisos para esta acción",
+      });
+    }
+
+    /* =========================
+       4. DETERMINAR EMPRESA
+       =========================
+       Prioridad:
+       1. Param (:companyId)
+       2. JWT (empresa activa)
+    */
     const companyId =
       req.params.companyId ?? req.user.companyId;
 
@@ -24,7 +91,9 @@ export const ownershipGuard = async (
       });
     }
 
-    // 🔍 Buscar empresa
+    /* =========================
+       5. BUSCAR EMPRESA
+       ========================= */
     const company = await CompanyModel.findById(companyId);
 
     if (!company) {
@@ -33,10 +102,12 @@ export const ownershipGuard = async (
       });
     }
 
-    // 🧠 Ownership:
-    // - owner: siempre
-    // - admin: solo si pertenece a la empresa
-    const isOwner = company.owner.toString() === req.user.id;
+    /* =========================
+       6. VALIDAR OWNERSHIP
+       ========================= */
+    const isOwner =
+      company.owner.toString() === req.user.id;
+
     const isAdmin =
       req.user.role === "admin" &&
       req.user.companyId === company._id.toString();
@@ -47,7 +118,9 @@ export const ownershipGuard = async (
       });
     }
 
-    // ✅ Inyectar empresa
+    /* =========================
+       7. INYECTAR CONTEXTO
+       ========================= */
     req.company = company;
 
     next();
@@ -58,50 +131,3 @@ export const ownershipGuard = async (
     });
   }
 };
-
-
-// import { Request, Response, NextFunction } from "express";
-// import { CompanyModel } from "../models/company.model.js";
-
-// export const ownershipGuard = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   try {
-//     if (!req.user) {
-//       return res.status(401).json({ message: "No autenticado" });
-//     }
-
-//     const companyId =
-//       req.params.companyId ||
-//       req.body.companyId ||
-//       req.user.companyId;
-
-//     if (!companyId) {
-//       return res.status(400).json({
-//         message: "No se pudo determinar la empresa",
-//       });
-//     }
-
-//     const company = await CompanyModel.findById(companyId);
-
-//     if (!company) {
-//       return res.status(404).json({
-//         message: "Empresa no encontrada",
-//       });
-//     }
-
-//     if (company.owner.toString() !== req.user.id) {
-//       return res.status(403).json({
-//         message: "No tienes permisos sobre esta empresa",
-//       });
-//     }
-
-//     req.company = company;
-//     next();
-//   } catch (error) {
-//     console.error("OwnershipGuard error:", error);
-//     res.status(500).json({ message: "Error validando permisos" });
-//   }
-// };

@@ -17,6 +17,7 @@ interface Props {
   showGreeting?: boolean;
   rightAction?: React.ReactNode;
   showAvatar?: boolean;
+  hideLogo?: boolean;
   neon?: boolean;
 }
 
@@ -27,6 +28,7 @@ export default function AppHeader({
   showGreeting,
   rightAction,
   showAvatar = true,
+  hideLogo = false,
   neon,
 }: Props) {
   const navigation = useNavigation<any>();
@@ -52,7 +54,7 @@ export default function AppHeader({
     >
       {/* ===== TOP ROW ===== */}
       <StyledView className="flex-row justify-between items-center mb-4 min-h-[40px]">
-        {showAvatar ? (
+        {showAvatar && !hideLogo ? (
           <TouchableOpacity
             onPress={handleOpenMenu}
             className="

@@ -26,7 +26,7 @@ import { colors } from "../../theme/colors";
 /* ================= TYPES ================= */
 
 type RoutePopulated = {
-  _id: string;
+  _id?: string;
   origin: string;
   destination: string;
 };
@@ -56,19 +56,24 @@ export default function HomeScreen() {
     setLoading(true);
     const data = await getTrips();
 
-    const normalizedTrips: TripItem[] = data.map((trip) => ({
-      _id: trip._id,
-      price: trip.price,
-      departureTime: trip.departureTime,
-      date: trip.date,
+    const normalizedTrips = data
+      .map((trip): TripItem | null => {
+        const tripId = trip._id ?? trip.id;
+        if (!tripId) return null;
 
-      route: trip.route,
-
-      company:
-        typeof trip.company === "object" && trip.company !== null
-          ? { name: trip.company.name }
-          : undefined,
-    }));
+        return {
+          _id: tripId,
+          price: trip.price,
+          departureTime: trip.departureTime,
+          date: trip.date,
+          route: trip.route,
+          company:
+            typeof trip.company === "object" && trip.company !== null
+              ? { name: trip.company.name }
+              : undefined,
+        };
+      })
+      .filter((trip): trip is TripItem => trip !== null);
 
     setTrips(normalizedTrips);
   } catch (error) {

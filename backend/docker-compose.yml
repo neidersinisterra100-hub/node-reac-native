@@ -18,6 +18,9 @@ services:
       - .env
     depends_on:
       - mongo
+    volumes:
+      - .:/app
+      - /app/node_modules
     restart: unless-stopped
 
 volumes:

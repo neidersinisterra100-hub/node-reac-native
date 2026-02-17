@@ -1,25 +1,23 @@
-// ===============================
-// SERVER ENTRYPOINT
-// ===============================
-
 import "dotenv/config";
 import app from "./app.js";
 import { connectMongo } from "./config/mongo.js";
+import { startSeatExpirationJob } from "./jobs/seatExpiration.job.js";
+import { initRedis } from './lib/redis.client.js';
+
+
+await initRedis();
 
 const PORT = Number(process.env.PORT) || 3000;
-console.log("🔥 BACKEND REAL ARRANCÓ DESDE ESTE ARCHIVO");
 
 /**
  * Arranca el servidor SOLO si Mongo conecta.
- * Evita:
- * - restart loops
- * - EADDRINUSE
- * - estados inconsistentes
+ * MongoDB TTL se encarga de liberar asientos.
  */
 const startServer = async () => {
   try {
     await connectMongo();
-
+    // después de conectar Mongo
+    startSeatExpirationJob();
     const server = app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 [Server] API corriendo en el puerto:${PORT}`);
     });
@@ -35,20 +33,3 @@ const startServer = async () => {
 };
 
 startServer();
-
-
-// import "dotenv/config";
-// import app from "./app.js";
-// import { connectMongo } from "./config/mongo.js";
-
-// const PORT = Number(process.env.PORT) || 3000;
-
-// const startServer = async () => {
-//   await connectMongo();
-
-//   app.listen(PORT, "0.0.0.0", () => {
-//     console.log(`🚀 [Server] API corriendo en el puerto:${PORT}`);
-//   });
-// };
-
-// startServer();

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -6,51 +6,101 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-} from 'react-native';
-import { styled } from 'nativewind';
-import { ScreenContainer } from '../../components/ui/ScreenContainer';
-import { Button } from '../../components/ui/Button';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../navigation/types';
-import { getTripSeats, Seat } from '../../services/seat.service';
+} from "react-native";
+import { styled } from "nativewind";
+import { ScreenContainer } from "../../components/ui/ScreenContainer";
+import { Button } from "../../components/ui/Button";
+import {
+  useRoute,
+  useNavigation,
+  RouteProp,
+  useFocusEffect,
+} from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/types";
+
+// 🔗 Servicios backend
+import {
+  getTripSeats,
+  reserveSeat,
+  releaseSeat,
+  Seat,
+} from "../../services/seat.service";
+
+/* =========================================================
+   ESTILOS
+   ========================================================= */
 
 const StyledText = styled(Text);
 const StyledView = styled(View);
 
+/* =========================================================
+   TIPOS DE RUTA
+   ========================================================= */
+
 type SeatSelectionRouteProp = RouteProp<
   RootStackParamList,
-  'SeatSelection'
+  "SeatSelection"
 >;
+
+/* =========================================================
+   SCREEN
+   ========================================================= */
 
 export const SeatSelectionScreen = () => {
   const route = useRoute<SeatSelectionRouteProp>();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  // ✅ AHORA SÍ EXISTEN
   const { tripId, routeName, price, date, time } = route.params;
+
+  /* =========================
+     STATE
+     ========================= */
 
   const [seats, setSeats] = useState<Seat[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadSeats();
-  }, [tripId]);
+  /* =========================================================
+     CARGA DE ASIENTOS
+     ---------------------------------------------------------
+     🔑 CLAVE:
+     - useFocusEffect → se ejecuta CADA VEZ que la pantalla
+       entra en foco (volver atrás, reabrir, etc.)
+     - Esto garantiza UX consistente
+   ========================================================= */
 
   const loadSeats = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const data = await getTripSeats(tripId);
       setSeats(data);
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'No se pudieron cargar los asientos');
+      Alert.alert(
+        "Error",
+        "No se pudieron cargar los asientos"
+      );
     } finally {
       setLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      // 🔄 Siempre refrescamos estado real del backend
+      setSelectedSeat(null);
+      loadSeats();
+
+      // cleanup no necesario aquí
+      return () => {};
+    }, [tripId])
+  );
+
+  /* =========================================================
+     SELECCIÓN LOCAL (NO BLOQUEA AÚN)
+     ========================================================= */
 
   const handleSelectSeat = (seatNumber: number) => {
     setSelectedSeat(prev =>
@@ -58,64 +108,110 @@ export const SeatSelectionScreen = () => {
     );
   };
 
-  /**
-   * ✅ FLUJO REAL
-   * TripDetail → SeatSelection → ConfirmTicketModal → Wompi
-   */
-  const handleConfirm = () => {
+  /* =========================================================
+     CONFIRMAR ASIENTO (BLOQUEO REAL EN BACKEND)
+     ========================================================= */
+
+  const handleConfirm = async () => {
     if (!selectedSeat) return;
 
-    navigation.navigate('ConfirmTicketModal', {
-      tripId,
-      routeName,
-      price,
-      date,
-      time,
-      seatNumber: selectedSeat,
-    });
+    try {
+      await reserveSeat({
+        tripId,
+        seatNumber: selectedSeat,
+      });
+
+      // 👉 El backend ya bloqueó el asiento
+      navigation.navigate("ConfirmTicketModal", {
+        tripId,
+        routeName,
+        price,
+        date,
+        time,
+        seatNumber: selectedSeat,
+      });
+    } catch {
+      Alert.alert(
+        "Asiento no disponible",
+        "Este asiento acaba de ser tomado por otro pasajero."
+      );
+      loadSeats(); // 🔄 refrescar estado real
+    }
   };
+
+  /* =========================================================
+     VOLVER ATRÁS (LIBERAR ASIENTO)
+     ---------------------------------------------------------
+     🔥 CRÍTICO:
+     - Evita abuso
+     - Evita bloqueos fantasma
+   ========================================================= */
+
+  const handleGoBack = async () => {
+    if (selectedSeat) {
+      try {
+        await releaseSeat({
+          tripId,
+          seatNumber: selectedSeat,
+        });
+      } catch (error) {
+        console.warn("No se pudo liberar el asiento");
+      }
+    }
+
+    navigation.goBack();
+  };
+
+  /* =========================================================
+     ITEM DE ASIENTO
+     ========================================================= */
 
   const SeatItem = ({ seat }: { seat: Seat }) => {
     const isSelected = selectedSeat === seat.seatNumber;
-    const isAvailable = seat.available;
-
-    let bgColor = 'bg-white';
-    let borderColor = 'border-gray-200';
-    let textColor = 'text-gray-600';
-
-    if (!isAvailable) {
-      bgColor = 'bg-gray-200';
-      textColor = 'text-gray-400';
-    } else if (isSelected) {
-      bgColor = 'bg-nautic-primary';
-      borderColor = 'border-nautic-primary';
-      textColor = 'text-white';
-    } else {
-      borderColor = 'border-nautic-accent';
-    }
 
     return (
       <TouchableOpacity
         onPress={() =>
-          isAvailable && handleSelectSeat(seat.seatNumber)
+          seat.available && handleSelectSeat(seat.seatNumber)
         }
-        disabled={!isAvailable}
-        className={`w-14 h-14 m-2 rounded-xl justify-center items-center border-2 ${bgColor} ${borderColor}`}
+        disabled={!seat.available}
+        className={`w-14 h-14 m-2 rounded-xl justify-center items-center border-2
+          ${
+            !seat.available
+              ? "bg-gray-200 border-gray-200"
+              : isSelected
+              ? "bg-nautic-primary border-nautic-primary"
+              : "bg-white border-nautic-accent"
+          }
+        `}
       >
-        <StyledText className={`font-bold text-lg ${textColor}`}>
+        <StyledText
+          className={`font-bold text-lg ${
+            !seat.available
+              ? "text-gray-400"
+              : isSelected
+              ? "text-white"
+              : "text-gray-600"
+          }`}
+        >
           {seat.seatNumber}
         </StyledText>
       </TouchableOpacity>
     );
   };
 
+  /* =========================================================
+     RENDER
+     ========================================================= */
+
   return (
     <ScreenContainer withPadding>
       <StyledView className="flex-1">
+        {/* HEADER */}
         <StyledView className="flex-row items-center mb-6 mt-2">
           <Button
             title="Atrás"
-            onPress={() => navigation.goBack()}
+            onPress={handleGoBack}
             variant="ghost"
             className="p-0 mr-4"
           />
@@ -124,6 +220,7 @@ export const SeatSelectionScreen = () => {
           </StyledText>
         </StyledView>
 
+        {/* BODY */}
         {loading ? (
           <StyledView className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="#0B4F9C" />
@@ -131,7 +228,7 @@ export const SeatSelectionScreen = () => {
         ) : (
           <ScrollView
             contentContainerStyle={{
-              alignItems: 'center',
+              alignItems: "center",
               paddingBottom: 120,
             }}
           >
@@ -143,7 +240,10 @@ export const SeatSelectionScreen = () => {
 
             <StyledView className="flex-row flex-wrap justify-center">
               {seats.map(seat => (
-                <SeatItem key={seat.seatNumber} seat={seat} />
+                <SeatItem
+                  key={seat.seatNumber}
+                  seat={seat}
+                />
               ))}
             </StyledView>
           </ScrollView>
@@ -156,7 +256,7 @@ export const SeatSelectionScreen = () => {
               Asiento seleccionado:
             </StyledText>
             <StyledText className="text-xl font-bold text-nautic-primary">
-              {selectedSeat ? `#${selectedSeat}` : '-'}
+              {selectedSeat ? `#${selectedSeat}` : "-"}
             </StyledText>
           </StyledView>
 

@@ -49,6 +49,7 @@ export interface Trip {
   departureTime: string;  // HH:mm
   price: number;
   capacity: number;
+  soldSeats?: number;
   transportType: TransportType;
   isActive: boolean;
 }

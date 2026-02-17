@@ -34,21 +34,36 @@ export default function AllTripsScreen() {
     loadTrips();
   }, []);
 
-  const handlePressTrip = (trip: Trip) => {
-    if (trip.route && typeof trip.route === "object") {
-      navigation.navigate("ConfirmTicketModal", {
-        tripId: trip._id ?? trip.id,
-        routeName: `${trip.route.origin} - ${trip.route.destination}`,
-        price: trip.price,
-        date: trip.date,
-        time: trip.departureTime,
-      });
-    } else {
-      Alert.alert("Error", "Información de ruta incompleta");
-    }
-  };
+const handlePressTrip = (trip: Trip) => {
+  if (!trip.isActive) {
+    Alert.alert("Viaje no disponible", "Este viaje está desactivado");
+    return;
+  }
+
+  if (!trip.route || typeof trip.route !== "object") {
+    Alert.alert("Error", "Información de ruta incompleta");
+    return;
+  }
+
+  navigation.navigate("SeatSelection", {
+    tripId: trip._id ?? trip.id,
+    routeName: `${trip.route.origin} - ${trip.route.destination}`,
+    price: trip.price,
+    date: trip.date,
+    time: trip.departureTime,
+
+    // 🔐 BLOQUEO POR CAPACIDAD
+    capacity: trip.capacity,
+    soldSeats: trip.soldSeats ?? 0, // backend
+    isActive: trip.isActive,
+  });
+};
+
 
   const renderItem = ({ item }: { item: Trip }) => {
+    const isActive = item.isActive ?? true;
+
+
     const routeName =
       item.route && typeof item.route === "object"
         ? `${item.route.origin} - ${item.route.destination}`
@@ -56,13 +71,21 @@ export default function AllTripsScreen() {
 
     return (
       <TouchableOpacity
+        disabled={!isActive}
         onPress={() => handlePressTrip(item)}
-        className="
-          bg-white dark:bg-dark-surface
-          border border-gray-200 dark:border-dark-border
+        className={`
+       bg-white dark:bg-dark-surface
+         border border-gray-200 dark:border-dark-border
           rounded-2xl p-4 mb-4
-        "
+          ${!isActive ? "opacity-50" : ""}
+         `}
       >
+        {!isActive && (
+          <StyledText className="text-xs text-red-500 font-bold mb-2">
+            VIAJE NO DISPONIBLE
+          </StyledText>
+        )}
+
         {/* ===== HEADER ===== */}
         <StyledView className="flex-row items-center mb-3 space-x-3">
           <StyledView className="bg-indigo-100 dark:bg-indigo-900 p-3 rounded-xl">
@@ -154,3 +177,133 @@ export default function AllTripsScreen() {
     </AppContainer>
   );
 }
+
+
+
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   Text,
+//   FlatList,
+//   ActivityIndicator,
+//   TouchableOpacity,
+// } from "react-native";
+// import { styled } from "nativewind";
+// import { useNavigation } from "@react-navigation/native";
+// import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+// import { format } from "date-fns";
+// import { es } from "date-fns/locale";
+// import { Ship, Calendar, Clock } from "lucide-react-native";
+
+// import { ScreenContainer } from "../components/ui/ScreenContainer";
+// import { Card } from "../components/ui/Card";
+// import { Button } from "../components/ui/Button";
+// import { RootStackParamList } from "../navigation/types";
+// import { getTrips, Trip } from "../services/trip.service";
+
+// const StyledText = styled(Text);
+// const StyledView = styled(View);
+
+// export default function AllTripsScreen() {
+//   const navigation =
+//     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+//   const [trips, setTrips] = useState<Trip[]>([]);
+//   const [loading, setLoading] = useState(true);
+
+//   useEffect(() => {
+//     loadTrips();
+//   }, []);
+
+//   const loadTrips = async () => {
+//     try {
+//       setLoading(true);
+//       const data = await getTrips(); // backend filtra activos
+//       setTrips(data);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const renderItem = ({ item }: { item: Trip }) => (
+//     <TouchableOpacity
+//       className="mb-3 p-4"
+//       onPress={() =>
+//         navigation.navigate("TripDetails", {
+//           tripId: item._id || item.id,
+//         })
+//       }
+//     >
+//       <StyledView className="flex-row justify-between items-start mb-2">
+//         <StyledView className="flex-row items-center">
+//           <StyledView className="bg-nautic-secondary p-2 rounded-lg mr-3">
+//             <Ship size={20} color="#0B4F9C" />
+//           </StyledView>
+
+//           <StyledView>
+//             <StyledText className="font-bold text-nautic-primary text-base">
+//               {typeof item.route === "object"
+//                 ? `${item.route.origin} - ${item.route.destination}`
+//                 : "Ruta"}
+//             </StyledText>
+
+//             <StyledText className="text-xs text-gray-500">
+//               {typeof item.company === "object"
+//                 ? item.company.name
+//                 : ""}
+//             </StyledText>
+//           </StyledView>
+//         </StyledView>
+
+//         <StyledText className="text-green-700 font-bold">
+//           ${item.price}
+//         </StyledText>
+//       </StyledView>
+
+//       <StyledView className="flex-row justify-between pt-2 border-t border-gray-100">
+//         <StyledView className="flex-row items-center">
+//           <Calendar size={14} color="#64748B" />
+//           <StyledText className="ml-1 text-xs text-gray-500">
+//             {format(new Date(item.date), "dd MMM", {
+//               locale: es,
+//             })}
+//           </StyledText>
+//         </StyledView>
+
+//         <StyledView className="flex-row items-center">
+//           <Clock size={14} color="#64748B" />
+//           <StyledText className="ml-1 text-xs text-gray-500">
+//             {item.departureTime}
+//           </StyledText>
+//         </StyledView>
+
+//         <StyledText className="text-xs text-gray-500">
+//           {item.transportType}
+//         </StyledText>
+//       </StyledView>
+//     </TouchableOpacity>
+//   );
+
+//   return (
+//     <ScreenContainer>
+//       {loading ? (
+//         <ActivityIndicator size="large" />
+//       ) : (
+//         <FlatList
+//           data={trips}
+//           keyExtractor={(item) => item._id || item.id}
+//           renderItem={renderItem}
+//           contentContainerStyle={{ padding: 16 }}
+//           ListEmptyComponent={
+//             <StyledView className="items-center mt-10">
+//               <Ship size={48} color="#cbd5e1" />
+//               <StyledText className="text-gray-400 mt-4">
+//                 No hay viajes disponibles
+//               </StyledText>
+//             </StyledView>
+//           }
+//         />
+//       )}
+//     </ScreenContainer>
+//   );
+// }

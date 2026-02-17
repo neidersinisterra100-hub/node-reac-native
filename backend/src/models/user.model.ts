@@ -7,7 +7,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: UserRole;
-
+  verified: boolean;
   departmentId?: Types.ObjectId | null;
 
   // 🔥 CLAVE PARA JWT / OWNERSHIP
@@ -18,6 +18,10 @@ export interface IUser extends Document {
 
   // Para futuro multi-empresa
   managedCompanies?: Types.ObjectId[];
+
+  // 🔐 SECURITY: Brute force protection
+  failedLoginAttempts?: number;
+  lockUntil?: Date | null;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -60,12 +64,29 @@ const UserSchema = new Schema<IUser>(
       default: null,
     },
 
+    verified: {
+      type: Boolean,
+      default: false,
+    },
+
+
     managedCompanies: [
       {
         type: Schema.Types.ObjectId,
         ref: "Company",
       },
     ],
+
+    // 🔐 SECURITY: Brute force protection
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+
+    lockUntil: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

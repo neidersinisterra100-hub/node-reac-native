@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { JwtPayload } from "../@types/express/auth.js";
+// import { JwtPayload } from "../@types/express/auth.js";
 
 export type AuthRequest = Request;
 
@@ -40,7 +40,8 @@ export const requireAuth = (
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET!
-    ) as JwtPayload;
+    ) as Express.UserPayload;
+
 
     // 3️⃣ Inyectar identidad mínima en req.user
     req.user = {

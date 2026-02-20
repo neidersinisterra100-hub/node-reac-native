@@ -138,49 +138,24 @@ GET TRIPS (MANAGE)
 
 export const getManageTrips: RequestHandler = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: "No autenticado" });
-    }
+    const company = req.company;
 
-    const { role, companyId, id: userId } = req.user;
+    // Log para validar que req.company esté definido
+    console.log('req.company:', company);
 
-    const companyFilter: Record<string, unknown> = {};
-
-    if (role === "admin") {
-      companyFilter._id = companyId;
-    }
-
-    if (role === "owner") {
-      companyFilter.owner = userId;
-    }
-
-    const companies = await CompanyModel.find(companyFilter)
-      .select("_id")
-      .lean();
-
-    if (!companies.length) {
-      return res.json([]);
+    if (!company) {
+      return res.status(500).json({ message: 'Empresa no encontrada en el contexto de la solicitud' });
     }
 
     const trips = await TripModel.find({
-      companyId: { $in: companies.map(c => c._id) },
+      companyId: company._id,
     })
       .populate("routeId", "origin destination isActive")
       .populate("companyId", "name")
       .sort({ createdAt: -1 })
       .lean();
 
-    let enrichedTrips;
-
-    try {
-      enrichedTrips = await attachSoldSeats(trips);
-    } catch (err) {
-      console.error("[attachSoldSeats]", err);
-      enrichedTrips = trips.map(t => ({
-        ...t,
-        soldSeats: 0,
-      }));
-    }
+    const enrichedTrips = await attachSoldSeats(trips);
 
     return res.json(
       enrichedTrips.map(t => ({
@@ -193,6 +168,64 @@ export const getManageTrips: RequestHandler = async (req, res) => {
     return res.status(500).json({ message: "Error al obtener viajes" });
   }
 };
+
+// export const getManageTrips: RequestHandler = async (req, res) => {
+//   try {
+//     if (!req.user) {
+//       return res.status(401).json({ message: "No autenticado" });
+//     }
+
+//     const { role, companyId, id: userId } = req.user;
+
+//     const companyFilter: Record<string, unknown> = {};
+
+//     if (role === "admin") {
+//       companyFilter._id = companyId;
+//     }
+
+//     if (role === "owner") {
+//       companyFilter.owner = userId;
+//     }
+
+//     const companies = await CompanyModel.find(companyFilter)
+//       .select("_id")
+//       .lean();
+
+//     if (!companies.length) {
+//       return res.json([]);
+//     }
+
+//     const trips = await TripModel.find({
+//       companyId: { $in: companies.map(c => c._id) },
+//     })
+//       .populate("routeId", "origin destination isActive")
+//       .populate("companyId", "name")
+//       .sort({ createdAt: -1 })
+//       .lean();
+
+//     let enrichedTrips;
+
+//     try {
+//       enrichedTrips = await attachSoldSeats(trips);
+//     } catch (err) {
+//       console.error("[attachSoldSeats]", err);
+//       enrichedTrips = trips.map(t => ({
+//         ...t,
+//         soldSeats: 0,
+//       }));
+//     }
+
+//     return res.json(
+//       enrichedTrips.map(t => ({
+//         ...toTripDTO(t),
+//         soldSeats: t.soldSeats,
+//       }))
+//     );
+//   } catch (error) {
+//     console.error("[getManageTrips]", error);
+//     return res.status(500).json({ message: "Error al obtener viajes" });
+//   }
+// };
 
 /* =========================================================
    CREAR VIAJE
@@ -315,8 +348,9 @@ export const toggleTripActive: RequestHandler = async (req, res) => {
 
     const trip = await TripModel.findById(tripId);
     if (!trip) {
+      console.log(`[toggleTripActive] Trip ${tripId} not found in DB`);
       return res.status(404).json({
-        message: "Viaje no encontrado",
+        message: `Trip ID: ${tripId} no encontrado en la base de datos`,
       });
     }
 

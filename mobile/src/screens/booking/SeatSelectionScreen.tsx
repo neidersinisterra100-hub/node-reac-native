@@ -52,7 +52,7 @@ export const SeatSelectionScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const { tripId, routeName, price, date, time } = route.params;
+  const { tripId, companyId, routeName, price, date, time } = route.params;
 
   /* =========================
      STATE
@@ -74,7 +74,7 @@ export const SeatSelectionScreen = () => {
   const loadSeats = async () => {
     try {
       setLoading(true);
-      const data = await getTripSeats(tripId);
+      const data = await getTripSeats(tripId, companyId);
       setSeats(data);
     } catch (error) {
       console.error(error);
@@ -94,7 +94,7 @@ export const SeatSelectionScreen = () => {
       loadSeats();
 
       // cleanup no necesario aquí
-      return () => {};
+      return () => { };
     }, [tripId])
   );
 
@@ -176,23 +176,21 @@ export const SeatSelectionScreen = () => {
         }
         disabled={!seat.available}
         className={`w-14 h-14 m-2 rounded-xl justify-center items-center border-2
-          ${
-            !seat.available
-              ? "bg-gray-200 border-gray-200"
-              : isSelected
+          ${!seat.available
+            ? "bg-gray-200 border-gray-200"
+            : isSelected
               ? "bg-nautic-primary border-nautic-primary"
               : "bg-white border-nautic-accent"
           }
         `}
       >
         <StyledText
-          className={`font-bold text-lg ${
-            !seat.available
+          className={`font-bold text-lg ${!seat.available
               ? "text-gray-400"
               : isSelected
-              ? "text-white"
-              : "text-gray-600"
-          }`}
+                ? "text-white"
+                : "text-gray-600"
+            }`}
         >
           {seat.seatNumber}
         </StyledText>

@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { CompanyModel } from "../models/company.model.js";
+import { Types } from "mongoose";
+
 
 /**
  * ownershipGuard
@@ -106,17 +108,33 @@ export const ownershipGuard = async (
        6. VALIDAR OWNERSHIP
        ========================= */
     const isOwner =
-      company.owner.toString() === req.user.id;
+      company.owner.toString() === req.user!.id;
 
     const isAdmin =
-      req.user.role === "admin" &&
-      req.user.companyId === company._id.toString();
+      company.admins.some(
+        (adminId: Types.ObjectId) =>
+          adminId.toString() === req.user!.id
+      );
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
         message: "No tienes permisos sobre esta empresa",
       });
     }
+
+
+    // const isOwner =
+    //   company.owner.toString() === req.user.id;
+
+    // const isAdmin =
+    //   req.user.role === "admin" &&
+    //   req.user.companyId === company._id.toString();
+
+    // if (!isOwner && !isAdmin) {
+    //   return res.status(403).json({
+    //     message: "No tienes permisos sobre esta empresa",
+    //   });
+    // }
 
     /* =========================
        7. INYECTAR CONTEXTO

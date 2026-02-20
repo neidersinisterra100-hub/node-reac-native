@@ -7,14 +7,12 @@ import { validateRequest } from "../middlewares/validateRequest.js";
 
 import {
   createCompany,
-  // createCompanyWithAdmin,
+  createCompanyWithAdmin, // We need to check if this is exported in controller
   getMyCompanies,
   toggleCompanyActive,
   deleteCompany,
-  // getCompanyAdmins,
-  // getPublicCompanies,
-
-  getCompany, // 👈 debe existir en controller
+  getCompany,
+  getCompanyAdmins,
 } from "../controllers/company.controller.js";
 
 import { getCompanyRoutes } from "../controllers/route.controller.js";
@@ -24,12 +22,6 @@ import {
 } from "../schemas/company.schema.js";
 
 const router = Router();
-
-const notImplemented = (_req: any, res: any) => {
-  res.status(501).json({
-    message: "Endpoint pendiente de implementación",
-  });
-};
 
 /* ================= PUBLIC ================= */
 // router.get("/", getPublicCompanies);
@@ -52,7 +44,7 @@ router.post(
   requireOwner,
   blockLegacyFields,
   validateRequest(createCompanySchema),
-  notImplemented
+  createCompanyWithAdmin
 );
 
 /* ================= MY COMPANIES ================= */
@@ -91,7 +83,7 @@ router.get(
   "/:companyId/admins",
   requireAuth,
   ownershipGuard,
-  notImplemented
+  createCompanyWithAdmin
 );
 
 // Rutas de una empresa (públicas o protegidas según tu negocio)

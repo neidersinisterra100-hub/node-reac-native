@@ -14,7 +14,9 @@ import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { getTrips, Trip } from "../../services/trip.service";
+import { getAllCompanies } from "../../services/company.service";
 import { Clock, Users, ArrowRight, Search } from "lucide-react-native";
+import { formatTimeAmPm } from "../../utils/time";
 
 const StyledText = styled(Text);
 const StyledView = styled(View);
@@ -30,6 +32,7 @@ export const AvailableTripsScreen = () => {
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [companyNamesById, setCompanyNamesById] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadTrips();
@@ -38,7 +41,10 @@ export const AvailableTripsScreen = () => {
   const loadTrips = async () => {
     setLoading(true);
     try {
-      const allTrips = await getTrips();
+      const [allTrips, companies] = await Promise.all([
+        getTrips(),
+        getAllCompanies(),
+      ]);
 
       let filtered = allTrips;
 
@@ -51,9 +57,33 @@ export const AvailableTripsScreen = () => {
       }
 
       setTrips(filtered);
+
+      const companyMap = companies.reduce<Record<string, string>>((acc, company: any) => {
+        if (company.id) acc[company.id] = company.name;
+        if (company._id) acc[company._id] = company.name;
+        return acc;
+      }, {});
+      setCompanyNamesById(companyMap);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getTripCompanyName = (item: Trip) => {
+    if (typeof item.company === "object" && item.company?.name) {
+      return item.company.name;
+    }
+
+    const companyId =
+      typeof item.company === "string"
+        ? item.company
+        : item.company?.id || item.company?._id;
+
+    if (companyId && companyNamesById[companyId]) {
+      return companyNamesById[companyId];
+    }
+
+    return "Empresa";
   };
 
   const renderItem = ({ item }: { item: Trip }) => (
@@ -83,9 +113,13 @@ export const AvailableTripsScreen = () => {
       <StyledView className="flex-row items-center mb-4 bg-blue-50 p-2 rounded-lg">
         <Clock size={20} color="#00B4D8" />
         <StyledText className="ml-2 font-bold text-nautic-primary">
-          {item.date} • {item.departureTime}
+          {item.date} • {formatTimeAmPm(item.departureTime)}
         </StyledText>
       </StyledView>
+
+      <StyledText className="mb-3 text-xs text-gray-500">
+        {getTripCompanyName(item)}
+      </StyledText>
 
       {/* FOOTER */}
       <StyledView className="flex-row justify-between items-center border-t border-gray-100 pt-3">

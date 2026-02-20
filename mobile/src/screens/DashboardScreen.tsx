@@ -8,16 +8,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { getAllRoutes } from '../services/route.service';
 import { tripService } from '../services/trip.service';
+import { getAllCompanies, getMyCompanies } from '../services/company.service';
 import { colors } from '../theme/colors';
+import { formatTimeAmPm } from '../utils/time';
 
 export default function DashboardScreen() {
     const { user } = useAuth();
     const navigation = useNavigation<any>();
-    const isOwner = user?.role === 'owner' || user?.role === 'admin';
+    const isOwner = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'super_owner';
+    const canUseMyCompanies = user?.role === 'owner' || user?.role === 'admin';
 
     const [loading, setLoading] = useState(true);
     const [routes, setRoutes] = useState<any[]>([]);
     const [trips, setTrips] = useState<any[]>([]);
+    const [companyNamesById, setCompanyNamesById] = useState<Record<string, string>>({});
 
     useEffect(() => {
         loadData();
@@ -26,10 +30,20 @@ export default function DashboardScreen() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const routesData = await getAllRoutes();
-            setRoutes(routesData.slice(0, 3));
-            const tripsData = await tripService.getAll();
-            setTrips(tripsData.slice(0, 3));
+            const [routesData, tripsData, companiesData] = await Promise.all([
+                getAllRoutes(),
+                tripService.getAll(),
+                canUseMyCompanies ? getMyCompanies() : getAllCompanies(),
+            ]);
+            setRoutes(routesData.slice(0, 2));
+            setTrips(tripsData.slice(0, 2));
+
+            const companyMap = companiesData.reduce<Record<string, string>>((acc, company: any) => {
+                if (company.id) acc[company.id] = company.name;
+                if (company._id) acc[company._id] = company.name;
+                return acc;
+            }, {});
+            setCompanyNamesById(companyMap);
         } catch (e) {
             console.log("Error loading dashboard", e);
         } finally {
@@ -37,11 +51,51 @@ export default function DashboardScreen() {
         }
     };
 
+    const getRouteCompanyName = (item: any) => {
+        if (typeof item.company === 'object' && item.company?.name) {
+            return item.company.name;
+        }
+
+        if (typeof item.company === 'string' && companyNamesById[item.company]) {
+            return companyNamesById[item.company];
+        }
+
+        const companyId = item.companyId || item.company?._id || item.company?.id;
+        if (companyId && companyNamesById[companyId]) {
+            return companyNamesById[companyId];
+        }
+
+        const matchedTrip = trips.find((trip: any) =>
+            trip.route?.origin === item.origin &&
+            trip.route?.destination === item.destination
+        );
+        if (matchedTrip) {
+            if (typeof matchedTrip.company === 'object' && matchedTrip.company?.name) {
+                return matchedTrip.company.name;
+            }
+            const tripCompanyId = typeof matchedTrip.company === 'string'
+                ? matchedTrip.company
+                : matchedTrip.company?.id || matchedTrip.company?._id;
+            if (tripCompanyId && companyNamesById[tripCompanyId]) {
+                return companyNamesById[tripCompanyId];
+            }
+        }
+
+        return 'Empresa';
+    };
+
     const renderRouteItem = (item: any) => (
         <TouchableOpacity
             key={item.id || item._id || Math.random().toString()}
             style={styles.listItem}
-            onPress={() => navigation.navigate('AllRoutes')}
+            onPress={() =>
+                navigation.navigate('RouteDetails', {
+                    routeId: item.id || item._id,
+                    origin: item.origin,
+                    destination: item.destination,
+                    companyName: getRouteCompanyName(item),
+                })
+            }
         >
             <View style={[styles.iconBox, { backgroundColor: '#e0f2f1' }]}>
                 <MaterialCommunityIcons name="compass-outline" size={24} color={colors.primary} />
@@ -49,7 +103,7 @@ export default function DashboardScreen() {
             <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.itemTitle}>{item.origin} → {item.destination}</Text>
                 <Text style={styles.itemSubtitle}>
-                    {typeof item.company === 'object' ? item.company.name : 'Empresa'}
+                    {getRouteCompanyName(item)}
                 </Text>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#ccc" />
@@ -65,7 +119,12 @@ export default function DashboardScreen() {
             <TouchableOpacity
                 key={item.id || item._id || Math.random().toString()}
                 style={styles.listItem}
-                onPress={() => navigation.navigate('AllTrips')}
+                onPress={() =>
+                    navigation.navigate('TripDetails', {
+                        tripId: item._id || item.id,
+                        trip: item,
+                    })
+                }
             >
                 <View style={[styles.iconBox, { backgroundColor: '#e8f5e9' }]}>
                     <MaterialCommunityIcons name="sail-boat" size={24} color="#2e7d32" />
@@ -73,7 +132,7 @@ export default function DashboardScreen() {
                 <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.itemTitle}>{origin} → {dest}</Text>
                     <Text style={styles.itemSubtitle}>
-                        {new Date(item.date).toLocaleDateString()} • {item.departureTime}
+                        {new Date(item.date).toLocaleDateString()} • {formatTimeAmPm(item.departureTime)}
                     </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>

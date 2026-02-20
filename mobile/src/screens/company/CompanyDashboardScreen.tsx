@@ -2,18 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { styled } from 'nativewind';
 import { ScreenContainer } from '../../components/ui/ScreenContainer';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
+import { PressableCard } from '../../components/ui/Card';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { getAllRoutes } from '../../services/route.service';
 import { tripService } from '../../services/trip.service';
-import { Compass, Anchor, Ticket, Building2, Map, Calendar, ArrowRight, Search, User, Menu } from 'lucide-react-native';
-import { getMyTickets } from '../../services/ticket.service';
-import { getMyCompanies } from '../../services/company.service';
+import { Compass, Anchor, Ticket, Building2, Map, Calendar, Search, Menu } from 'lucide-react-native';
+import { getAllCompanies, getMyCompanies } from '../../services/company.service';
 import { getAllMunicipios } from '../../services/municipio.service';
+import { formatTimeAmPm } from '../../utils/time';
 
 const StyledText = styled(Text);
 const StyledView = styled(View);
@@ -22,13 +21,14 @@ export const CompanyDashboardScreen = () => {
     const { user } = useAuth();
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-    const isOwner = user?.role === 'owner' || user?.role === 'admin';
+    const isOwner = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'super_owner';
+    const canUseMyCompanies = user?.role === 'owner' || user?.role === 'admin';
 
     const [loading, setLoading] = useState(true);
     const [routes, setRoutes] = useState<any[]>([]);
     const [trips, setTrips] = useState<any[]>([]);
-    const [myTickets, setMyTickets] = useState<any[]>([]);
     const [activeMunicipioName, setActiveMunicipioName] = useState<string>("");
+    const [companyNamesById, setCompanyNamesById] = useState<Record<string, string>>({});
 
     useEffect(() => {
         loadData();
@@ -37,16 +37,22 @@ export const CompanyDashboardScreen = () => {
     const loadData = async () => {
         try {
             setLoading(true);
-            const routesData = await getAllRoutes();
-            setRoutes(routesData.slice(0, 3));
+            const [routesData, tripsData, companies] = await Promise.all([
+                getAllRoutes(),
+                tripService.getAll(),
+                canUseMyCompanies ? getMyCompanies() : getAllCompanies(),
+            ]);
+            setRoutes(routesData.slice(0, 2));
+            setTrips(tripsData.slice(0, 2));
+
+            const companyMap = companies.reduce<Record<string, string>>((acc, company: any) => {
+                if (company.id) acc[company.id] = company.name;
+                if (company._id) acc[company._id] = company.name;
+                return acc;
+            }, {});
+            setCompanyNamesById(companyMap);
 
             if (isOwner) {
-                const tripsData = await tripService.getAll();
-                setTrips(tripsData.slice(0, 3));
-
-                // Fetch Company to get Municipio
-                // Assuming first company for now or active one
-                const companies = await getMyCompanies();
                 if (companies.length > 0) {
                     const activeCompany = companies.find(c => c.isActive) || companies[0];
                     if (activeCompany.municipioId) { // Check if it has string or object
@@ -61,12 +67,6 @@ export const CompanyDashboardScreen = () => {
                         if (muni) setActiveMunicipioName(muni.name);
                     }
                 }
-            } else {
-                // User: Load My Tickets
-                const ticketsData = await getMyTickets();
-                // Filter for upcoming? Assuming backend returns all.
-                // Let's just show top 3 recent/upcoming
-                setMyTickets(ticketsData.slice(0, 3));
             }
         } catch (e) {
             console.log("Error loading dashboard", e);
@@ -84,6 +84,66 @@ export const CompanyDashboardScreen = () => {
         </TouchableOpacity>
     );
 
+    const handleRoutePress = (item: any) => {
+        navigation.navigate('RouteDetails', {
+            routeId: item.id || item._id,
+            origin: item.origin,
+            destination: item.destination,
+            companyName: getRouteCompanyName(item),
+        });
+    };
+
+    const handleTripPress = (item: any) => {
+        const tripId = item._id || item.id;
+        if (!tripId) return;
+
+        navigation.navigate('TripDetails', {
+            tripId,
+            trip: item,
+        });
+    };
+
+    const getRouteCompanyName = (item: any) => {
+        if (typeof item.company === 'object' && item.company?.name) {
+            return item.company.name;
+        }
+
+        if (typeof item.company === 'string' && companyNamesById[item.company]) {
+            return companyNamesById[item.company];
+        }
+
+        const companyId = item.companyId || item.company?._id || item.company?.id;
+        if (companyId && companyNamesById[companyId]) {
+            return companyNamesById[companyId];
+        }
+
+        const matchedTrip = trips.find((trip: any) =>
+            trip.route?.origin === item.origin &&
+            trip.route?.destination === item.destination
+        );
+        if (matchedTrip) {
+            return getTripCompanyName(matchedTrip);
+        }
+
+        return "Empresa";
+    };
+
+    const getTripCompanyName = (item: any) => {
+        if (typeof item.company === 'object' && item.company?.name) {
+            return item.company.name;
+        }
+
+        const companyId = typeof item.company === 'string'
+            ? item.company
+            : item.companyId || item.company?._id || item.company?.id;
+
+        if (companyId && companyNamesById[companyId]) {
+            return companyNamesById[companyId];
+        }
+
+        return "Empresa";
+    };
+
     return (
         <ScreenContainer withPadding={false}>
             {/* Header */}
@@ -97,7 +157,15 @@ export const CompanyDashboardScreen = () => {
                         </StyledView>
                         <StyledView>
                             <StyledText className="text-white font-bold text-lg">{user?.name}</StyledText>
-                            <StyledText className="text-white/70 text-xs">{isOwner ? (user?.role === 'admin' ? 'Administrador' : 'Propietario') : 'Viajero'}</StyledText>
+                            <StyledText className="text-white/70 text-xs">
+                                {isOwner
+                                    ? (user?.role === 'admin'
+                                        ? 'Administrador'
+                                        : user?.role === 'super_owner'
+                                            ? 'Super Propietario'
+                                            : 'Propietario')
+                                    : 'Viajero'}
+                            </StyledText>
                         </StyledView>
                     </StyledView>
                     <StyledView className="flex-row gap-2">
@@ -184,94 +252,78 @@ export const CompanyDashboardScreen = () => {
                 ) : (
                     <>
                         {/* Rutas Recientes */}
-                        {isOwner && (
-                            <StyledView className="mb-6">
-                                <StyledView className="flex-row justify-between items-center mb-4 px-1">
-                                    <StyledText className="text-lg font-bold text-nautic-navy">Rutas Activas</StyledText>
-                                    <TouchableOpacity onPress={() => navigation.navigate('AllRoutes')}>
-                                        <StyledText className="text-nautic-accent font-bold text-sm">Ver todas</StyledText>
-                                    </TouchableOpacity>
-                                </StyledView>
-
-                                {routes.map((item, idx) => (
-                                    <Card key={idx} className="mb-3 p-4 flex-row items-center">
-                                        <StyledView className="w-10 h-10 bg-blue-50 rounded-xl items-center justify-center mr-3">
-                                            <Map size={20} color="#0B4F9C" />
-                                        </StyledView>
-                                        <StyledView className="flex-1">
-                                            <StyledText className="font-bold text-gray-800">{item.origin} → {item.destination}</StyledText>
-                                            <StyledText className="text-xs text-gray-500">
-                                                {typeof item.company === 'object' ? item.company.name : 'Mi Empresa'}
-                                            </StyledText>
-                                        </StyledView>
-                                    </Card>
-                                ))}
-                                {routes.length === 0 && (
-                                    <StyledView className="items-center p-4"><StyledText className="text-gray-400">No hay rutas</StyledText></StyledView>
-                                )}
+                        <StyledView className="mb-6">
+                            <StyledView className="flex-row justify-between items-center mb-4 px-1">
+                                <StyledText className="text-lg font-bold text-nautic-navy">Rutas Activas</StyledText>
+                                <TouchableOpacity onPress={() => navigation.navigate('AllRoutes')}>
+                                    <StyledText className="text-nautic-accent font-bold text-sm">Ver todas</StyledText>
+                                </TouchableOpacity>
                             </StyledView>
-                        )}
 
-                        {/* Viajes / Tickets Section */}
+                            {routes.map((item, idx) => (
+                                <PressableCard
+                                    key={item._id || item.id || `${item.origin}-${item.destination}-${idx}`}
+                                    className="mb-3 p-4 flex-row items-center"
+                                    onPress={() => handleRoutePress(item)}
+                                >
+                                    <StyledView className="w-10 h-10 bg-blue-50 rounded-xl items-center justify-center mr-3">
+                                        <Map size={20} color="#0B4F9C" />
+                                    </StyledView>
+                                    <StyledView className="flex-1">
+                                        <StyledText className="font-bold text-gray-800">{item.origin} → {item.destination}</StyledText>
+                                        <StyledText className="text-xs text-gray-500">
+                                            {getRouteCompanyName(item)}
+                                        </StyledText>
+                                    </StyledView>
+                                </PressableCard>
+                            ))}
+                            {routes.length === 0 && (
+                                <StyledView className="items-center p-4"><StyledText className="text-gray-400">No hay rutas</StyledText></StyledView>
+                            )}
+                        </StyledView>
+
+                        {/* Viajes Section */}
                         <StyledView className="mb-8">
                             <StyledView className="flex-row justify-between items-center mb-4 px-1">
-                                <StyledText className="text-lg font-bold text-nautic-navy">{isOwner ? "Próximos Viajes (Gestión)" : "Mis Próximos Viajes"}</StyledText>
-                                <TouchableOpacity onPress={() => navigation.navigate(isOwner ? 'AllTrips' : 'MyTickets')}>
+                                <StyledText className="text-lg font-bold text-nautic-navy">
+                                    {isOwner ? "Próximos Viajes (Gestión)" : "Próximos Viajes"}
+                                </StyledText>
+                                <TouchableOpacity onPress={() => navigation.navigate('AllTrips')}>
                                     <StyledText className="text-nautic-accent font-bold text-sm">Ver todos</StyledText>
                                 </TouchableOpacity>
                             </StyledView>
 
-                            {isOwner ? (
-                                trips.map((item, idx) => (
-                                    <Card key={idx} className="mb-3 p-4 flex-row items-center border-l-4 border-l-emerald-500">
-                                        <StyledView className="w-10 h-10 bg-emerald-50 rounded-xl items-center justify-center mr-3">
-                                            <Calendar size={20} color="#10B981" />
-                                        </StyledView>
-                                        <StyledView className="flex-1">
-                                            <StyledText className="font-bold text-gray-800">
-                                                {item.route?.origin || 'Origen'} → {item.route?.destination || 'Destino'}
-                                            </StyledText>
-                                            <StyledText className="text-xs text-gray-500">
-                                                {new Date(item.date).toLocaleDateString()} • {item.departureTime}
-                                            </StyledText>
-                                        </StyledView>
-                                        <StyledView>
-                                            <StyledText className={`text-xs font-bold ${(item.isActive ?? item.active) ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                {(item.isActive ?? item.active) ? 'ACTIVO' : 'CANCEL'}
-                                            </StyledText>
-                                        </StyledView>
-                                    </Card>
-                                ))
-                            ) : (
-                                myTickets.map((item, idx) => (
-                                    <Card key={idx} className="mb-3 p-4 flex-row items-center border-l-4 border-l-nautic-primary">
-                                        <StyledView className="w-10 h-10 bg-blue-50 rounded-xl items-center justify-center mr-3">
-                                            <Ticket size={20} color="#0B4F9C" />
-                                        </StyledView>
-                                        <StyledView className="flex-1">
-                                            <StyledText className="font-bold text-gray-800">
-                                                {item.routeName || "Viaje"}
-                                            </StyledText>
-                                            <StyledText className="text-xs text-gray-500">
-                                                {item.date ? item.date.toString().substring(0, 10) : ""} • {item.departureAt}
-                                            </StyledText>
-                                        </StyledView>
-                                        <StyledView>
-                                            <StyledText className="text-xs font-bold text-green-600">CONFIRMADO</StyledText>
-                                        </StyledView>
-                                    </Card>
-                                ))
-                            )}
+                            {trips.map((item, idx) => (
+                                <PressableCard
+                                    key={item._id || item.id || `${item.date}-${item.departureTime}-${idx}`}
+                                    className="mb-3 p-4 flex-row items-center border-l-4 border-l-emerald-500"
+                                    onPress={() => handleTripPress(item)}
+                                >
+                                    <StyledView className="w-10 h-10 bg-emerald-50 rounded-xl items-center justify-center mr-3">
+                                        <Calendar size={20} color="#10B981" />
+                                    </StyledView>
+                                    <StyledView className="flex-1">
+                                        <StyledText className="font-bold text-gray-800">
+                                            {item.route?.origin || 'Origen'} → {item.route?.destination || 'Destino'}
+                                        </StyledText>
+                                        <StyledText className="text-xs text-gray-500">
+                                            {new Date(item.date).toLocaleDateString()} • {formatTimeAmPm(item.departureTime)}
+                                        </StyledText>
+                                        <StyledText className="text-xs text-gray-500">
+                                            {getTripCompanyName(item)} • ${Number(item.price || 0).toLocaleString('es-CO')}
+                                        </StyledText>
+                                    </StyledView>
+                                    <StyledView>
+                                        <StyledText className={`text-xs font-bold ${(item.isActive ?? item.active) ? 'text-emerald-600' : 'text-red-500'}`}>
+                                            {(item.isActive ?? item.active) ? 'ACTIVO' : 'CANCEL'}
+                                        </StyledText>
+                                    </StyledView>
+                                </PressableCard>
+                            ))}
 
-                            {/* Empty States */}
-                            {isOwner && trips.length === 0 && (
+                            {/* Empty State */}
+                            {trips.length === 0 && (
                                 <StyledView className="items-center p-4"><StyledText className="text-gray-400">No hay viajes programados</StyledText></StyledView>
-                            )}
-                            {!isOwner && myTickets.length === 0 && (
-                                <StyledView className="items-center p-4">
-                                    <StyledText className="text-gray-400 mb-2">No tienes viajes próximos</StyledText>
-                                    <Button title="Buscar Viaje" onPress={() => navigation.navigate('LocationSelection')} variant="outline" />
-                                </StyledView>
                             )}
                         </StyledView>
                     </>

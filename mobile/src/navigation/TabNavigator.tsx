@@ -26,7 +26,7 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export default function TabNavigator() {
   const { user } = useAuth();
-  const isOwner = user?.role === 'owner' || user?.role === 'admin';
+  const isOwner = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'super_owner';
 
   return (
     <Tab.Navigator

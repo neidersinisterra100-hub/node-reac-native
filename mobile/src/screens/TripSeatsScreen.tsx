@@ -12,7 +12,7 @@ type TripSeatsRouteProp = RouteProp<RootStackParamList, 'TripSeats'>;
 export default function TripSeatsScreen() {
     const route = useRoute<TripSeatsRouteProp>();
     const navigation = useNavigation();
-    const { tripId } = route.params;
+    const { tripId, companyId } = route.params;
 
     const [seats, setSeats] = useState<Seat[]>([]);
     const [loading, setLoading] = useState(true);
@@ -22,9 +22,15 @@ export default function TripSeatsScreen() {
     }, []);
 
     const loadSeats = async () => {
+        if (!companyId) {
+            console.error("Missing companyId for TripSeatsScreen");
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
-            const data = await getTripSeats(tripId);
+            const data = await getTripSeats(tripId, companyId);
             setSeats(data);
         } catch (error) {
             console.error("Error loading seats:", error);

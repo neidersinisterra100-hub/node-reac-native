@@ -22,6 +22,7 @@ import {
 } from "lucide-react-native";
 import { Button } from "../../components/ui/Button";
 import AppHeader from "../../components/ui/AppHeader";
+import { formatTimeAmPm } from "../../utils/time";
 
 const StyledText = styled(Text);
 const StyledView = styled(View);
@@ -89,7 +90,7 @@ export const MyTripsScreen = () => {
         <StyledView className="flex-row items-center">
           <Clock size={14} color="#64748B" />
           <StyledText className="ml-1 text-xs text-gray-500">
-            {item.departureAt}
+            {formatTimeAmPm(item.departureAt)}
           </StyledText>
         </StyledView>
       </StyledView>

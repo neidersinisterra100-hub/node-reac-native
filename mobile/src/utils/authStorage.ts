@@ -20,9 +20,24 @@ export async function loadSession() {
       TOKEN_KEY,
     ]);
 
+    let parsedUser: User | null = null;
+    if (user) {
+      try {
+        parsedUser = JSON.parse(user) as User;
+      } catch {
+        // Keep token even if legacy/corrupted user payload cannot be parsed
+        parsedUser = null;
+      }
+    }
+
+    const normalizedToken =
+      typeof token === "string" && token.trim().length > 0
+        ? token.trim().replace(/^Bearer\s+/i, "")
+        : null;
+
     return {
-      user: user ? (JSON.parse(user) as User) : null,
-      token,
+      user: parsedUser,
+      token: normalizedToken,
     };
   } catch {
     return { user: null, token: null };

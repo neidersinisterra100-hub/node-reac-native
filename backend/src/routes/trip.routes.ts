@@ -54,12 +54,12 @@ router.get("/", getTrips);
    ========================================================= */
 
 /**
- * GET /api/trips/:tripId/seats
+ * GET /api/trips/companies/:companyId/trips/:tripId/seats
  * ---------------------------------------------------------
  * ✔️ Devuelve mapa de asientos
  * ✔️ PÚBLICO (no requiere auth)
  */
-router.get("/:tripId/seats", getTripSeats);
+router.get("/companies/:companyId/trips/:tripId/seats", getTripSeats);
 
 /* =========================================================
    A PARTIR DE AQUÍ: RUTAS PRIVADAS
@@ -87,24 +87,30 @@ router.use(requireAuth);
  *    si el usuario es role=user
  */
 router.get(
-  "/manage",
+  "/companies/:companyId/trips/manage",
   ownershipGuard,
   getManageTrips
 );
 
+// router.get(
+//   "/manage",
+//   ownershipGuard,
+//   getManageTrips
+// );
+ 
 /* =========================================================
    DETALLE DE VIAJE
    ========================================================= */
 
 /**
- * GET /api/trips/:tripId
+ * GET /api/trips/companies/:companyId/trips/:tripId
  * ---------------------------------------------------------
  * ✔️ Detalle de un viaje
  * ✔️ Accesible para usuarios autenticados
  *
  * ⚠️ Debe ir DESPUÉS de rutas más específicas
  */
-router.get("/:tripId", getTripById);
+router.get("/companies/:companyId/trips/:tripId", getTripById);
 
 /* =========================================================
    VIAJES POR EMPRESA
@@ -146,23 +152,23 @@ router.post(
    ========================================================= */
 
 /**
- * PATCH /api/trips/:tripId
+ * PATCH /api/trips/companies/:companyId/trips/:tripId
  * ---------------------------------------------------------
  * Activa / desactiva viaje
  */
 router.patch(
-  "/:tripId",
+  "/companies/:companyId/trips/:tripId",
   ownershipGuard,
   toggleTripActive
 );
 
 /**
- * DELETE /api/trips/:tripId
+ * DELETE /api/trips/companies/:companyId/trips/:tripId
  * ---------------------------------------------------------
  * Elimina viaje
  */
 router.delete(
-  "/:tripId",
+  "/companies/:companyId/trips/:tripId",
   ownershipGuard,
   deleteTrip
 );

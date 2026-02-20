@@ -119,8 +119,8 @@ api.interceptors.response.use(
 
     const config = error.config as
       | (InternalAxiosRequestConfig & {
-          _retry?: boolean;
-        })
+        _retry?: boolean;
+      })
       | undefined;
 
     if (

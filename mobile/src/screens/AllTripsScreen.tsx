@@ -9,6 +9,7 @@ import { styled } from "nativewind";
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
 import { tripService, Trip } from "../services/trip.service";
+import { formatTimeAmPm } from "../utils/time";
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
@@ -123,7 +124,7 @@ const handlePressTrip = (trip: Trip) => {
           <StyledView className="flex-row items-center space-x-1">
             <Clock size={14} className="text-slate-500 dark:text-dark-textMuted" />
             <StyledText className="text-xs text-slate-600 dark:text-dark-textMuted">
-              {item.departureTime}
+              {formatTimeAmPm(item.departureTime)}
             </StyledText>
           </StyledView>
 

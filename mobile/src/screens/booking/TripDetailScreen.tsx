@@ -20,6 +20,7 @@ import { Card } from "../../components/ui/Card";
 import { RootStackParamList } from "../../navigation/types";
 import { Trip } from "../../services/trip.service";
 import { api } from "../../services/api";
+import { formatTimeAmPm } from "../../utils/time";
 
 const StyledText = styled(Text);
 const StyledView = styled(View);
@@ -193,7 +194,7 @@ export const TripDetailScreen = () => {
                     Hora
                   </StyledText>
                   <StyledText className="font-bold text-nautic-navy">
-                    {trip.departureTime}
+                    {formatTimeAmPm(trip.departureTime)}
                   </StyledText>
                 </StyledView>
 
@@ -232,8 +233,13 @@ export const TripDetailScreen = () => {
             }
 
             onPress={() => {
+              const companyId = typeof trip.company === 'string'
+                ? trip.company
+                : (trip.company.id || trip.company._id || '');
+
               navigation.navigate("SeatSelection", {
                 tripId: trip._id || trip.id,
+                companyId,
                 routeName,
                 price: trip.price,
                 date: trip.date,

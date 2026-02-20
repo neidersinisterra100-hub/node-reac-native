@@ -20,10 +20,11 @@ export interface Seat {
    GET /api/trips/:tripId/seats
    ========================================================= */
 export async function getTripSeats(
-  tripId: string
+  tripId: string,
+  companyId: string
 ): Promise<Seat[]> {
   const { data } = await api.get<Seat[]>(
-    `/trips/${tripId}/seats`
+    `/trips/companies/${companyId}/trips/${tripId}/seats`
   );
   return data;
 }

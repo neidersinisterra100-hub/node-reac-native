@@ -33,6 +33,7 @@ import {
   toggleTripActive,
 } from "../services/trip.service";
 import { Trip } from "../types/trip";
+import { formatTimeAmPm } from "../utils/time";
 
 /* ================= STYLED ================= */
 
@@ -126,9 +127,21 @@ export default function TripsScreen() {
      ACTIONS
      ======================================================= */
 
-  const handleToggle = async (tripId: string) => {
+  const resolveTripCompanyId = (trip: Trip): string | null => {
+    if (typeof trip.company === "string") return trip.company;
+    return trip.company?.id || trip.company?._id || null;
+  };
+
+  const handleToggle = async (trip: Trip) => {
+    const tripId = trip._id || trip.id;
+    const companyId = resolveTripCompanyId(trip);
+    if (!tripId || !companyId) {
+      Alert.alert("Error", "No se pudo identificar la empresa del viaje");
+      return;
+    }
+
     try {
-      await toggleTripActive(tripId);
+      await toggleTripActive(tripId, companyId);
 
       setTrips((prev) =>
         prev.map((t) =>
@@ -145,7 +158,14 @@ export default function TripsScreen() {
     }
   };
 
-  const handleDelete = (tripId: string) => {
+  const handleDelete = (trip: Trip) => {
+    const tripId = trip._id || trip.id;
+    const companyId = resolveTripCompanyId(trip);
+    if (!tripId || !companyId) {
+      Alert.alert("Error", "No se pudo identificar la empresa del viaje");
+      return;
+    }
+
     Alert.alert(
       "Eliminar viaje",
       "¿Estás seguro?",
@@ -156,7 +176,7 @@ export default function TripsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteTrip(tripId);
+              await deleteTrip(tripId, companyId);
               setTrips((prev) =>
                 prev.filter(
                   (t) =>
@@ -241,7 +261,7 @@ export default function TripsScreen() {
           <StyledView className="flex-row items-center">
             <Clock size={14} color="#64748B" />
             <StyledText className="ml-1 text-xs text-gray-500">
-              {item.departureTime}
+              {formatTimeAmPm(item.departureTime)}
             </StyledText>
           </StyledView>
 
@@ -261,7 +281,7 @@ export default function TripsScreen() {
                 );
                 return;
               }
-              handleToggle(item._id || item.id);
+              handleToggle(item);
             }}
             className={`p-2 rounded-full ${
               isActive
@@ -280,9 +300,7 @@ export default function TripsScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() =>
-              handleDelete(item._id || item.id)
-            }
+            onPress={() => handleDelete(item)}
             className="p-2 rounded-full bg-red-100"
           >
             <Trash2 size={18} color="#ef4444" />

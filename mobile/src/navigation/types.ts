@@ -11,6 +11,36 @@ export type RootTabParamList = {
   Passengers: undefined;
 };
 
+export type HomeFlowParamList = {
+  ModularHome: undefined;
+  TerrestrialFlowStack: undefined;
+  FluvialFlowStack: undefined;
+  LocationSelection: undefined;
+  AllTrips: {
+    origin?: string;
+    destination?: string;
+  } | undefined;
+  TripDetails: {
+    tripId: string;
+    trip?: Trip;
+  };
+  SeatSelection: {
+    tripId: string;
+    companyId: string;
+    routeName: string;
+    price: number;
+    date: string;
+    time: string;
+    capacity?: number;
+    soldSeats?: number;
+    isActive?: boolean;
+  };
+  Payment: {
+    tripId: string;
+    seatNumber: number;
+  };
+};
+
 /* ===========================
    STACK
 =========================== */
@@ -35,19 +65,27 @@ export type RootStackParamList = {
   LocationSelection: undefined;
 
   AllTrips:
-    | {
-        origin?: string;
-        destination?: string;
-      }
-    | undefined;
+  | {
+    origin?: string;
+    destination?: string;
+  }
+  | undefined;
 
   TripDetails: {
     tripId: string;
     trip?: Trip;
   };
 
+  RouteDetails: {
+    routeId?: string;
+    origin: string;
+    destination: string;
+    companyName?: string;
+  };
+
   SeatSelection: {
     tripId: string;
+    companyId: string;
     routeName: string;
     price: number;
     date: string;
@@ -64,6 +102,7 @@ export type RootStackParamList = {
 
   TripSeats: {
     tripId: string;
+    companyId: string;
   };
 
   ConfirmTicketModal: {

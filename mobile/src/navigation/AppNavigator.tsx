@@ -12,6 +12,7 @@ import { useAuth } from "../context/AuthContext";
 import { LocationSelectionScreen } from "../screens/booking/LocationSelectionScreen";
 import { AvailableTripsScreen } from "../screens/booking/AvailableTripsScreen";
 import { TripDetailScreen } from "../screens/booking/TripDetailScreen";
+import { RouteDetailScreen } from "../screens/booking/RouteDetailScreen";
 import { SeatSelectionScreen } from "../screens/booking/SeatSelectionScreen";
 import { PaymentScreen } from "../screens/booking/PaymentScreen";
 import { TicketScreen } from "../screens/booking/TicketScreen";
@@ -55,6 +56,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
+
         {!user ? (
           <>
             <Stack.Screen
@@ -67,11 +69,6 @@ export default function AppNavigator() {
               component={RegisterScreen}
               options={{ animation: "slide_from_right" }}
             />
-            <Stack.Screen
-              name="Terms"
-              component={TermsScreen}
-              options={{ presentation: "modal" }}
-            />
           </>
         ) : (
           <>
@@ -82,9 +79,10 @@ export default function AppNavigator() {
             <Stack.Screen name="LocationSelection" component={LocationSelectionScreen} />
             <Stack.Screen name="AllTrips" component={AvailableTripsScreen} />
             <Stack.Screen name="TripDetails" component={TripDetailScreen} />
+            <Stack.Screen name="RouteDetails" component={RouteDetailScreen} />
             <Stack.Screen name="SeatSelection" component={SeatSelectionScreen} />
             <Stack.Screen name="Payment" component={PaymentScreen} />
-            {/* <Stack.Screen name="TicketDetail" component={TicketScreen} /> */}
+            <Stack.Screen name="TicketDetail" component={TicketScreen} />
 
             <Stack.Screen name="Ticket" component={TicketScreen} />
 
@@ -120,10 +118,12 @@ export default function AppNavigator() {
               }}
             />
             <Stack.Screen name="Balance" component={BalanceScreen} />
-            {/* <Stack.Screen name="MyTickets" component={MyTicketsScreen} /> */}
+            <Stack.Screen name="MyTickets" component={MyTicketsScreen} />
             <Stack.Screen name="ValidateTicket" component={ValidateTicketScreen} />
             <Stack.Screen name="Reports" component={ReportsScreen} />
             <Stack.Screen name="Calendar" component={CalendarScreen} />
+
+
 
             {/* Modals */}
             <Stack.Screen
@@ -143,6 +143,11 @@ export default function AppNavigator() {
             />
           </>
         )}
+        <Stack.Screen
+          name="Terms"
+          component={TermsScreen}
+          options={{ presentation: "modal" }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

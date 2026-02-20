@@ -14,6 +14,8 @@ import { styled } from "nativewind";
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
 import { getAllRoutes, Route } from "../services/route.service";
+import { getAllCompanies } from "../services/company.service";
+import { getTrips } from "../services/trip.service";
 import { useAuth } from "../context/AuthContext";
 
 const StyledView = styled(View);
@@ -24,12 +26,47 @@ export default function AllRoutesScreen() {
 
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(false);
+  const [companyNamesById, setCompanyNamesById] = useState<Record<string, string>>({});
+  const [companyByRouteKey, setCompanyByRouteKey] = useState<Record<string, string>>({});
 
   const loadRoutes = async () => {
     try {
       setLoading(true);
-      const data = await getAllRoutes();
-      setRoutes(data);
+      const [routesData, companiesData] = await Promise.all([
+        getAllRoutes(),
+        getAllCompanies(),
+      ]);
+
+      setRoutes(routesData);
+
+      const companyMap = companiesData.reduce<Record<string, string>>((acc, company: any) => {
+        if (company.id) acc[company.id] = company.name;
+        if (company._id) acc[company._id] = company.name;
+        return acc;
+      }, {});
+      setCompanyNamesById(companyMap);
+
+      const allTrips = await getTrips();
+      const routeMap = allTrips.reduce<Record<string, string>>((acc, trip: any) => {
+        if (typeof trip.route !== "object") return acc;
+        const key = `${trip.route.origin}__${trip.route.destination}`;
+        if (acc[key]) return acc;
+
+        if (typeof trip.company === "object" && trip.company?.name) {
+          acc[key] = trip.company.name;
+          return acc;
+        }
+
+        const tripCompanyId =
+          typeof trip.company === "string"
+            ? trip.company
+            : trip.company?.id || trip.company?._id;
+        if (tripCompanyId && companyMap[tripCompanyId]) {
+          acc[key] = companyMap[tripCompanyId];
+        }
+        return acc;
+      }, {});
+      setCompanyByRouteKey(routeMap);
     } catch {
       Alert.alert("Error", "No se pudieron cargar las rutas");
     } finally {
@@ -45,14 +82,18 @@ export default function AllRoutesScreen() {
     const companyName =
       item.company && typeof item.company === "object"
         ? (item.company as any).name
-        : "Empresa";
+        : (typeof item.company === "string" && companyNamesById[item.company])
+          ? companyNamesById[item.company]
+          : companyByRouteKey[`${item.origin}__${item.destination}`] || "Empresa";
 
     return (
       <TouchableOpacity
         onPress={() =>
-          navigation.navigate("AllTrips", {
+          navigation.navigate("RouteDetails", {
+            routeId: item.id || item._id,
             origin: item.origin,
             destination: item.destination,
+            companyName,
           })
         }
         className="
@@ -85,7 +126,7 @@ export default function AllRoutesScreen() {
             </Text>
 
             <Text className="mt-1 text-xs text-slate-500 dark:text-dark-textMuted">
-              {user?.role === "owner"
+              {user?.role === "owner" || user?.role === "admin" || user?.role === "super_owner"
                 ? "Toca para gestionar viajes"
                 : "Ver horarios disponibles"}
             </Text>

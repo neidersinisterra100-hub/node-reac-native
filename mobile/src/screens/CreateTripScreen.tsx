@@ -18,6 +18,7 @@ import { ScreenContainer } from "../components/ui/ScreenContainer";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { createTrip } from "../services/trip.service";
+import { formatTimeAmPm, toHHmmFromDate } from "../utils/time";
 
 import {
   Calendar,
@@ -93,7 +94,7 @@ export default function CreateTripScreen() {
       const payload = {
         routeId,
         date: date.toISOString().split("T")[0], // YYYY-MM-DD
-        departureTime: time.toTimeString().slice(0, 5), // HH:mm
+        departureTime: toHHmmFromDate(time), // HH:mm
         price: Number(price),
         capacity: Number(capacity),
         transportType,
@@ -201,7 +202,7 @@ export default function CreateTripScreen() {
               <TextInput
                 mode="outlined"
                 label="Hora de zarpe"
-                value={format(time, "HH:mm")}
+                value={formatTimeAmPm(toHHmmFromDate(time))}
                 editable={false}
                 right={
                   <TextInput.Icon

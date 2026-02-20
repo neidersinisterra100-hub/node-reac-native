@@ -34,7 +34,7 @@ export const CompanyRoutesScreen = () => {
   const companyName = route.params?.companyName;
 
   const { user } = useAuth();
-  const isOwner = user?.role === "owner" || user?.role === "admin";
+  const isOwner = user?.role === "owner" || user?.role === "admin" || user?.role === "super_owner";
 
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,8 +78,11 @@ export const CompanyRoutesScreen = () => {
             : r
         )
       );
-    } catch {
-      Alert.alert("Error", "No se pudo cambiar el estado.");
+    } catch (error: any) {
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message || "No se pudo cambiar el estado."
+      );
     }
   };
 
@@ -95,8 +98,11 @@ export const CompanyRoutesScreen = () => {
             setRoutes(prev =>
               prev.filter(r => (r._id || r.id) !== id)
             );
-          } catch {
-            Alert.alert("Error", "No se pudo eliminar.");
+          } catch (error: any) {
+            Alert.alert(
+              "Error",
+              error?.response?.data?.message || "No se pudo eliminar."
+            );
           }
         },
       },

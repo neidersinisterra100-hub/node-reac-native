@@ -107,12 +107,19 @@ const CompanySchema = new Schema<CompanyDocument>(
       index: true,
     },
 
+    // admins: [
+    //   {
+    //     type: Schema.Types.ObjectId, // ✅ CORRECTO
+    //     ref: "User",
+    //   },
+    // ],
     admins: [
       {
-        type: Schema.Types.ObjectId, // ✅ CORRECTO
+        type: mongoose.Schema.Types.ObjectId, // ✅ CORRECTO
         ref: "User",
       },
     ],
+
 
     /* =========================
        FINANZAS

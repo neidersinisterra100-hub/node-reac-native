@@ -65,13 +65,19 @@ export interface Trip {
    El backend decide qué endpoint responde.
    ========================================================= */
 
-export async function getTrips(): Promise<Trip[]> {
+export async function getTrips(companyId?: string): Promise<Trip[]> {
   try {
-    // 🔐 Intentar endpoint privado (owners/admins)
-    const { data } = await api.get<Trip[]>("/trips/manage");
+    if (companyId) {
+      const { data } = await api.get<Trip[]>(
+        `/trips/companies/${companyId}/trips/manage`
+      );
+      return data;
+    }
+
+    // Si no hay companyId, intentar endpoint público o manejar según lógica de negocio
+    const { data } = await api.get<Trip[]>("/trips");
     return data;
   } catch (error: any) {
-    // 🚫 Si no tiene permisos → usar endpoint público
     if (
       error?.response?.status === 401 ||
       error?.response?.status === 403
@@ -79,12 +85,32 @@ export async function getTrips(): Promise<Trip[]> {
       const { data } = await api.get<Trip[]>("/trips");
       return data;
     }
-
-    // 🛟 Fallback defensivo
+    // Fallback
     const { data } = await api.get<Trip[]>("/trips");
     return data;
   }
 }
+
+// export async function getTrips(): Promise<Trip[]> {
+//   try {
+//     // 🔐 Intentar endpoint privado (owners/admins)
+//     const { data } = await api.get<Trip[]>("/trips/manage");
+//     return data;
+//   } catch (error: any) {
+//     // 🚫 Si no tiene permisos → usar endpoint público
+//     if (
+//       error?.response?.status === 401 ||
+//       error?.response?.status === 403
+//     ) {
+//       const { data } = await api.get<Trip[]>("/trips");
+//       return data;
+//     }
+
+//     // 🛟 Fallback defensivo
+//     const { data } = await api.get<Trip[]>("/trips");
+//     return data;
+//   }
+// }
 
 /* =========================================================
    CREATE TRIP
@@ -115,8 +141,8 @@ export async function createTrip(data: {
    - Solo owner
    ========================================================= */
 
-export async function deleteTrip(tripId: string): Promise<void> {
-  await api.delete(`/trips/${tripId}`);
+export async function deleteTrip(tripId: string, companyId: string): Promise<void> {
+  await api.delete(`/trips/companies/${companyId}/trips/${tripId}`);
 }
 
 /* =========================================================
@@ -127,8 +153,8 @@ export async function deleteTrip(tripId: string): Promise<void> {
    - NO se envía payload
    ========================================================= */
 
-export async function toggleTripActive(tripId: string): Promise<void> {
-  await api.patch(`/trips/${tripId}`);
+export async function toggleTripActive(tripId: string, companyId: string): Promise<void> {
+  await api.patch(`/trips/companies/${companyId}/trips/${tripId}`);
 }
 
 /* =========================================================

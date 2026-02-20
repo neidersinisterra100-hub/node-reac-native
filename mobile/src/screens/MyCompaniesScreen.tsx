@@ -140,6 +140,17 @@ export default function MyCompaniesScreen() {
                         </TouchableOpacity>
 
                         <IconButton
+                            icon="account-group"
+                            iconColor="#3b82f6"
+                            size={20}
+                            style={{ margin: 0 }}
+                            onPress={() => navigation.navigate("CompanyAdmins", {
+                                companyId: item.id || item._id,
+                                companyName: item.name,
+                            })}
+                        />
+
+                        <IconButton
                             icon="delete-outline"
                             iconColor="#ef4444"
                             size={20}

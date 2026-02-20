@@ -105,6 +105,21 @@ export async function getCompanyAdmins(companyId: string) {
   return response.data as CompanyAdmin[];
 }
 
+export async function addAdmin(companyId: string, userId: string) {
+  const response = await api.post(`/companies/${companyId}/admins`, { userId });
+  return response.data;
+}
+
+export async function removeAdmin(companyId: string, adminId: string) {
+  const response = await api.delete(`/companies/${companyId}/admins/${adminId}`);
+  return response.data;
+}
+
+export async function inviteAdmin(companyId: string, email: string) {
+  const response = await api.post(`/companies/${companyId}/invite-admin`, { email });
+  return response.data;
+}
+
 
 // import { api } from "./api"; // 👈 Corregido import
 

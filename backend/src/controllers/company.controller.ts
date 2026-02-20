@@ -1,5 +1,7 @@
 import { RequestHandler } from "express";
 import mongoose, { Types } from "mongoose";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 // ===============================
 // MODELOS
@@ -8,6 +10,8 @@ import { CompanyModel } from "../models/company.model.js";
 import { UserModel } from "../models/user.model.js";
 import { RouteModel } from "../models/route.model.js";
 import { TripModel } from "../models/trip.model.js";
+import { CompanyInvitationModel } from "../models/companyInvitation.model.js";
+import { sendAdminInvitation } from "../services/email.service.js";
 
 // ===============================
 // DOMINIO
@@ -243,8 +247,6 @@ export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
     }
 
     // 1. Create Company
-    // We instantiate the model to get the ID but use the raw data carefully.
-    // Ideally use Zod but here we keep it simple as requested.
     const company = new CompanyModel({
       ...companyDataRaw,
       owner: new Types.ObjectId(req.user.id),
@@ -255,36 +257,23 @@ export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
     await company.save({ session });
 
     // 2. Handle Admin User
+    let adminUser: any = null;
+
     if (adminEmail && adminPassword) {
       let admin = await UserModel.findOne({ email: adminEmail }).session(session);
 
       if (!admin) {
-        // Create New Admin user... you might need bcrypt here if not doing it in model hooks
-        // Assuming UserModel pre-save hook handles hashing if just setting password?
-        // Let's assume we need to import bcrypt if we do manual hashing or just pass raw if model handles.
-        // Checking imports: we need bcryptjs to be safe.
-        // But for now, let's create it. The previous commented code had bcrypt.
+        // Create New Admin user
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-        // IMPORTANT: We need bcrypt imported. 
-        // I'll add the bcrypt import in a separate step if needed, but for now assuming model hook or manual hash.
-        // Actually, let's just create the user object.
-
-        /* 
-           NOTE: Since I cannot easily add the import at the top in this same step without replacing the whole file,
-           I will assume the user model handles hashing OR I will need to do another edit to add the import.
-           Let's look at the existing imports. No bcrypt.
-           I'll add a comment that this needs bcrypt or rely on model.
-        */
-
-        // Temporary: creating user without explicit hash here, relying on User model logic
-        // If User model doesn't auto-hash, this will store plain text which is bad, but fixing syntax is first priority.
         admin = new UserModel({
           name: adminName || "Admin",
           email: adminEmail,
-          password: adminPassword, // Model should hash this
+          password: hashedPassword,
           role: "admin",
-          companyId: company._id, // companyId field on User
-          isActive: true
+          companyId: company._id,
+          isActive: true,
+          verified: true
         });
         await admin.save({ session });
       } else {
@@ -294,19 +283,33 @@ export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
         await admin.save({ session });
       }
 
+      adminUser = admin;
+
       // Link back to company
       company.admins.push(admin._id);
       await company.save({ session });
     }
 
-    // Update Owner's companyId as well? Usually yes.
+    // Update Owner's companyId
     await UserModel.findByIdAndUpdate(req.user.id, {
       $set: { companyId: company._id },
     }).session(session);
 
 
     await session.commitTransaction();
-    return res.status(201).json(toCompanyDTO(company));
+
+    // Normalize admin response
+    const adminResponse = adminUser ? {
+      id: adminUser._id.toString(),
+      name: adminUser.name,
+      email: adminUser.email
+    } : null;
+
+    return res.status(201).json({
+      company: toCompanyDTO(company),
+      admin: adminResponse,
+      message: "Empresa creada exitosamente"
+    });
 
   } catch (error: any) {
     await session.abortTransaction();
@@ -341,3 +344,202 @@ export const getCompanyAdmins: RequestHandler = async (req, res) => {
     res.status(500).json({ message: "Error al obtener administradores" });
   }
 };
+
+/* =========================================================
+   ADMIN MANAGEMENT
+   ========================================================= */
+
+// A) AGREGAR ADMIN DIRECTO (Usuario existente por ID)
+export const addAdmin: RequestHandler = async (req, res) => {
+  try {
+    if (req.user?.role !== 'super_owner' && req.company?.owner.toString() !== req.user?.id) {
+      return res.status(403).json({ message: "Solo el owner puede gestionar administradores" });
+    }
+    const { userId } = req.body;
+
+    if (!req.company) return res.status(500).json({ message: "Guard error" });
+
+    const user = await UserModel.findById(userId);
+    if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
+
+    // Validations
+    if (req.company.owner.toString() === userId) {
+      return res.status(400).json({ message: "El owner ya tiene acceso total" });
+    }
+    if (req.company.admins.some((a: Types.ObjectId) => a.toString() === userId)) {
+      return res.status(400).json({ message: "El usuario ya es administrador" });
+    }
+
+    // Update Company
+    req.company.admins.push(user._id);
+    await req.company.save();
+
+    // Update User
+    user.role = "admin";
+    user.companyId = req.company._id;
+    await user.save();
+
+    res.json(toCompanyDTO(req.company));
+  } catch (error) {
+    console.error("Error adding admin:", error);
+    res.status(500).json({ message: "Error al agregar administrador" });
+  }
+};
+
+// B) REMOVE ADMIN
+export const removeAdmin: RequestHandler = async (req, res) => {
+  try {
+    if (req.user?.role !== 'super_owner' && req.company?.owner.toString() !== req.user?.id) {
+      return res.status(403).json({ message: "Solo el owner puede gestionar administradores" });
+    }
+    const { adminId } = req.params;
+
+    if (!req.company) return res.status(500).json({ message: "Guard error" });
+
+    // Remove from company
+    req.company.admins = req.company.admins.filter((id: Types.ObjectId) => id.toString() !== adminId);
+    await req.company.save();
+
+    // Update User (revoke access)
+    await UserModel.findByIdAndUpdate(adminId, {
+      $set: { role: "user", companyId: null }
+    });
+
+    res.json(toCompanyDTO(req.company));
+  } catch (error) {
+    console.error("Error removing admin:", error);
+    res.status(500).json({ message: "Error al remover administrador" });
+  }
+};
+
+// C) INVITE ADMIN
+export const inviteAdmin: RequestHandler = async (req, res) => {
+  try {
+    if (req.user?.role !== 'super_owner' && req.company?.owner.toString() !== req.user?.id) {
+      return res.status(403).json({ message: "Solo el owner puede gestionar administradores" });
+    }
+    const { email } = req.body;
+    const company = req.company;
+    if (!company) return res.status(500).json({ message: "Guard error" });
+
+    // 1. Check if user already exists
+    const existingUser = await UserModel.findOne({ email });
+    if (existingUser) {
+      // Check if already admin here
+      if (company.admins.some((id: Types.ObjectId) => id.toString() === existingUser.id)) {
+        return res.status(400).json({ message: "Usuario ya es admin" });
+      }
+      if (company.owner.toString() === existingUser.id) {
+        return res.status(400).json({ message: "Usuario es el owner" });
+      }
+
+      // Add directly
+      company.admins.push(existingUser._id);
+      await company.save();
+
+      existingUser.role = "admin";
+      existingUser.companyId = company._id;
+      await existingUser.save();
+
+      return res.json({ message: "Usuario existente agregado como admin" });
+    }
+
+    // 2. Create Invitation
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 48); // 48h validity
+
+    await CompanyInvitationModel.create({
+      companyId: company._id,
+      email,
+      token,
+      expiresAt,
+      status: "pending"
+    });
+
+    // 3. Send Email
+    const inviteLink = `${process.env.FRONTEND_URL}/accept-invite?token=${token}`;
+    const sent = await sendAdminInvitation(email, inviteLink, company.name);
+
+    if (!sent) {
+      // Optional: rollback? Or just warn.
+      console.warn("Could not send email, but invitation created.");
+      return res.json({ message: "Invitación creada, pero hubo un error enviando el email." });
+    }
+
+    res.json({ message: "Invitación enviada exitosamente" });
+
+  } catch (error) {
+    console.error("Error inviting admin:", error);
+    res.status(500).json({ message: "Error al invitar admin" });
+  }
+}
+
+// D) ACCEPT INVITE
+export const acceptInvite: RequestHandler = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { token } = req.body;
+    const userId = req.user?.id; // Authenticated user accepting the invite
+
+    if (!userId) {
+      await session.abortTransaction();
+      return res.status(401).json({ message: "Debes estar logueado para aceptar" });
+    }
+
+    const invitation = await CompanyInvitationModel.findOne({
+      token,
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    }).session(session);
+
+    if (!invitation) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: "Invitación inválida o expirada" });
+    }
+
+    const company = await CompanyModel.findById(invitation.companyId).session(session);
+    if (!company) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Empresa no existe" });
+    }
+
+    const user = await UserModel.findById(userId).session(session);
+    if (!user) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // Validate emails match? 
+    // Strict security: Invite email must match User email
+    if (user.email !== invitation.email) {
+      await session.abortTransaction();
+      return res.status(403).json({ message: "El email de la invitación no coincide con tu usuario" });
+    }
+
+    // Apply changes
+    if (!company.admins.some((id: Types.ObjectId) => id.toString() === userId)) {
+      company.admins.push(user._id);
+      await company.save({ session });
+    }
+
+    user.role = "admin";
+    user.companyId = company._id;
+    await user.save({ session });
+
+    // Update Invitation
+    invitation.status = "accepted";
+    await invitation.save({ session });
+
+    await session.commitTransaction();
+    res.json({ message: "Invitación aceptada. Ahora eres admin." });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Error accepting invite:", error);
+    res.status(500).json({ message: "Error al aceptar invitación" });
+  } finally {
+    session.endSession();
+  }
+}

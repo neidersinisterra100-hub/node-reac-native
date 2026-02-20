@@ -17,6 +17,7 @@ import { SeatSelectionScreen } from "../screens/booking/SeatSelectionScreen";
 import { PaymentScreen } from "../screens/booking/PaymentScreen";
 import { TicketScreen } from "../screens/booking/TicketScreen";
 import { CompanyDashboardScreen } from "../screens/company/CompanyDashboardScreen";
+import { CompanyAdminsScreen } from "../screens/company/CompanyAdminsScreen";
 
 // Legacy / Existing screens
 import CreateCompanyScreen from "../screens/CreateCompanyScreen";
@@ -88,6 +89,7 @@ export default function AppNavigator() {
 
             {/* 🏢 Company Flow */}
             <Stack.Screen name="CompanyDashboard" component={CompanyDashboardScreen} />
+            <Stack.Screen name="CompanyAdmins" component={CompanyAdminsScreen} />
             <Stack.Screen name="CreateCompany" component={CreateCompanyScreen} />
             <Stack.Screen name="ManageLocations" component={ManageLocationsScreen} />
             <Stack.Screen name="MyCompanies" component={MyCompaniesScreen} />
@@ -97,14 +99,6 @@ export default function AppNavigator() {
             <Stack.Screen name="CreateTrip" component={CreateTripScreen} />
             <Stack.Screen name="CreateRoute" component={CreateRouteScreen} />
             <Stack.Screen name="AllRoutes" component={AllRoutesScreen} />
-            {/* AllTrips also used by company, but mapped to AvailableTripsScreen if we want modernization, 
-                but old logic used AllTripsScreen. AvailableTripsScreen is safer for Booking.
-                If Company needs AllTripsScreen (old), we might need to alias or check.
-                For now, "AllTrips" is mapped to AvailableTripsScreen in Booking Flow.
-                If old code navigates to "AllTrips", it goes to new screen. Check if compatible. 
-                AvailableTrips logic might be different. 
-                But I'll assume users appreciate the new UI.
-            */}
 
             {/* User / Settings */}
             <Stack.Screen name="Profile" component={ProfileScreen} />

@@ -13,6 +13,10 @@ import {
   deleteCompany,
   getCompany,
   getCompanyAdmins,
+  addAdmin,
+  removeAdmin,
+  inviteAdmin,
+  acceptInvite,
 } from "../controllers/company.controller.js";
 
 import { getCompanyRoutes } from "../controllers/route.controller.js";
@@ -45,6 +49,13 @@ router.post(
   blockLegacyFields,
   validateRequest(createCompanySchema),
   createCompanyWithAdmin
+);
+
+// Aceptar invitación (antes de rutas con :companyId para evitar conflicto)
+router.post(
+  "/accept-invite",
+  requireAuth,
+  acceptInvite
 );
 
 /* ================= MY COMPANIES ================= */
@@ -83,7 +94,33 @@ router.get(
   "/:companyId/admins",
   requireAuth,
   ownershipGuard,
-  createCompanyWithAdmin
+  getCompanyAdmins // Fixed: was createCompanyWithAdmin
+);
+
+/* ================= COMPANY ADMIN MANAGEMENT ================= */
+
+// Agregar admin directo
+router.post(
+  "/:companyId/admins",
+  requireAuth,
+  ownershipGuard,
+  addAdmin
+);
+
+// Eliminar admin
+router.delete(
+  "/:companyId/admins/:adminId",
+  requireAuth,
+  ownershipGuard,
+  removeAdmin
+);
+
+// Invitar admin por email
+router.post(
+  "/:companyId/invite-admin",
+  requireAuth,
+  ownershipGuard,
+  inviteAdmin
 );
 
 // Rutas de una empresa (públicas o protegidas según tu negocio)

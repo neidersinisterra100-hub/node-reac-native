@@ -140,6 +140,11 @@ export type RootStackParamList = {
     companyName: string;
   };
 
+  CompanyAdmins: {
+    companyId: string;
+    companyName: string;
+  };
+
   Trips: {
     routeId: string;
     routeName: string;

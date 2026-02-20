@@ -57,9 +57,8 @@ function baseEmailTemplate({
           ${content}
         </p>
 
-        ${
-          buttonText && buttonUrl
-            ? `
+        ${buttonText && buttonUrl
+      ? `
           <div style="text-align:center;margin:32px 0;">
             <a href="${buttonUrl}" style="
               background:${colors.primary};
@@ -74,8 +73,8 @@ function baseEmailTemplate({
             </a>
           </div>
         `
-            : ""
-        }
+      : ""
+    }
 
         <p style="color:${colors.textSecondary};font-size:13px;margin-top:32px;">
           Si no solicitaste este correo, puedes ignorarlo.
@@ -122,7 +121,7 @@ export async function sendVerificationEmail(
   }
 }
 
-   // export async function sendVerificationEmail(
+// export async function sendVerificationEmail(
 //   to: string,
 //   token: string
 // ) {
@@ -168,4 +167,30 @@ export async function sendPasswordResetEmail(
     subject: "Restablece tu contraseña en NauticGo",
     html,
   });
+}
+
+export async function sendAdminInvitation(
+  to: string,
+  inviteLink: string,
+  companyName: string
+) {
+  const html = baseEmailTemplate({
+    title: `Invitación a ${companyName}`,
+    content: `Has sido invitado a formar parte del equipo de administración de <strong>${companyName}</strong> en NauticGo. Para aceptar, haz clic en el botón.`,
+    buttonText: "Aceptar Invitación",
+    buttonUrl: inviteLink,
+  });
+
+  const { error } = await resend.emails.send({
+    from: "NauticGo <no-reply@nauticgo.com>",
+    to,
+    subject: `Invitación de Administración - ${companyName}`,
+    html,
+  });
+
+  if (error) {
+    console.error("Error sending admin invite:", error);
+    return false;
+  }
+  return true;
 }

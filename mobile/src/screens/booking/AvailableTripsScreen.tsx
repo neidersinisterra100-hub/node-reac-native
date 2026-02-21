@@ -15,7 +15,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { getTrips, Trip } from "../../services/trip.service";
 import { getAllCompanies } from "../../services/company.service";
-import { Clock, Users, ArrowRight, Search } from "lucide-react-native";
+import { Clock, Users, ArrowRight, Search, Calendar } from "lucide-react-native";
 import { formatTimeAmPm } from "../../utils/time";
 
 const StyledText = styled(Text);
@@ -94,47 +94,61 @@ export const AvailableTripsScreen = () => {
           trip: item,
         })
       }
-      className="mt-2"
+      className="mt-4 p-5 shadow-sm border-0 bg-white"
+      style={{ borderLeftWidth: 4, borderLeftColor: "#22c55e" }}
     >
-      {/* HEADER */}
-      <StyledView className="flex-row justify-between items-start mb-2">
-        <StyledView className="bg-blue-100 px-3 py-1 rounded-full">
-          <StyledText className="text-nautic-primary text-xs font-bold uppercase">
+      {/* HEADER: Transport & Price */}
+      <StyledView className="flex-row justify-between items-center mb-4">
+        <StyledView className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200">
+          <StyledText className="text-slate-600 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest">
             {item.transportType || "Lancha"}
           </StyledText>
         </StyledView>
 
-        <StyledText className="text-lg font-bold text-nautic-primary">
-          ${item.price?.toLocaleString()}
+        <StyledView className="bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 shadow-sm">
+          <StyledText className="text-emerald-700 text-lg font-black tracking-tight">
+            ${item.price?.toLocaleString()}
+          </StyledText>
+        </StyledView>
+      </StyledView>
+
+      {/* DATE & TIME SECTION */}
+      <StyledView className="flex-row items-center mb-4 bg-blue-50/50 dark:bg-blue-900/20 p-3 rounded-2xl border border-blue-50">
+        <StyledView className="flex-row items-center flex-1 border-r border-blue-100 dark:border-blue-800 pr-2">
+          <Calendar size={18} color="#0B4F9C" />
+          <StyledText className="ml-2 font-bold text-nautic-primary dark:text-blue-200">
+            {item.date}
+          </StyledText>
+        </StyledView>
+        <StyledView className="flex-row items-center flex-1 pl-4">
+          <Clock size={18} color="#00B4D8" />
+          <StyledText className="ml-2 font-black text-nautic-primary dark:text-blue-100">
+            {formatTimeAmPm(item.departureTime)}
+          </StyledText>
+        </StyledView>
+      </StyledView>
+
+      <StyledView className="mb-4 px-1">
+        <StyledText className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Operado por</StyledText>
+        <StyledText className="text-nautic-primary dark:text-blue-400 font-extrabold text-base">
+          {getTripCompanyName(item)}
         </StyledText>
       </StyledView>
 
-      {/* DATE */}
-      <StyledView className="flex-row items-center mb-4 bg-blue-50 p-2 rounded-lg">
-        <Clock size={20} color="#00B4D8" />
-        <StyledText className="ml-2 font-bold text-nautic-primary">
-          {item.date} • {formatTimeAmPm(item.departureTime)}
-        </StyledText>
-      </StyledView>
-
-      <StyledText className="mb-3 text-xs text-gray-500">
-        {getTripCompanyName(item)}
-      </StyledText>
-
-      {/* FOOTER */}
-      <StyledView className="flex-row justify-between items-center border-t border-gray-100 pt-3">
+      {/* FOOTER: Capacity & CTA */}
+      <StyledView className="flex-row justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-4">
         <StyledView className="flex-row items-center">
-          <Users size={16} color="#64748B" />
-          <StyledText className="ml-2 text-sm text-gray-500">
-            {item.capacity || 0} cupos
+          <Users size={18} color="#64748B" />
+          <StyledText className="ml-2 text-sm font-bold text-slate-500">
+            {item.capacity || 0} cupos libres
           </StyledText>
         </StyledView>
 
-        <StyledView className="flex-row items-center">
-          <StyledText className="mr-1 font-bold text-nautic-accent">
-            Ver detalle
+        <StyledView className="flex-row items-center bg-nautic-primary px-4 py-2 rounded-xl shadow-sm">
+          <StyledText className="mr-2 font-black text-white text-[10px] uppercase tracking-widest">
+            Reservar
           </StyledText>
-          <ArrowRight size={16} color="#00B4D8" />
+          <ArrowRight size={14} color="#FFFFFF" />
         </StyledView>
       </StyledView>
     </PressableCard>
@@ -240,7 +254,7 @@ export const AvailableTripsScreen = () => {
 //     const loadTrips = async () => {
 //         setLoading(true);
 //         try {
-//             // Fetch ALL trips and filter client side for now, 
+//             // Fetch ALL trips and filter client side for now,
 //             // as endpoint seems to be getAllTrips()
 //             const allTrips = await getAllTrips();
 
@@ -249,7 +263,7 @@ export const AvailableTripsScreen = () => {
 //             if (origin && destination) {
 //                 filtered = allTrips.filter(
 //                     (t: any) =>
-//                         // Route object might be populated or just ID. 
+//                         // Route object might be populated or just ID.
 //                         // If it's populated:
 //                         t.route?.origin === origin &&
 //                         t.route?.destination === destination
@@ -259,7 +273,7 @@ export const AvailableTripsScreen = () => {
 //             }
 
 //             // Filter only active and future trips
-//             // filtered = filtered.filter(t => t.isActive); 
+//             // filtered = filtered.filter(t => t.isActive);
 
 //             setTrips(filtered);
 //         } catch (error) {

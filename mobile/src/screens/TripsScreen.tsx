@@ -204,40 +204,37 @@ export default function TripsScreen() {
 
     return (
       <Card
-        className={`mb-3 p-4 ${
-          !isActive
-            ? "opacity-60 bg-gray-50"
-            : ""
+        className={`mb-4 p-5 shadow-sm ${
+          !isActive ? "opacity-75 bg-slate-50" : "bg-white"
         }`}
+        style={{ borderLeftWidth: 4, borderLeftColor: isActive ? "#0B4F9C" : "#94a3b8" }}
       >
-        <StyledView className="flex-row justify-between items-start mb-2">
-          <StyledView className="flex-row items-center">
-            <StyledView className="bg-nautic-secondary p-2 rounded-lg mr-3">
-              <Ship size={20} color="#0B4F9C" />
+        <StyledView className="flex-row justify-between items-start mb-3">
+          <StyledView className="flex-row items-center flex-1">
+            <StyledView className="bg-blue-50 dark:bg-blue-900/40 p-2.5 rounded-xl mr-3">
+              <Ship size={22} color="#0B4F9C" />
             </StyledView>
 
-            <StyledView>
-              <StyledText className="font-bold text-nautic-primary text-base">
+            <StyledView className="flex-1">
+              <StyledText className="font-extrabold text-nautic-primary dark:text-blue-400 text-base leading-tight">
                 {routeName}
               </StyledText>
-              <StyledText className="text-xs text-gray-500">
+              <StyledText className="text-xs text-slate-400 font-bold uppercase tracking-tighter">
                 {companyName}
               </StyledText>
             </StyledView>
           </StyledView>
 
           <StyledView
-            className={`px-2 py-1 rounded ${
+            className={`px-2.5 py-1 rounded-full border ${
               isActive
-                ? "bg-green-100"
-                : "bg-red-100"
+                ? "bg-green-50 border-green-200"
+                : "bg-red-50 border-red-200"
             }`}
           >
             <StyledText
-              className={`text-xs font-bold ${
-                isActive
-                  ? "text-green-700"
-                  : "text-red-700"
+              className={`text-[10px] font-black tracking-widest ${
+                isActive ? "text-green-700" : "text-red-700"
               }`}
             >
               {isActive ? "ACTIVO" : "INACTIVO"}
@@ -245,66 +242,55 @@ export default function TripsScreen() {
           </StyledView>
         </StyledView>
 
-        {/* INFO */}
-        <StyledView className="flex-row justify-between mt-2 pt-2 border-t border-gray-100">
-          <StyledView className="flex-row items-center">
-            <Calendar size={14} color="#64748B" />
-            <StyledText className="ml-1 text-xs text-gray-500">
-              {format(
-                new Date(item.date),
-                "dd MMM yyyy",
-                { locale: es }
-              )}
+        {/* INFO GRID */}
+        <StyledView className="flex-row items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl mb-3">
+          <StyledView className="flex-row items-center flex-1 border-r border-slate-200 pr-2">
+            <Calendar size={16} color="#0B4F9C" />
+            <StyledText className="ml-2 text-sm font-bold text-slate-700 dark:text-slate-200">
+              {format(new Date(item.date), "dd MMM yyyy", { locale: es })}
             </StyledText>
           </StyledView>
 
-          <StyledView className="flex-row items-center">
-            <Clock size={14} color="#64748B" />
-            <StyledText className="ml-1 text-xs text-gray-500">
+          <StyledView className="flex-row items-center flex-1 pl-4">
+            <Clock size={16} color="#00B4D8" />
+            <StyledText className="ml-2 text-sm font-extrabold text-nautic-primary dark:text-blue-300">
               {formatTimeAmPm(item.departureTime)}
             </StyledText>
           </StyledView>
-
-          <StyledText className="text-xs text-gray-500">
-            {item.transportType}
-          </StyledText>
         </StyledView>
 
-        {/* ACTIONS */}
-        <StyledView className="flex-row justify-end mt-3 space-x-3 border-t border-gray-100 pt-2">
-          <TouchableOpacity
-            onPress={() => {
-              if (!routeActive || !companyActive) {
-                Alert.alert(
-                  "Bloqueado",
-                  "Empresa o ruta inactiva"
-                );
-                return;
-              }
-              handleToggle(item);
-            }}
-            className={`p-2 rounded-full ${
-              isActive
-                ? "bg-green-100"
-                : "bg-gray-200"
-            }`}
-          >
-            <Power
-              size={18}
-              color={
-                isActive
-                  ? "#15803d"
-                  : "#9ca3af"
-              }
-            />
-          </TouchableOpacity>
+        {/* FOOTER */}
+        <StyledView className="flex-row justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
+          <StyledView className="flex-row items-center">
+             <StyledText className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+              {item.transportType || "Lancha"}
+             </StyledText>
+          </StyledView>
 
-          <TouchableOpacity
-            onPress={() => handleDelete(item)}
-            className="p-2 rounded-full bg-red-100"
-          >
-            <Trash2 size={18} color="#ef4444" />
-          </TouchableOpacity>
+          {/* ACTIONS */}
+          <StyledView className="flex-row gap-4 items-center">
+            <TouchableOpacity
+              onPress={() => {
+                if (!routeActive || !companyActive) {
+                  Alert.alert("Bloqueado", "Empresa o ruta inactiva");
+                  return;
+                }
+                handleToggle(item);
+              }}
+              className={`p-2.5 rounded-full ${
+                isActive ? "bg-green-100 dark:bg-green-900/30" : "bg-slate-200 dark:bg-slate-700"
+              }`}
+            >
+              <Power size={18} color={isActive ? "#15803d" : "#64748b"} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => handleDelete(item)}
+              className="p-2.5 rounded-full bg-red-100 dark:bg-red-900/30"
+            >
+              <Trash2 size={18} color="#ef4444" />
+            </TouchableOpacity>
+          </StyledView>
         </StyledView>
       </Card>
     );

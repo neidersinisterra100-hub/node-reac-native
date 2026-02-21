@@ -94,7 +94,7 @@ export default function AppNavigator() {
             <Stack.Screen name="ManageLocations" component={ManageLocationsScreen} />
             <Stack.Screen name="MyCompanies" component={MyCompaniesScreen} />
             <Stack.Screen name="CompanyRoutes" component={CompanyRoutesScreen} />
-            {/* <Stack.Screen name="Trips" component={TripsScreen} /> eliminar */}
+            <Stack.Screen name="Trips" component={TripsScreen} />
             <Stack.Screen name="CompanyLegalInfo" component={CompanyLegalInfoScreen} options={{ presentation: "modal" }} />
             <Stack.Screen name="CreateTrip" component={CreateTripScreen} />
             <Stack.Screen name="CreateRoute" component={CreateRouteScreen} />

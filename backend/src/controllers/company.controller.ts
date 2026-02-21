@@ -118,6 +118,23 @@ export const getMyCompanies: RequestHandler = async (req, res) => {
 };
 
 /* =========================================================
+   LIST PUBLIC COMPANIES
+   ---------------------------------------------------------
+   - Retorna todas las empresas activas
+   - Usado principalmente por el Dashboard y AllRoutes
+   ========================================================= */
+
+export const getPublicCompanies: RequestHandler = async (_req, res) => {
+  try {
+    const companies = await CompanyModel.find({ isActive: true });
+    res.json(companies.map(toCompanyDTO));
+  } catch (error) {
+    console.error("❌ getPublicCompanies error:", error);
+    res.status(500).json({ message: "Error al obtener empresas públicas" });
+  }
+};
+
+/* =========================================================
    GET COMPANY
    ---------------------------------------------------------
    - ownershipGuard ya validó permisos
@@ -256,16 +273,25 @@ export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
 
     await company.save({ session });
 
-    // 2. Handle Admin User
+    // 2. Handle Admin User (Link existing or Invite)
     let adminUser: any = null;
 
-    if (adminEmail && adminPassword) {
+    if (adminEmail) {
       let admin = await UserModel.findOne({ email: adminEmail }).session(session);
 
-      if (!admin) {
-        // Create New Admin user
-        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      if (admin) {
+        // Link Existing User
+        admin.companyId = company._id;
+        admin.role = "admin";
+        await admin.save({ session });
+        adminUser = admin;
 
+        // Link back to company
+        company.admins.push(admin._id);
+        await company.save({ session });
+      } else if (adminPassword) {
+        // [LEGACY/INTERNAL] Create New Admin user with provided password
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
         admin = new UserModel({
           name: adminName || "Admin",
           email: adminEmail,
@@ -276,18 +302,30 @@ export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
           verified: true
         });
         await admin.save({ session });
+        adminUser = admin;
+
+        // Link back to company
+        company.admins.push(admin._id);
+        await company.save({ session });
       } else {
-        // Link Existing User
-        admin.companyId = company._id;
-        admin.role = "admin";
-        await admin.save({ session });
+        // 🚀 SECURE FLOW: No password -> Create Invitation
+        const token = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 48); // 48h validity
+
+        const invitation = new CompanyInvitationModel({
+          companyId: company._id,
+          email: adminEmail,
+          token,
+          expiresAt,
+          status: "pending"
+        });
+        await invitation.save({ session });
+
+        // Enviar email después de commit idealmente, pero aquí lo lanzamos
+        const inviteLink = `${process.env.FRONTEND_URL}/accept-invite?token=${token}`;
+        await sendAdminInvitation(adminEmail, inviteLink, company.name);
       }
-
-      adminUser = admin;
-
-      // Link back to company
-      company.admins.push(admin._id);
-      await company.save({ session });
     }
 
     // Update Owner's companyId
@@ -420,17 +458,24 @@ export const inviteAdmin: RequestHandler = async (req, res) => {
     }
     const { email } = req.body;
     const company = req.company;
-    if (!company) return res.status(500).json({ message: "Guard error" });
+
+    console.log("📨 inviteAdmin - body:", req.body, "companyId:", company?._id);
+
+    if (!email) {
+      return res.status(400).json({ message: "El email es requerido" });
+    }
+
+    if (!company) return res.status(500).json({ message: "Guard error: Empresa no inyectada" });
 
     // 1. Check if user already exists
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
       // Check if already admin here
       if (company.admins.some((id: Types.ObjectId) => id.toString() === existingUser.id)) {
-        return res.status(400).json({ message: "Usuario ya es admin" });
+        return res.status(400).json({ message: `El usuario ${email} ya es administrador de esta empresa` });
       }
-      if (company.owner.toString() === existingUser.id) {
-        return res.status(400).json({ message: "Usuario es el owner" });
+      if (company.owner.toString() === existingUser._id.toString()) {
+        return res.status(400).json({ message: `El usuario ${email} es el dueño de la empresa` });
       }
 
       // Add directly
@@ -469,9 +514,13 @@ export const inviteAdmin: RequestHandler = async (req, res) => {
 
     res.json({ message: "Invitación enviada exitosamente" });
 
-  } catch (error) {
-    console.error("Error inviting admin:", error);
-    res.status(500).json({ message: "Error al invitar admin" });
+  } catch (error: any) {
+    console.error("❌ Error inviting admin:", error);
+    res.status(500).json({
+      message: "Error al invitar admin",
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
 

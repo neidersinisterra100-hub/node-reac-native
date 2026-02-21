@@ -15,7 +15,7 @@ import { ScreenContainer } from "../components/ui/ScreenContainer";
 import { Card } from "../components/ui/Card";
 import { getCompanyRoutes, toggleRouteActive, deleteRoute, Route } from "../services/route.service";
 import { useAuth } from "../context/AuthContext";
-import { MapPin, Power, Trash2, Plus, ArrowLeft } from "lucide-react-native";
+import { MapPin, Power, Trash2, Plus, ArrowLeft, ArrowRight } from "lucide-react-native";
 
 const StyledText = styled(Text);
 const StyledView = styled(View);
@@ -113,76 +113,85 @@ export const CompanyRoutesScreen = () => {
      ITEM
   ========================= */
   const renderItem = ({ item }: { item: Route }) => {
-  const active = Boolean(item.isActive ?? item.active);
-  // const renderItem = ({ item }: { item: Route }) => {
-  //   const active = item.isActive ?? item.active;
+    const active = Boolean(item.isActive ?? item.active);
 
     return (
       <Card
-        className={`mb-3 p-4 flex-row justify-between items-center ${
-          !active ? "opacity-60" : ""
-        }`}
+        className="mb-4 p-5 shadow-sm border-0 bg-white dark:bg-dark-surface"
+        style={{ borderLeftWidth: 4, borderLeftColor: active ? "#22c55e" : "#94a3b8" }}
       >
-        <TouchableOpacity
-          className="flex-1"
-          onPress={() =>
-            navigation.navigate("Trips", {
-              routeId: item._id || item.id,
-              routeName: `${item.origin} - ${item.destination}`,
-              companyName,
-            })
-          }
-        >
-          <StyledView className="flex-row items-center mb-1">
-            <StyledView className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg mr-3">
-              <MapPin size={20} color="#0B4F9C" />
-            </StyledView>
-
-            <StyledView>
-              <StyledText className="font-bold text-nautic-primary dark:text-blue-400 text-lg">
-                {item.origin}
-              </StyledText>
-              <StyledText className="text-xs text-slate-400 font-bold">
-                DESTINO: {item.destination}
-              </StyledText>
-            </StyledView>
-          </StyledView>
-
-          <StyledText
-            className={`text-xs font-bold mt-1 ${
-              active ? "text-green-600" : "text-slate-400"
-            }`}
+        <StyledView className="flex-row justify-between items-center">
+          <TouchableOpacity
+            className="flex-1"
+            onPress={() =>
+              navigation.navigate("Trips", {
+                routeId: item._id || item.id,
+                routeName: `${item.origin} - ${item.destination}`,
+                companyName,
+              })
+            }
           >
-            {active ? "ACTIVA" : "INACTIVA"}
-          </StyledText>
-        </TouchableOpacity>
+            <StyledView className="flex-row items-center">
+              <StyledView className="bg-blue-50 dark:bg-blue-900/40 p-2.5 rounded-xl mr-4">
+                <MapPin size={22} color="#0B4F9C" />
+              </StyledView>
 
-        {isOwner && (
-          <StyledView className="flex-row items-center">
-            <TouchableOpacity
-              onPress={() =>
-                handleToggle(item._id || item.id, active)
-              }
-              className={`p-2 rounded-full ${
-                active
+              <StyledView className="flex-1">
+                <StyledText className="font-extrabold text-nautic-primary dark:text-blue-400 text-lg leading-tight">
+                  {item.origin}
+                </StyledText>
+                <StyledView className="flex-row items-center mt-1">
+                  <ArrowRight size={12} color="#94a3b8" />
+                  <StyledText className="ml-1 text-sm text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider">
+                    {item.destination}
+                  </StyledText>
+                </StyledView>
+
+                <StyledView className="mt-2 flex-row">
+                  <StyledView
+                    className={`px-2.5 py-0.5 rounded-full border ${active
+                      ? "bg-green-50 border-green-200"
+                      : "bg-slate-50 border-slate-200"
+                      }`}
+                  >
+                    <StyledText
+                      className={`text-[9px] font-black tracking-widest ${active ? "text-green-700" : "text-slate-500"
+                        }`}
+                    >
+                      {active ? "ACTIVA" : "INACTIVA"}
+                    </StyledText>
+                  </StyledView>
+                </StyledView>
+              </StyledView>
+            </StyledView>
+          </TouchableOpacity>
+
+          {isOwner && (
+            <StyledView className="flex-row items-center ml-2 border-l border-slate-100 dark:border-slate-800 pl-4">
+              <TouchableOpacity
+                onPress={() =>
+                  handleToggle(item._id || item.id, active)
+                }
+                className={`p-2.5 rounded-full ${active
                   ? "bg-green-100 dark:bg-green-900/30"
                   : "bg-slate-100 dark:bg-slate-800"
-              }`}
-            >
-              <Power
-                size={18}
-                color={active ? "#15803d" : "#94a3b8"}
-              />
-            </TouchableOpacity>
+                  }`}
+              >
+                <Power
+                  size={18}
+                  color={active ? "#15803d" : "#64748b"}
+                />
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => handleDelete(item._id || item.id)}
-              className="p-2 rounded-full bg-red-100 dark:bg-red-900/30 ml-2"
-            >
-              <Trash2 size={18} color="#ef4444" />
-            </TouchableOpacity>
-          </StyledView>
-        )}
+              <TouchableOpacity
+                onPress={() => handleDelete(item._id || item.id)}
+                className="p-2.5 rounded-full bg-red-50 dark:bg-red-900/30 ml-3"
+              >
+                <Trash2 size={18} color="#ef4444" />
+              </TouchableOpacity>
+            </StyledView>
+          )}
+        </StyledView>
       </Card>
     );
   };

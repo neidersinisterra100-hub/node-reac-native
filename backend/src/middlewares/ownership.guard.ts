@@ -87,6 +87,8 @@ export const ownershipGuard = async (
     const companyId =
       req.params.companyId ?? req.user.companyId;
 
+    console.log("🔍 ownershipGuard - companyId:", companyId, "params:", req.params);
+
     if (!companyId) {
       return res.status(400).json({
         message: "Empresa no definida para esta operación",

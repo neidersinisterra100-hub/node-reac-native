@@ -2,7 +2,7 @@ import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator } from
 import { IconButton } from "react-native-paper";
 import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { Building2, CheckCircle2, AlertCircle } from "lucide-react-native";
+import { Building2, CheckCircle2, AlertCircle, Power, Trash2 } from "lucide-react-native";
 import { styled } from "nativewind";
 
 import AppContainer from "../components/ui/AppContainer";
@@ -82,86 +82,91 @@ export default function MyCompaniesScreen() {
         ]);
     };
 
-    const renderItem = ({ item }: { item: Company }) => (
-        <StyledTouchableOpacity
-            className={`bg-white rounded-2xl mb-4 border border-gray-200 shadow-sm elevation-1 overflow-hidden ${!item.isActive && isOwner ? 'bg-gray-50' : ''}`}
-            onPress={() => navigation.navigate("CompanyRoutes", {
-                companyId: item.id || item._id || "",
-                companyName: item.name,
-            })}
-            activeOpacity={0.7}
-        >
-            <StyledView className="p-4 flex-row gap-3">
-                {/* Icono de Empresa */}
-                <StyledView className="w-12 h-12 rounded-xl bg-blue-50 justify-center items-center">
-                    <Building2 size={24} color={colors.primary} />
+    const renderItem = ({ item }: { item: Company }) => {
+        const isActive = Boolean(item.isActive);
+        return (
+            <StyledTouchableOpacity
+                className="bg-white dark:bg-dark-surface rounded-2xl mb-4 shadow-sm overflow-hidden"
+                style={{ borderLeftWidth: 4, borderLeftColor: isActive ? "#0B4F9C" : "#94a3b8" }}
+                onPress={() => navigation.navigate("CompanyRoutes", {
+                    companyId: item.id || item._id || "",
+                    companyName: item.name,
+                })}
+                activeOpacity={0.7}
+            >
+                <StyledView className="p-5 flex-row items-center border-0">
+                    {/* Icono de Empresa */}
+                    <StyledView className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/40 justify-center items-center mr-4">
+                        <Building2 size={28} color="#0B4F9C" />
+                    </StyledView>
+
+                    {/* Información Principal */}
+                    <StyledView className="flex-1">
+                        <StyledView className="flex-row justify-between items-center mb-1">
+                            <StyledText className="text-lg font-extrabold text-nautic-primary dark:text-blue-400 flex-1 leading-tight">
+                                {item.name}
+                            </StyledText>
+
+                            {/* BADGE DE LEGALIDAD PROFESIONAL */}
+                            <StyledView className={`px-2.5 py-1 rounded-full border ${isActive ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'}`}>
+                                <StyledText className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-green-700' : 'text-slate-500'}`}>
+                                    {isActive ? 'VERIFICADA' : 'PENDIENTE'}
+                                </StyledText>
+                            </StyledView>
+                        </StyledView>
+
+                        <StyledText className="text-xs text-slate-400 font-bold mb-1 uppercase tracking-tighter">NIT: {item.nit || 'Sin registrar'}</StyledText>
+
+                        {isOwner && (
+                            <StyledView className="flex-row items-center mt-1">
+                                <StyledText className="text-xs text-slate-500 font-bold">Balance:</StyledText>
+                                <StyledView className="ml-2 bg-emerald-50 px-2 py-0.5 rounded">
+                                    <StyledText className="text-emerald-700 font-black text-xs">${item.balance?.toLocaleString() || '0'}</StyledText>
+                                </StyledView>
+                            </StyledView>
+                        )}
+                    </StyledView>
                 </StyledView>
 
-                {/* Información Principal */}
-                <StyledView className="flex-1">
-                    <StyledView className="flex-row justify-between items-center mb-1">
-                        <StyledText className="text-base font-bold text-slate-800 flex-1 mr-2">{item.name}</StyledText>
+                {/* Acciones (Solo Owner) */}
+                {isOwner && (
+                    <StyledView className="flex-row items-center justify-between px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800">
+                        <StyledText className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Gestión de Empresa</StyledText>
+                        <StyledView className="flex-row items-center gap-3">
+                            <TouchableOpacity
+                                className={`p-2 rounded-full ${isActive ? 'bg-amber-100' : 'bg-green-100'}`}
+                                onPress={() => handleToggle(item.id || item._id || "", isActive)}
+                            >
+                                <Power size={18} color={isActive ? '#d97706' : '#15803d'} />
+                            </TouchableOpacity>
 
-                        {/* BADGE DE LEGALIDAD PROFESIONAL */}
-                        <StyledView className={`flex-row items-center px-2 py-1 rounded-xl gap-1 ${item.isActive ? 'bg-green-100' : 'bg-red-100'}`}>
-                            {item.active ? (
-                                <CheckCircle2 size={12} color="#166534" />
-                            ) : (
-                                <AlertCircle size={12} color="#991b1b" />
-                            )}
-                            <StyledText className={`text-[10px] font-bold uppercase ${item.isActive ? 'text-green-800' : 'text-red-800'}`}>
-                                {item.isActive ? 'Verificada' : 'Pendiente'}
-                            </StyledText>
+                            <TouchableOpacity
+                                className="p-2 rounded-full bg-blue-100"
+                                onPress={() => navigation.navigate("CompanyAdmins", {
+                                    companyId: item.id || item._id,
+                                    companyName: item.name,
+                                })}
+                            >
+                                <IconButton
+                                    icon="account-group"
+                                    iconColor="#2563eb"
+                                    size={18}
+                                    style={{ margin: 0, padding: 0 }}
+                                />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                className="p-2 rounded-full bg-red-100"
+                                onPress={() => handleDelete(item.id || item._id || "")}
+                            >
+                                <Trash2 size={18} color="#ef4444" />
+                            </TouchableOpacity>
                         </StyledView>
                     </StyledView>
-
-                    <StyledText className="text-xs text-slate-500 mb-1">NIT: {item.nit || 'Sin registrar'}</StyledText>
-
-                    {isOwner && (
-                        <StyledText className="text-xs text-slate-900">
-                            Balance: <StyledText className="font-bold">${item.balance?.toLocaleString() || '0'}</StyledText>
-                        </StyledText>
-                    )}
-                </StyledView>
-            </StyledView>
-
-            {/* Acciones (Solo Owner) */}
-            {isOwner && (
-                <StyledView className="flex-row items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-100">
-                    <StyledText className="text-xs text-slate-400 font-medium">Acciones:</StyledText>
-                    <StyledView className="flex-row items-center gap-2">
-                        <TouchableOpacity
-                            className={`px-3 py-1.5 rounded-lg ${item.isActive ? 'bg-red-50' : 'bg-green-50'}`}
-                            onPress={() => handleToggle(item.id || item._id || "", !!item.isActive)}
-                        >
-                            <StyledText className={`text-xs font-semibold ${item.isActive ? 'text-red-600' : 'text-green-600'}`}>
-                                {item.isActive ? 'Desactivar' : 'Activar'}
-                            </StyledText>
-                        </TouchableOpacity>
-
-                        <IconButton
-                            icon="account-group"
-                            iconColor="#3b82f6"
-                            size={20}
-                            style={{ margin: 0 }}
-                            onPress={() => navigation.navigate("CompanyAdmins", {
-                                companyId: item.id || item._id,
-                                companyName: item.name,
-                            })}
-                        />
-
-                        <IconButton
-                            icon="delete-outline"
-                            iconColor="#ef4444"
-                            size={20}
-                            style={{ margin: 0 }}
-                            onPress={() => handleDelete(item.id || item._id || "")}
-                        />
-                    </StyledView>
-                </StyledView>
-            )}
-        </StyledTouchableOpacity>
-    );
+                )}
+            </StyledTouchableOpacity>
+        );
+    };
 
     return (
         <AppContainer>

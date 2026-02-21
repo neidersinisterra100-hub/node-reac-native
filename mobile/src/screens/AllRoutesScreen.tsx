@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { Navigation } from "lucide-react-native";
+import { Map, ArrowRight } from "lucide-react-native";
 import { styled } from "nativewind";
 
 import AppContainer from "../components/ui/AppContainer";
@@ -96,42 +96,33 @@ export default function AllRoutesScreen() {
             companyName,
           })
         }
-        className="
-          mb-4
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          p-4
-          shadow-sm
-
-          dark:border-dark-border
-          dark:bg-dark-surface
-        "
+        className="mb-4 p-5 shadow-sm border-0 bg-white dark:bg-dark-surface rounded-2xl"
+        style={{ borderLeftWidth: 4, borderLeftColor: "#0B4F9C" }}
       >
-        <View className="flex-row items-center gap-3">
-          {/* Icono */}
-          <View className="rounded-xl bg-nautic-secondary p-3 dark:bg-dark-bg">
-            <Navigation size={22} className="text-nautic-accent" />
-          </View>
+        <StyledView className="flex-row items-center">
+          <StyledView className="bg-blue-50 dark:bg-blue-900/40 p-2.5 rounded-xl mr-4">
+            <Map size={22} color="#0B4F9C" />
+          </StyledView>
 
-          {/* Texto */}
-          <View className="flex-1">
-            <Text className="text-base font-semibold text-slate-800 dark:text-dark-text">
-              {item.origin} → {item.destination}
+          <StyledView className="flex-1">
+            <Text className="font-extrabold text-nautic-primary dark:text-blue-400 text-lg leading-tight">
+              {item.origin}
             </Text>
-
-            <Text className="text-sm font-medium text-nautic-primary dark:text-nautic-accent">
-              {companyName}
-            </Text>
-
-            <Text className="mt-1 text-xs text-slate-500 dark:text-dark-textMuted">
-              {user?.role === "owner" || user?.role === "admin" || user?.role === "super_owner"
-                ? "Toca para gestionar viajes"
-                : "Ver horarios disponibles"}
-            </Text>
-          </View>
-        </View>
+            <StyledView className="flex-row items-center mt-1">
+              <ArrowRight size={12} color="#94a3b8" />
+              <Text className="ml-1 text-sm text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider">
+                {item.destination}
+              </Text>
+            </StyledView>
+            <StyledView className="flex-row items-center mt-2">
+              <StyledView className="bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-100 dark:border-slate-700">
+                <Text className="text-[10px] text-nautic-primary font-black uppercase">
+                  {companyName}
+                </Text>
+              </StyledView>
+            </StyledView>
+          </StyledView>
+        </StyledView>
       </TouchableOpacity>
     );
   };

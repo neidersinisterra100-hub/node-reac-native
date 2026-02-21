@@ -260,23 +260,36 @@ export const CompanyDashboardScreen = () => {
                                 </TouchableOpacity>
                             </StyledView>
 
-                            {routes.map((item, idx) => (
-                                <PressableCard
-                                    key={item._id || item.id || `${item.origin}-${item.destination}-${idx}`}
-                                    className="mb-3 p-4 flex-row items-center"
-                                    onPress={() => handleRoutePress(item)}
-                                >
-                                    <StyledView className="w-10 h-10 bg-blue-50 rounded-xl items-center justify-center mr-3">
-                                        <Map size={20} color="#0B4F9C" />
-                                    </StyledView>
-                                    <StyledView className="flex-1">
-                                        <StyledText className="font-bold text-gray-800">{item.origin} → {item.destination}</StyledText>
-                                        <StyledText className="text-xs text-gray-500">
-                                            {getRouteCompanyName(item)}
-                                        </StyledText>
-                                    </StyledView>
-                                </PressableCard>
-                            ))}
+                            {routes.map((item, idx) => {
+                                const companyName = getRouteCompanyName(item);
+                                return (
+                                    <PressableCard
+                                        key={item._id || item.id || `${item.origin}-${item.destination}-${idx}`}
+                                        className="mb-4 p-5 shadow-sm border-0 bg-white"
+                                        style={{ borderLeftWidth: 4, borderLeftColor: "#0B4F9C" }}
+                                        onPress={() => handleRoutePress(item)}
+                                    >
+                                        <StyledView className="flex-row items-center">
+                                            <StyledView className="bg-blue-50 dark:bg-blue-900/40 p-2.5 rounded-xl mr-4">
+                                                <Map size={22} color="#0B4F9C" />
+                                            </StyledView>
+                                            <StyledView className="flex-1">
+                                                <StyledText className="font-extrabold text-nautic-primary dark:text-blue-400 text-lg leading-tight">
+                                                    {item.origin}
+                                                </StyledText>
+                                                <StyledView className="flex-row items-center mt-1">
+                                                    <StyledText className="text-xs text-slate-500 dark:text-slate-300 font-bold uppercase tracking-wider">
+                                                        {item.destination}
+                                                    </StyledText>
+                                                </StyledView>
+                                                <StyledText className="mt-1 text-[10px] text-nautic-primary/60 font-black uppercase tracking-tighter">
+                                                    {companyName}
+                                                </StyledText>
+                                            </StyledView>
+                                        </StyledView>
+                                    </PressableCard>
+                                );
+                            })}
                             {routes.length === 0 && (
                                 <StyledView className="items-center p-4"><StyledText className="text-gray-400">No hay rutas</StyledText></StyledView>
                             )}
@@ -293,33 +306,50 @@ export const CompanyDashboardScreen = () => {
                                 </TouchableOpacity>
                             </StyledView>
 
-                            {trips.map((item, idx) => (
-                                <PressableCard
-                                    key={item._id || item.id || `${item.date}-${item.departureTime}-${idx}`}
-                                    className="mb-3 p-4 flex-row items-center border-l-4 border-l-emerald-500"
-                                    onPress={() => handleTripPress(item)}
-                                >
-                                    <StyledView className="w-10 h-10 bg-emerald-50 rounded-xl items-center justify-center mr-3">
-                                        <Calendar size={20} color="#10B981" />
-                                    </StyledView>
-                                    <StyledView className="flex-1">
-                                        <StyledText className="font-bold text-gray-800">
-                                            {item.route?.origin || 'Origen'} → {item.route?.destination || 'Destino'}
-                                        </StyledText>
-                                        <StyledText className="text-xs text-gray-500">
-                                            {new Date(item.date).toLocaleDateString()} • {formatTimeAmPm(item.departureTime)}
-                                        </StyledText>
-                                        <StyledText className="text-xs text-gray-500">
-                                            {getTripCompanyName(item)} • ${Number(item.price || 0).toLocaleString('es-CO')}
-                                        </StyledText>
-                                    </StyledView>
-                                    <StyledView>
-                                        <StyledText className={`text-xs font-bold ${(item.isActive ?? item.active) ? 'text-emerald-600' : 'text-red-500'}`}>
-                                            {(item.isActive ?? item.active) ? 'ACTIVO' : 'CANCEL'}
-                                        </StyledText>
-                                    </StyledView>
-                                </PressableCard>
-                            ))}
+                            {trips.map((item, idx) => {
+                                const isActive = item.isActive ?? item.active;
+                                return (
+                                    <PressableCard
+                                        key={item._id || item.id || `${item.date}-${item.departureTime}-${idx}`}
+                                        className="mb-4 p-5 shadow-sm border-0 bg-white"
+                                        style={{ borderLeftWidth: 4, borderLeftColor: isActive ? "#22c55e" : "#94a3b8" }}
+                                        onPress={() => handleTripPress(item)}
+                                    >
+                                        <StyledView className="flex-row justify-between items-start mb-3">
+                                            <StyledView className="flex-row items-center flex-1">
+                                                <StyledView className="bg-emerald-50 dark:bg-emerald-900/20 p-2.5 rounded-xl mr-3">
+                                                    <Calendar size={22} color="#10B981" />
+                                                </StyledView>
+                                                <StyledView className="flex-1">
+                                                    <StyledText className="font-extrabold text-gray-800 dark:text-white text-base">
+                                                        {item.route?.origin || 'Origen'} → {item.route?.destination || 'Destino'}
+                                                    </StyledText>
+                                                    <StyledText className="text-[10px] text-slate-400 font-black uppercase">
+                                                        {getTripCompanyName(item)}
+                                                    </StyledText>
+                                                </StyledView>
+                                            </StyledView>
+
+                                            <StyledView className="bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
+                                                <StyledText className="text-emerald-700 font-black text-sm">
+                                                    ${Number(item.price || 0).toLocaleString('es-CO')}
+                                                </StyledText>
+                                            </StyledView>
+                                        </StyledView>
+
+                                        <StyledView className="flex-row justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl">
+                                            <StyledText className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                                                {new Date(item.date).toLocaleDateString()} • {formatTimeAmPm(item.departureTime)}
+                                            </StyledText>
+                                            <StyledView className={`px-2 py-0.5 rounded-full ${isActive ? 'bg-green-100' : 'bg-red-100'}`}>
+                                                <StyledText className={`text-[9px] font-black tracking-widest ${isActive ? 'text-green-700' : 'text-red-700'}`}>
+                                                    {isActive ? 'ACTIVO' : 'CANCELADO'}
+                                                </StyledText>
+                                            </StyledView>
+                                        </StyledView>
+                                    </PressableCard>
+                                );
+                            })}
 
                             {/* Empty State */}
                             {trips.length === 0 && (

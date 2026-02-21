@@ -47,3 +47,7 @@ export const createCompanySchema = z.object({
 export const updateCompanySchema = z.object({
   isActive: z.boolean().optional(),
 });
+
+export const inviteAdminSchema = z.object({
+  email: z.string().email("Email inválido"),
+});

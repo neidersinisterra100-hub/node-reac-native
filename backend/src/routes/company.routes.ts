@@ -7,8 +7,9 @@ import { validateRequest } from "../middlewares/validateRequest.js";
 
 import {
   createCompany,
-  createCompanyWithAdmin, // We need to check if this is exported in controller
+  createCompanyWithAdmin,
   getMyCompanies,
+  getPublicCompanies,
   toggleCompanyActive,
   deleteCompany,
   getCompany,
@@ -23,12 +24,13 @@ import { getCompanyRoutes } from "../controllers/route.controller.js";
 import {
   createCompanySchema,
   updateCompanySchema,
+  inviteAdminSchema,
 } from "../schemas/company.schema.js";
 
 const router = Router();
 
 /* ================= PUBLIC ================= */
-// router.get("/", getPublicCompanies);
+router.get("/", getPublicCompanies);
 
 /* ================= CREATE ================= */
 // Crear empresa
@@ -120,6 +122,7 @@ router.post(
   "/:companyId/invite-admin",
   requireAuth,
   ownershipGuard,
+  validateRequest(inviteAdminSchema),
   inviteAdmin
 );
 

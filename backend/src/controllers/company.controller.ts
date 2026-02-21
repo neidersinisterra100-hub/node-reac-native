@@ -37,6 +37,21 @@ export interface CompanyDTO {
   plan: "free" | "pro" | "enterprise";
   subscriptionStatus: "active" | "inactive" | "past_due" | "cancelled";
   createdAt: Date;
+  nit?: string;
+  legalRepresentative?: string;
+  licenseNumber?: string;
+  insurancePolicyNumber?: string;
+  departmentId?: string;
+  municipioId?: string;
+  cityId?: string;
+  compliance?: {
+    hasLegalConstitution?: boolean;
+    hasTransportLicense?: boolean;
+    hasVesselRegistration?: boolean;
+    hasCrewLicenses?: boolean;
+    hasInsurance?: boolean;
+    hasSafetyProtocols?: boolean;
+  };
 }
 
 /**
@@ -50,6 +65,14 @@ function toCompanyDTO(company: CompanyDocument): CompanyDTO {
     plan: company.plan,
     subscriptionStatus: company.subscriptionStatus,
     createdAt: company.createdAt,
+    nit: company.nit,
+    legalRepresentative: company.legalRepresentative,
+    licenseNumber: company.licenseNumber,
+    insurancePolicyNumber: company.insurancePolicyNumber,
+    departmentId: company.departmentId?.toString(),
+    municipioId: company.municipioId?.toString(),
+    cityId: company.cityId?.toString(),
+    compliance: company.compliance
   };
 }
 
@@ -258,7 +281,7 @@ export const createCompanyWithAdmin: RequestHandler = async (req, res) => {
     } = req.body;
 
     // Basic validation for location fields
-    if (!companyDataRaw.departmentId || !companyDataRaw.municipioId || !companyDataRaw.cityId) {
+    if (!companyDataRaw.departmentId || !companyDataRaw.municipioId || !companyDataRaw.cityId) { 
       await session.abortTransaction();
       return res.status(400).json({ message: "Ubicación requerida (Departamento, Municipio, Ciudad)" });
     }
@@ -390,8 +413,8 @@ export const getCompanyAdmins: RequestHandler = async (req, res) => {
 // A) AGREGAR ADMIN DIRECTO (Usuario existente por ID)
 export const addAdmin: RequestHandler = async (req, res) => {
   try {
-    if (req.user?.role !== 'super_owner' && req.company?.owner.toString() !== req.user?.id) {
-      return res.status(403).json({ message: "Solo el owner puede gestionar administradores" });
+    if (req.user?.role !== 'super_owner' && req.company?.owner.toString() !== req.user?.id) {    
+      return res.status(403).json({ message: "Solo el owner puede gestionar administradores" }); 
     }
     const { userId } = req.body;
 
@@ -427,8 +450,8 @@ export const addAdmin: RequestHandler = async (req, res) => {
 // B) REMOVE ADMIN
 export const removeAdmin: RequestHandler = async (req, res) => {
   try {
-    if (req.user?.role !== 'super_owner' && req.company?.owner.toString() !== req.user?.id) {
-      return res.status(403).json({ message: "Solo el owner puede gestionar administradores" });
+    if (req.user?.role !== 'super_owner' && req.company?.owner.toString() !== req.user?.id) {    
+      return res.status(403).json({ message: "Solo el owner puede gestionar administradores" }); 
     }
     const { adminId } = req.params;
 
@@ -453,8 +476,8 @@ export const removeAdmin: RequestHandler = async (req, res) => {
 // C) INVITE ADMIN
 export const inviteAdmin: RequestHandler = async (req, res) => {
   try {
-    if (req.user?.role !== 'super_owner' && req.company?.owner.toString() !== req.user?.id) {
-      return res.status(403).json({ message: "Solo el owner puede gestionar administradores" });
+    if (req.user?.role !== 'super_owner' && req.company?.owner.toString() !== req.user?.id) {    
+      return res.status(403).json({ message: "Solo el owner puede gestionar administradores" }); 
     }
     const { email } = req.body;
     const company = req.company;
@@ -465,13 +488,13 @@ export const inviteAdmin: RequestHandler = async (req, res) => {
       return res.status(400).json({ message: "El email es requerido" });
     }
 
-    if (!company) return res.status(500).json({ message: "Guard error: Empresa no inyectada" });
+    if (!company) return res.status(500).json({ message: "Guard error: Empresa no inyectada" }); 
 
     // 1. Check if user already exists
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
       // Check if already admin here
-      if (company.admins.some((id: Types.ObjectId) => id.toString() === existingUser.id)) {
+      if (company.admins.some((id: Types.ObjectId) => id.toString() === existingUser.id)) {      
         return res.status(400).json({ message: `El usuario ${email} ya es administrador de esta empresa` });
       }
       if (company.owner.toString() === existingUser._id.toString()) {
@@ -509,7 +532,7 @@ export const inviteAdmin: RequestHandler = async (req, res) => {
     if (!sent) {
       // Optional: rollback? Or just warn.
       console.warn("Could not send email, but invitation created.");
-      return res.json({ message: "Invitación creada, pero hubo un error enviando el email." });
+      return res.json({ message: "Invitación creada, pero hubo un error enviando el email." });  
     }
 
     res.json({ message: "Invitación enviada exitosamente" });
@@ -560,7 +583,7 @@ export const acceptInvite: RequestHandler = async (req, res) => {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    // Validate emails match? 
+    // Validate emails match?
     // Strict security: Invite email must match User email
     if (user.email !== invitation.email) {
       await session.abortTransaction();

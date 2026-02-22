@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { styled } from "nativewind";
+import { ListSkeleton } from "../components/ui/Skeletons";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { format } from "date-fns";
@@ -20,6 +21,7 @@ import {
   Trash2,
   Plus,
   ArrowLeft,
+  ArrowRight,
 } from "lucide-react-native";
 
 import { ScreenContainer } from "../components/ui/ScreenContainer";
@@ -216,10 +218,16 @@ export default function TripsScreen() {
             </StyledView>
 
             <StyledView className="flex-1">
-              <StyledText className="font-extrabold text-nautic-primary dark:text-blue-400 text-base leading-tight">
-                {routeName}
-              </StyledText>
-              <StyledText className="text-xs text-slate-400 font-bold uppercase tracking-tighter">
+              <StyledView className="flex-row flex-wrap items-center">
+                <StyledText className="font-extrabold text-nautic-primary dark:text-blue-400 text-base leading-tight mr-2">
+                  {item.route && typeof item.route === "object" ? item.route.origin : routeName.split(' - ')[0]}
+                </StyledText>
+                <ArrowRight size={12} color="#64748B" style={{ marginRight: 4 }} />
+                <StyledText className="text-[11px] text-slate-500 dark:text-slate-300 font-bold uppercase tracking-wider">
+                   {item.route && typeof item.route === "object" ? item.route.destination : routeName.split(' - ')[1]}
+                </StyledText>
+              </StyledView>
+              <StyledText className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">
                 {companyName}
               </StyledText>
             </StyledView>
@@ -328,11 +336,7 @@ export default function TripsScreen() {
       </StyledView>
 
       {loading ? (
-        <ActivityIndicator
-          size="large"
-          color="#0B4F9C"
-          className="mt-8"
-        />
+        <ListSkeleton count={4} />
       ) : (
         <FlatList
           data={trips}

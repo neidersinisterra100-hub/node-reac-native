@@ -156,6 +156,8 @@ export async function login(req: SecurityRequest, res: Response) {
         email: user.email,
         role: user.role,
         companyId: user.companyId,
+        createdAt: (user as any).createdAt,
+        updatedAt: (user as any).updatedAt,
       },
     });
   } catch (error) {

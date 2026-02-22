@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { Map, ArrowRight } from "lucide-react-native";
 import { styled } from "nativewind";
+import { ListSkeleton } from "../components/ui/Skeletons";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
@@ -105,12 +106,12 @@ export default function AllRoutesScreen() {
           </StyledView>
 
           <StyledView className="flex-1">
-            <Text className="font-extrabold text-nautic-primary dark:text-blue-400 text-lg leading-tight">
-              {item.origin}
-            </Text>
-            <StyledView className="flex-row items-center mt-1">
-              <ArrowRight size={12} color="#94a3b8" />
-              <Text className="ml-1 text-sm text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider">
+            <StyledView className="flex-row flex-wrap items-center">
+              <Text className="font-extrabold text-nautic-primary dark:text-blue-400 text-lg leading-tight mr-2">
+                {item.origin}
+              </Text>
+              <ArrowRight size={14} color="#94a3b8" style={{ marginRight: 6 }} />
+              <Text className="text-sm text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider">
                 {item.destination}
               </Text>
             </StyledView>
@@ -137,9 +138,7 @@ export default function AllRoutesScreen() {
       />
 
       {loading ? (
-        <StyledView className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#00B4D8" />
-        </StyledView>
+        <ListSkeleton count={5} />
       ) : (
         <FlatList
           data={routes}

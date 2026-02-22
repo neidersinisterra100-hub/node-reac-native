@@ -11,6 +11,7 @@ import { api } from "./api";
 export interface Seat {
   seatNumber: number;
   available: boolean;
+  isReservedByMe?: boolean; // 🚀 Nuevo campo
 }
 
 /* =========================================================
@@ -30,33 +31,29 @@ export async function getTripSeats(
 }
 
 /* =========================================================
-   RESERVE SEAT (BLOCK)
+   RESERVE SEATS (BLOCK)
    ---------------------------------------------------------
    🔐 Requiere auth
    POST /api/seats/reserve
    ========================================================= */
 export async function reserveSeat(data: {
   tripId: string;
-  seatNumber: number;
+  seatNumber?: number;
+  seatNumbers?: number[];
 }) {
   return api.post("/seats/reserve", data);
 }
 
 /* =========================================================
-   RELEASE SEAT (UNBLOCK)
+   RELEASE SEATS (UNBLOCK)
    ---------------------------------------------------------
    🔐 Requiere auth
    POST /api/seats/release
-   ---------------------------------------------------------
-   Se llama cuando:
-   - usuario cancela
-   - goBack
-   - logout
-   - app va a background
    ========================================================= */
 export async function releaseSeat(data: {
   tripId: string;
-  seatNumber: number;
+  seatNumber?: number;
+  seatNumbers?: number[];
 }) {
   return api.post("/seats/release", data);
 }

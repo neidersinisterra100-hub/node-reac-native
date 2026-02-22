@@ -13,6 +13,7 @@ import { es } from "date-fns/locale";
 
 import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
+import { ListSkeleton } from "../components/ui/Skeletons";
 
 import { getMyTickets } from "../services/ticket.service";
 import { Ticket } from "../types/ticket";
@@ -163,12 +164,7 @@ export default function MyTicketsScreen() {
       <AppHeader title="Mis Tickets" showBack />
 
       {loading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator
-            size="large"
-            color={colors.primary}
-          />
-        </View>
+        <ListSkeleton count={4} />
       ) : (
         <FlatList
           data={tickets}

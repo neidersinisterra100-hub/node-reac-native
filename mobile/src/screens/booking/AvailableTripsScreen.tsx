@@ -129,18 +129,35 @@ export const AvailableTripsScreen = () => {
       </StyledView>
 
       <StyledView className="mb-4 px-1">
-        <StyledText className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Operado por</StyledText>
-        <StyledText className="text-nautic-primary dark:text-blue-400 font-extrabold text-base">
-          {getTripCompanyName(item)}
-        </StyledText>
+        <StyledView className="flex-row flex-wrap items-center">
+          <StyledText className="text-lg font-black text-nautic-primary leading-tight mr-2">
+            {item.route && typeof item.route === "object" ? item.route.origin : "Origen"}
+          </StyledText>
+          <ArrowRight size={14} color="#64748b" style={{ marginRight: 6 }} />
+          <StyledText className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            {item.route && typeof item.route === "object" ? item.route.destination : "Destino"}
+          </StyledText>
+        </StyledView>
+
+        <StyledView className="mt-2">
+          <StyledText className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Operado por</StyledText>
+          <StyledText className="text-nautic-primary dark:text-blue-400 font-extrabold text-sm">
+            {getTripCompanyName(item)}
+          </StyledText>
+        </StyledView>
       </StyledView>
 
       {/* FOOTER: Capacity & CTA */}
       <StyledView className="flex-row justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-4">
         <StyledView className="flex-row items-center">
           <Users size={18} color="#64748B" />
-          <StyledText className="ml-2 text-sm font-bold text-slate-500">
-            {item.capacity || 0} cupos libres
+          <StyledText className={`ml-2 text-sm font-bold ${(item.capacity - (item.soldSeats ?? 0)) <= 3
+              ? "text-red-500"
+              : (item.capacity - (item.soldSeats ?? 0)) <= Math.ceil(item.capacity * 0.3)
+                ? "text-amber-500"
+                : "text-slate-500"
+            }`}>
+            {Math.max(0, item.capacity - (item.soldSeats ?? 0))} cupos libres
           </StyledText>
         </StyledView>
 

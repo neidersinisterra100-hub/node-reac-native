@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { styled } from 'nativewind';
 import { ScreenContainer } from '../../components/ui/ScreenContainer';
 import { PressableCard } from '../../components/ui/Card';
@@ -9,10 +9,15 @@ import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { getAllRoutes } from '../../services/route.service';
 import { tripService } from '../../services/trip.service';
-import { Compass, Anchor, Ticket, Building2, Map, Calendar, Search, Menu } from 'lucide-react-native';
+import { Map, MapIcon, Compass, Anchor, Ticket, Building2, Search, Menu, Calendar, Ship } from 'lucide-react-native';
+import { WeatherWidget } from '../../components/dashboard/WeatherWidget';
 import { getAllCompanies, getMyCompanies } from '../../services/company.service';
+import { getMyTickets } from '../../services/ticket.service';
 import { getAllMunicipios } from '../../services/municipio.service';
 import { formatTimeAmPm } from '../../utils/time';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { DashboardSkeleton } from '../../components/ui/Skeletons';
 
 const StyledText = styled(Text);
 const StyledView = styled(View);
@@ -75,12 +80,17 @@ export const CompanyDashboardScreen = () => {
         }
     };
 
-    const Shortcut = ({ icon, label, onPress, color }: any) => (
+    const Shortcut = ({ icon, label, onPress, colors }: any) => (
         <TouchableOpacity onPress={onPress} className="items-center w-1/4">
-            <StyledView className={`w-14 h-14 rounded-2xl items-center justify-center mb-2 shadow-sm ${color}`}>
+            <LinearGradient
+                colors={colors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                className="w-14 h-14 rounded-2xl items-center justify-center mb-2 shadow-md"
+            >
                 {icon}
-            </StyledView>
-            <StyledText className="text-xs font-bold text-gray-600 text-center">{label}</StyledText>
+            </LinearGradient>
+            <StyledText className="text-[11px] font-bold text-slate-600 text-center">{label}</StyledText>
         </TouchableOpacity>
     );
 
@@ -144,20 +154,44 @@ export const CompanyDashboardScreen = () => {
         return "Empresa";
     };
 
+    const [activeFacet, setActiveFacet] = useState<'aereo' | 'fluvial' | 'terrestre'>('fluvial');
+
+    const FacetButton = ({ type, icon: Icon, label, color, bg }: { type: typeof activeFacet, icon: any, label: string, color: string, bg: string }) => {
+        const isActive = activeFacet === type;
+        return (
+            <TouchableOpacity
+                onPress={() => setActiveFacet(type)}
+                className={`flex-1 flex-row items-center justify-center py-2.5 rounded-2xl mx-1 border ${isActive
+                    ? 'bg-white shadow-sm border-white'
+                    : 'bg-white/10 border-white/5'
+                    }`}
+            >
+                <StyledView className={`w-8 h-8 rounded-xl items-center justify-center ${isActive ? bg : 'bg-white/20'}`}>
+                    <Icon size={16} color={isActive ? "white" : "rgba(255,255,255,0.7)"} strokeWidth={2.5} />
+                </StyledView>
+                {isActive && (
+                    <StyledText className="text-nautic-primary font-bold ml-2 text-[10px] uppercase tracking-tighter">
+                        {label}
+                    </StyledText>
+                )}
+            </TouchableOpacity>
+        );
+    };
+
     return (
         <ScreenContainer withPadding={false}>
             {/* Header */}
-            <StyledView className="bg-nautic-primary pt-12 pb-8 px-6 rounded-b-[32px] shadow-lg">
-                <StyledView className="flex-row justify-between items-center mb-6">
+            <StyledView className="bg-nautic-primary pt-10 pb-5 px-6 rounded-b-[32px] shadow-lg">
+                <StyledView className="flex-row justify-between items-center mb-3">
                     <StyledView className="flex-row items-center">
-                        <StyledView className="w-12 h-12 bg-white/20 rounded-full items-center justify-center mr-3 border border-white/30">
-                            <StyledText className="text-white font-bold text-lg">
+                        <StyledView className="w-10 h-10 bg-white/20 rounded-full items-center justify-center mr-3 border border-white/30">
+                            <StyledText className="text-white font-bold text-base">
                                 {user?.name?.substring(0, 2).toUpperCase() || "CP"}
                             </StyledText>
                         </StyledView>
                         <StyledView>
-                            <StyledText className="text-white font-bold text-lg">{user?.name}</StyledText>
-                            <StyledText className="text-white/70 text-xs">
+                            <StyledText className="text-white font-bold text-base">{user?.name}</StyledText>
+                            <StyledText className="text-white/70 text-[10px]">
                                 {isOwner
                                     ? (user?.role === 'admin'
                                         ? 'Administrador'
@@ -171,192 +205,309 @@ export const CompanyDashboardScreen = () => {
                     <StyledView className="flex-row gap-2">
                         <TouchableOpacity onPress={() => navigation.navigate('LocationSelection')}>
                             <StyledView className="bg-white/10 p-2 rounded-lg">
-                                <Search size={20} color="white" />
+                                <Search size={18} color="white" />
                             </StyledView>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => navigation.navigate('Menu')}>
                             <StyledView className="bg-white/10 p-2 rounded-lg">
-                                <Menu size={20} color="white" />
+                                <Menu size={18} color="white" />
                             </StyledView>
                         </TouchableOpacity>
                     </StyledView>
                 </StyledView>
-                <StyledText className="text-white text-2xl font-bold ml-1">
-                    {isOwner ? `Panel de Control - ${activeMunicipioName || "General"}` : "Hola, ¿A dónde vamos?"}
-                </StyledText>
+
+                <StyledView className="mb-1">
+                    <View className="flex-row justify-between">
+                        <FacetButton
+                            type="aereo"
+                            icon={(props: any) => <MaterialCommunityIcons name="airplane" {...props} />}
+                            label="Aéreos"
+                            color="#3b82f6"
+                            bg="bg-blue-500"
+                        />
+                        <FacetButton
+                            type="fluvial"
+                            icon={Anchor}
+                            label="Fluvial"
+                            color="#10b981"
+                            bg="bg-emerald-500"
+                        />
+                        <FacetButton
+                            type="terrestre"
+                            icon={(props: any) => <MaterialCommunityIcons name="bus" {...props} />}
+                            label="Terrestre"
+                            color="#f59e0b"
+                            bg="bg-amber-500"
+                        />
+                    </View>
+                </StyledView>
             </StyledView>
 
             <ScrollView className="flex-1 px-4 pt-6" showsVerticalScrollIndicator={false}>
-                {/* Shortcuts */}
-                <StyledView className="flex-row justify-between mb-8">
-                    {isOwner ? (
-                        <>
-                            <Shortcut
-                                icon={<Compass size={24} color="white" />}
-                                label="Rutas"
-                                onPress={() => navigation.navigate('AllRoutes')}
-                                color="bg-blue-500"
-                            />
-                            <Shortcut
-                                icon={<Anchor size={24} color="white" />}
-                                label="Viajes"
-                                onPress={() => navigation.navigate('AllTrips')}
-                                color="bg-emerald-500"
-                            />
-                            <Shortcut
-                                icon={<Ticket size={24} color="white" />}
-                                label="Tickets"
-                                onPress={() => navigation.navigate('MyTickets')}
-                                color="bg-amber-500"
-                            />
-                            <Shortcut
-                                icon={<Building2 size={24} color="white" />}
-                                label="Empresas"
-                                onPress={() => navigation.navigate('MyCompanies')}
-                                color="bg-violet-500"
-                            />
-
-                            {/* <Shortcut
-                                icon={<Map size={24} color="white" />}
-                                label="Lugares"
-                                onPress={() => navigation.navigate('ManageLocations')}
-                                color="bg-rose-500"
-                            /> Removed as per user request to not be in grid, maybe in Menu? */}
-                        </>
-                    ) : (
-                        <>
-                            <Shortcut
-                                icon={<Anchor size={24} color="white" />}
-                                label="Viajes"
-                                onPress={() => navigation.navigate('AllTrips')}
-                                color="bg-nautic-primary"
-                            />
-                            <Shortcut
-                                icon={<Ticket size={24} color="white" />}
-                                label="Mis Tickets"
-                                onPress={() => navigation.navigate('MyTickets')} // Uses MyTickets (list) or Tabs 'History'
-                                color="bg-amber-500"
-                            />
-                            <Shortcut
-                                icon={<Compass size={24} color="white" />}
-                                label="Rutas"
-                                onPress={() => navigation.navigate('AllRoutes')} // Assuming AllRoutes works for user?
-                                color="bg-violet-500"
-                            />
-                        </>
-                    )}
-                </StyledView>
-
-                {loading ? (
-                    <ActivityIndicator size="large" color="#0B4F9C" />
-                ) : (
+                {activeFacet === 'fluvial' ? (
                     <>
-                        {/* Rutas Recientes */}
-                        <StyledView className="mb-6">
-                            <StyledView className="flex-row justify-between items-center mb-4 px-1">
-                                <StyledText className="text-lg font-bold text-nautic-navy">Rutas Activas</StyledText>
-                                <TouchableOpacity onPress={() => navigation.navigate('AllRoutes')}>
-                                    <StyledText className="text-nautic-accent font-bold text-sm">Ver todas</StyledText>
-                                </TouchableOpacity>
-                            </StyledView>
-
-                            {routes.map((item, idx) => {
-                                const companyName = getRouteCompanyName(item);
-                                return (
-                                    <PressableCard
-                                        key={item._id || item.id || `${item.origin}-${item.destination}-${idx}`}
-                                        className="mb-4 p-5 shadow-sm border-0 bg-white"
-                                        style={{ borderLeftWidth: 4, borderLeftColor: "#0B4F9C" }}
-                                        onPress={() => handleRoutePress(item)}
-                                    >
-                                        <StyledView className="flex-row items-center">
-                                            <StyledView className="bg-blue-50 dark:bg-blue-900/40 p-2.5 rounded-xl mr-4">
-                                                <Map size={22} color="#0B4F9C" />
-                                            </StyledView>
-                                            <StyledView className="flex-1">
-                                                <StyledText className="font-extrabold text-nautic-primary dark:text-blue-400 text-lg leading-tight">
-                                                    {item.origin}
-                                                </StyledText>
-                                                <StyledView className="flex-row items-center mt-1">
-                                                    <StyledText className="text-xs text-slate-500 dark:text-slate-300 font-bold uppercase tracking-wider">
-                                                        {item.destination}
-                                                    </StyledText>
-                                                </StyledView>
-                                                <StyledText className="mt-1 text-[10px] text-nautic-primary/60 font-black uppercase tracking-tighter">
-                                                    {companyName}
-                                                </StyledText>
-                                            </StyledView>
-                                        </StyledView>
-                                    </PressableCard>
-                                );
-                            })}
-                            {routes.length === 0 && (
-                                <StyledView className="items-center p-4"><StyledText className="text-gray-400">No hay rutas</StyledText></StyledView>
+                        {/* Shortcuts */}
+                        <StyledView className="flex-row justify-between mb-8">
+                            {isOwner ? (
+                                <>
+                                    <Shortcut
+                                        icon={<Compass size={24} color="white" />}
+                                        label="Rutas"
+                                        onPress={() => navigation.navigate('AllRoutes')}
+                                        colors={['#3b82f6', '#1d4ed8']}
+                                    />
+                                    <Shortcut
+                                        icon={<Anchor size={24} color="white" />}
+                                        label="Viajes"
+                                        onPress={() => navigation.navigate('AllTrips')}
+                                        colors={['#10b981', '#059669']}
+                                    />
+                                    <Shortcut
+                                        icon={<Ticket size={24} color="white" />}
+                                        label="Tickets"
+                                        onPress={() => navigation.navigate('Passengers')}
+                                        colors={['#f59e0b', '#d97706']}
+                                    />
+                                    <Shortcut
+                                        icon={<Building2 size={24} color="white" />}
+                                        label="Empresas"
+                                        onPress={() => navigation.navigate('MyCompanies')}
+                                        colors={['#8b5cf6', '#7c3aed']}
+                                    />
+                                </>
+                            ) : (
+                                <>
+                                    <Shortcut
+                                        icon={<Anchor size={24} color="white" />}
+                                        label="Viajes"
+                                        onPress={() => navigation.navigate('AllTrips')}
+                                        colors={['#10b981', '#059669']}
+                                    />
+                                    <Shortcut
+                                        icon={<Ticket size={24} color="white" />}
+                                        label="Tickets"
+                                        onPress={async () => {
+                                            try {
+                                                const tickets = await getMyTickets();
+                                                if (tickets.length > 0) {
+                                                    navigation.navigate('Ticket', { ticketId: tickets[0]._id });
+                                                } else {
+                                                    navigation.navigate('MyTickets');
+                                                }
+                                            } catch (e) {
+                                                navigation.navigate('MyTickets');
+                                            }
+                                        }}
+                                        colors={['#f59e0b', '#d97706']}
+                                    />
+                                    <Shortcut
+                                        icon={<Compass size={24} color="white" />}
+                                        label="Rutas"
+                                        onPress={() => navigation.navigate('AllRoutes')}
+                                        colors={['#3b82f6', '#1d4ed8']}
+                                    />
+                                </>
                             )}
                         </StyledView>
 
-                        {/* Viajes Section */}
-                        <StyledView className="mb-8">
-                            <StyledView className="flex-row justify-between items-center mb-4 px-1">
-                                <StyledText className="text-lg font-bold text-nautic-navy">
-                                    {isOwner ? "Próximos Viajes (Gestión)" : "Próximos Viajes"}
-                                </StyledText>
-                                <TouchableOpacity onPress={() => navigation.navigate('AllTrips')}>
-                                    <StyledText className="text-nautic-accent font-bold text-sm">Ver todos</StyledText>
-                                </TouchableOpacity>
-                            </StyledView>
+                        {/* Weather Widget */}
+                        <WeatherWidget />
 
-                            {trips.map((item, idx) => {
-                                const isActive = item.isActive ?? item.active;
-                                return (
-                                    <PressableCard
-                                        key={item._id || item.id || `${item.date}-${item.departureTime}-${idx}`}
-                                        className="mb-4 p-5 shadow-sm border-0 bg-white"
-                                        style={{ borderLeftWidth: 4, borderLeftColor: isActive ? "#22c55e" : "#94a3b8" }}
-                                        onPress={() => handleTripPress(item)}
-                                    >
-                                        <StyledView className="flex-row justify-between items-start mb-3">
-                                            <StyledView className="flex-row items-center flex-1">
-                                                <StyledView className="bg-emerald-50 dark:bg-emerald-900/20 p-2.5 rounded-xl mr-3">
-                                                    <Calendar size={22} color="#10B981" />
-                                                </StyledView>
-                                                <StyledView className="flex-1">
-                                                    <StyledText className="font-extrabold text-gray-800 dark:text-white text-base">
-                                                        {item.route?.origin || 'Origen'} → {item.route?.destination || 'Destino'}
-                                                    </StyledText>
-                                                    <StyledText className="text-[10px] text-slate-400 font-black uppercase">
-                                                        {getTripCompanyName(item)}
-                                                    </StyledText>
-                                                </StyledView>
-                                            </StyledView>
-
-                                            <StyledView className="bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
-                                                <StyledText className="text-emerald-700 font-black text-sm">
-                                                    ${Number(item.price || 0).toLocaleString('es-CO')}
-                                                </StyledText>
-                                            </StyledView>
+                        {loading ? (
+                            <DashboardSkeleton />
+                        ) : (
+                            <>
+                                {/* Rutas Recientes */}
+                                <StyledView className="mb-8">
+                                    <StyledView className="flex-row justify-between items-center mb-5 px-1">
+                                        <StyledView>
+                                            <StyledText className="text-xl font-black text-nautic-navy dark:text-dark-text tracking-tight">Rutas Activas</StyledText>
+                                            <StyledView className="h-1 w-8 bg-blue-500 rounded-full mt-1" />
                                         </StyledView>
+                                        <TouchableOpacity
+                                            onPress={() => navigation.navigate('AllRoutes')}
+                                            className="bg-blue-500/10 dark:bg-blue-500/20 px-4 py-2 rounded-xl border border-blue-500/20 active:opacity-70"
+                                            style={{ shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 }}
+                                        >
+                                            <StyledText className="text-blue-600 dark:text-blue-400 font-black text-xs uppercase tracking-widest">Ver todas</StyledText>
+                                        </TouchableOpacity>
+                                    </StyledView>
 
-                                        <StyledView className="flex-row justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl">
-                                            <StyledText className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                                                {new Date(item.date).toLocaleDateString()} • {formatTimeAmPm(item.departureTime)}
+                                    {routes.slice(0, 1).map((item, idx) => {
+                                        const companyName = getRouteCompanyName(item);
+                                        return (
+                                            <PressableCard
+                                                key={item._id || item.id || `${item.origin}-${item.destination}-${idx}`}
+                                                className="mb-4 p-5 shadow-sm border-0 bg-white dark:bg-dark-surface rounded-[24px]"
+                                                style={{ borderLeftWidth: 6, borderLeftColor: "#3b82f6" }}
+                                                onPress={() => handleRoutePress(item)}
+                                            >
+                                                <StyledView className="flex-row items-center">
+                                                    <StyledView className="bg-blue-50 dark:bg-blue-900/40 p-3 rounded-2xl mr-4">
+                                                        <Map size={24} color="#3b82f6" strokeWidth={2.5} />
+                                                    </StyledView>
+                                                    <StyledView className="flex-1">
+                                                        <StyledView className="flex-row flex-wrap items-center">
+                                                            <StyledText className="font-black text-nautic-navy dark:text-white text-xl leading-tight mr-2">
+                                                                {item.origin}
+                                                            </StyledText>
+                                                            <StyledView className="flex-row items-center bg-slate-100 dark:bg-dark-bg px-2 py-1 rounded-lg">
+                                                                <MapIcon size={12} color="#64748b" style={{ marginRight: 4 }} />
+                                                                <StyledText className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tighter">
+                                                                    {item.destination}
+                                                                </StyledText>
+                                                            </StyledView>
+                                                        </StyledView>
+                                                        <StyledText className="mt-1.5 text-[10px] text-blue-500 font-bold uppercase tracking-widest">
+                                                            {companyName}
+                                                        </StyledText>
+                                                    </StyledView>
+                                                </StyledView>
+                                            </PressableCard>
+                                        );
+                                    })}
+                                    {routes.length === 0 && (
+                                        <StyledView className="items-center p-8 bg-slate-50 dark:bg-dark-bg rounded-[24px] border border-dashed border-slate-200 dark:border-dark-border/50">
+                                            <StyledText className="text-slate-400 font-bold">No hay rutas disponibles</StyledText>
+                                        </StyledView>
+                                    )}
+                                </StyledView>
+
+                                {/* Viajes Section */}
+                                <StyledView className="mb-12">
+                                    <StyledView className="flex-row justify-between items-center mb-5 px-1">
+                                        <StyledView>
+                                            <StyledText className="text-xl font-black text-nautic-navy dark:text-dark-text tracking-tight">
+                                                {isOwner ? "Próximos Viajes" : "Tu Próximo Viaje"}
                                             </StyledText>
-                                            <StyledView className={`px-2 py-0.5 rounded-full ${isActive ? 'bg-green-100' : 'bg-red-100'}`}>
-                                                <StyledText className={`text-[9px] font-black tracking-widest ${isActive ? 'text-green-700' : 'text-red-700'}`}>
-                                                    {isActive ? 'ACTIVO' : 'CANCELADO'}
-                                                </StyledText>
-                                            </StyledView>
+                                            <StyledView className="h-1 w-8 bg-emerald-500 rounded-full mt-1" />
                                         </StyledView>
-                                    </PressableCard>
-                                );
-                            })}
+                                        <TouchableOpacity
+                                            onPress={() => navigation.navigate('AllTrips')}
+                                            className="bg-emerald-500/10 dark:bg-emerald-500/20 px-4 py-2 rounded-xl border border-emerald-500/20 active:opacity-70"
+                                            style={{ shadowColor: '#10b981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 }}
+                                        >
+                                            <StyledText className="text-emerald-600 dark:text-emerald-400 font-black text-xs uppercase tracking-widest">Ver todos</StyledText>
+                                        </TouchableOpacity>
+                                    </StyledView>
 
-                            {/* Empty State */}
-                            {trips.length === 0 && (
-                                <StyledView className="items-center p-4"><StyledText className="text-gray-400">No hay viajes programados</StyledText></StyledView>
-                            )}
-                        </StyledView>
+                                    {trips.slice(0, 1).map((item, idx) => {
+                                        const isActive = item.isActive ?? item.active;
+                                        return (
+                                            <PressableCard
+                                                key={item._id || item.id || `${item.date}-${item.departureTime}-${idx}`}
+                                                className="mb-4 p-5 shadow-sm border-0 bg-white dark:bg-dark-surface rounded-[24px]"
+                                                style={{ borderLeftWidth: 6, borderLeftColor: isActive ? "#10b981" : "#f43f5e" }}
+                                                onPress={() => handleTripPress(item)}
+                                            >
+                                                <StyledView className="flex-row justify-between items-start mb-4">
+                                                    <StyledView className="flex-row items-center flex-1">
+                                                        <StyledView className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-2xl mr-4">
+                                                            <Calendar size={24} color="#10b981" strokeWidth={2.5} />
+                                                        </StyledView>
+                                                        <StyledView className="flex-1">
+                                                            <StyledText className="font-black text-nautic-navy dark:text-white text-lg">
+                                                                {item.route?.origin || 'Origen'} → {item.route?.destination || 'Destino'}
+                                                            </StyledText>
+                                                            <StyledText className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">
+                                                                {getTripCompanyName(item)}
+                                                            </StyledText>
+                                                        </StyledView>
+                                                    </StyledView>
+
+                                                    <StyledView className="bg-emerald-500 px-3 py-1.5 rounded-xl shadow-sm">
+                                                        <StyledText className="text-white font-black text-sm">
+                                                            ${Number(item.price || 0).toLocaleString('es-CO')}
+                                                        </StyledText>
+                                                    </StyledView>
+                                                </StyledView>
+
+                                                <StyledView className="flex-row justify-between items-center bg-slate-50 dark:bg-dark-bg p-3 rounded-2xl">
+                                                    <StyledText className="text-xs font-bold text-slate-600 dark:text-dark-text-muted">
+                                                        📅 {new Date(item.date).toLocaleDateString()}  •  ⏰ {formatTimeAmPm(item.departureTime)}
+                                                    </StyledText>
+                                                    <StyledView className={`px-2.5 py-1 rounded-lg ${isActive ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-rose-100 dark:bg-rose-900/40'}`}>
+                                                        <StyledText className={`text-[9px] font-black tracking-widest ${isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                                                            {isActive ? 'CONFIRMADO' : 'PENDIENTE'}
+                                                        </StyledText>
+                                                    </StyledView>
+                                                </StyledView>
+                                            </PressableCard>
+                                        );
+                                    })}
+
+                                    {/* Empty State */}
+                                    {trips.length === 0 && (
+                                        <StyledView className="items-center p-8 bg-slate-50 dark:bg-dark-bg rounded-[24px] border border-dashed border-slate-200 dark:border-dark-border/50">
+                                            <StyledText className="text-slate-400 font-bold">No hay viajes programados</StyledText>
+                                        </StyledView>
+                                    )}
+                                </StyledView>
+                            </>
+                        )}
                     </>
+                ) : (
+                    activeFacet === 'terrestre' ? (
+                        <StyledView className="mt-6 mb-12">
+                            {/* Terrestre Hub */}
+                            <PressableCard
+                                onPress={() => navigation.navigate('TerrestreRide')}
+                                className="bg-amber-500 p-8 rounded-[40px] shadow-xl shadow-amber-500/30 overflow-hidden border-0"
+                            >
+                                <LinearGradient
+                                    colors={['#f59e0b', '#d97706']}
+                                    style={StyleSheet.absoluteFill}
+                                />
+                                <StyledView className="flex-row justify-between items-center relative z-10">
+                                    <StyledView className="flex-1">
+                                        <StyledText className="text-white text-3xl font-black leading-tight mb-2">
+                                            Solicitar{"\n"}un Viaje
+                                        </StyledText>
+                                        <StyledText className="text-white/80 font-bold text-xs uppercase tracking-widest">
+                                            Transporte Terrestre
+                                        </StyledText>
+                                    </StyledView>
+                                    <StyledView className="bg-white/20 p-5 rounded-[32px] border border-white/20">
+                                        <MaterialCommunityIcons name="car-side" size={48} color="white" />
+                                    </StyledView>
+                                </StyledView>
+
+                                <StyledView className="mt-8 bg-white/10 py-3 rounded-2xl items-center border border-white/10">
+                                    <StyledText className="text-white font-black uppercase text-[10px] tracking-[4px]">
+                                        Comenzar Ahora
+                                    </StyledText>
+                                </StyledView>
+                            </PressableCard>
+
+                            {/* Stats row */}
+                            <StyledView className="flex-row gap-4 mt-6">
+                                <StyledView className="flex-1 bg-white dark:bg-dark-surface p-5 rounded-[32px] shadow-sm border border-slate-100 dark:border-dark-border/50">
+                                    <StyledText className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-1">Cerca de ti</StyledText>
+                                    <StyledText className="text-nautic-navy dark:text-white text-xl font-black">5 Conductores</StyledText>
+                                </StyledView>
+                                <StyledView className="flex-1 bg-white dark:bg-dark-surface p-5 rounded-[32px] shadow-sm border border-slate-100 dark:border-dark-border/50">
+                                    <StyledText className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-1">Tu Rating</StyledText>
+                                    <StyledText className="text-nautic-navy dark:text-white text-xl font-black">4.9 ★</StyledText>
+                                </StyledView>
+                            </StyledView>
+                        </StyledView>
+                    ) : (
+                        <StyledView className="mt-12 items-center justify-center py-20 px-10 bg-white dark:bg-dark-surface rounded-[40px] shadow-sm border border-slate-100 dark:border-dark-border/50">
+                            <StyledView className={`w-20 h-20 rounded-full items-center justify-center mb-6 bg-blue-50 dark:bg-blue-900/20`}>
+                                <MaterialCommunityIcons name="airplane-clock" size={40} color="#3b82f6" />
+                            </StyledView>
+                            <StyledText className="text-2xl font-black text-nautic-navy dark:text-dark-text text-center mb-2">
+                                Próximamente
+                            </StyledText>
+                            <StyledText className="text-slate-500 dark:text-dark-text-muted text-center text-sm leading-relaxed">
+                                Estamos trabajando para traer el transporte aéreo a nuestra plataforma.
+                            </StyledText>
+
+                            <StyledView className="mt-8 px-6 py-2 bg-slate-100 dark:bg-dark-bg rounded-full">
+                                <StyledText className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inauguración 2026</StyledText>
+                            </StyledView>
+                        </StyledView>
+                    )
                 )}
             </ScrollView>
         </ScreenContainer>

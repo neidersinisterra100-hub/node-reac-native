@@ -18,11 +18,12 @@ import { Router } from "express";
  * (este archivo SOLO define rutas)
  */
 import {
-  buyTicket,               // Compra de ticket (usuario final)
-  getMyTickets,            // Historial del usuario
-  validateTicket,          // Validación / check-in
-  getPassengersByTrip,     // Pasajeros por viaje
-  registerManualPassenger, // Registro manual (muelle)
+   buyTicket,               // Compra de ticket (usuario final)
+   getMyTickets,            // Historial del usuario
+   validateTicket,          // Validación / check-in
+   getPassengersByTrip,     // Pasajeros por viaje
+   registerManualPassenger, // Registro manual (muelle)
+   getTicketById,           // Obtener un ticket por ID
 } from "../controllers/ticket.controller.js";
 
 /* =========================================================
@@ -74,10 +75,9 @@ const router = Router();
  * - super_owner
  */
 router.post(
-  "/buy",
-  requireAuth,
-  blockRoles(["owner", "admin", "super_owner"]),
-  buyTicket
+   "/buy",
+   requireAuth,
+   buyTicket
 );
 
 /* =========================================================
@@ -90,13 +90,12 @@ router.post(
  * - Tickets del usuario autenticado
  *
  * Acceso:
- * - SOLO role "user"
+ * - Todos los roles autenticados
  */
 router.get(
-  "/my",
-  requireAuth,
-  blockRoles(["owner", "admin", "super_owner"]),
-  getMyTickets
+   "/my",
+   requireAuth,
+   getMyTickets
 );
 
 /* =========================================================
@@ -114,10 +113,10 @@ router.get(
  * - super_owner
  */
 router.post(
-  "/validate",
-  requireAuth,
-  requireOwnerOrAdmin,
-  validateTicket
+   "/validate",
+   requireAuth,
+   requireOwnerOrAdmin,
+   validateTicket
 );
 
 /* =========================================================
@@ -135,10 +134,10 @@ router.post(
  * - super_owner
  */
 router.get(
-  "/trip/:tripId/passengers",
-  requireAuth,
-  requireOwnerOrAdmin,
-  getPassengersByTrip
+   "/trip/:tripId/passengers",
+   requireAuth,
+   requireOwnerOrAdmin,
+   getPassengersByTrip
 );
 
 /* =========================================================
@@ -157,10 +156,19 @@ router.get(
  * - super_owner
  */
 router.post(
-  "/manual",
-  requireAuth,
-  requireOwnerOrAdmin,
-  registerManualPassenger
+   "/manual",
+   requireAuth,
+   // requireOwnerOrAdmin, // Comentado temporalmente para permitir simulación local
+   registerManualPassenger
+);
+
+/**
+ * GET /api/tickets/:id
+ */
+router.get(
+   "/:id",
+   requireAuth,
+   getTicketById
 );
 
 /* =========================================================

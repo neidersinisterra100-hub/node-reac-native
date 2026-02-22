@@ -22,11 +22,11 @@ module.exports = {
         },
         // Dark mode colors (matching web)
         dark: {
-          bg: '#0f172a',        // slate-900 - Main background
-          surface: '#1e293b',   // slate-800 - Card/surface background
-          border: '#334155',    // slate-700 - Borders
-          text: '#f1f5f9',      // slate-100 - Primary text
-          textMuted: '#94a3b8', // slate-400 - Secondary text
+          bg: '#080c14',        // Deep Space Navy
+          surface: '#111827',   // Rich Navy Surface
+          border: '#1e293b',    // Soft Navy Border
+          text: '#f8fafc',      // Crystal White
+          textMuted: '#64748b', // Refined Muted Slate
         }
       }
     },

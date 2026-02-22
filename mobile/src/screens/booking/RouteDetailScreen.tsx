@@ -4,6 +4,7 @@ import { styled } from "nativewind";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MapPinned, CalendarClock, ArrowRight } from "lucide-react-native";
+import { ListSkeleton } from "../../components/ui/Skeletons";
 
 import { ScreenContainer } from "../../components/ui/ScreenContainer";
 import { Card, PressableCard } from "../../components/ui/Card";
@@ -152,9 +153,7 @@ export function RouteDetailScreen() {
           )}
           ListEmptyComponent={
             loading ? (
-              <StyledView className="items-center justify-center py-12">
-                <ActivityIndicator size="large" color="#0B4F9C" />
-              </StyledView>
+              <ListSkeleton count={3} />
             ) : (
               <StyledView className="items-center justify-center py-10 px-2">
                 <StyledText className="text-gray-500 mb-3">

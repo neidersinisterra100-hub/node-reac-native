@@ -10,7 +10,6 @@ import {
 import { styled } from "nativewind";
 
 // Import new screens
-import { LocationSelectionScreen } from "../screens/booking/LocationSelectionScreen"; // User Home
 import { CompanyDashboardScreen } from "../screens/company/CompanyDashboardScreen"; // Owner Home
 import { MyTripsScreen } from "../screens/profile/MyTripsScreen"; // New History
 import ProfileScreen from "../screens/ProfileScreen";
@@ -65,7 +64,7 @@ export default function TabNavigator() {
         name="History"
         component={MyTripsScreen}
         options={{
-          tabBarLabel: "Mis Viajes",
+          tabBarLabel: "Mis Tickets",
           tabBarIcon: ({ color, size }) => (
             <FileText color={color} size={size} />
           ),

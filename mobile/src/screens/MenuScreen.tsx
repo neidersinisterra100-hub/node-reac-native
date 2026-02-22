@@ -50,9 +50,9 @@ export default function MenuScreen() {
       show: isOwner,
     },
     {
-      icon: "history",
-      label: "Historial de Viajes",
-      onPress: () => navigation.navigate("History"),
+      icon: "ticket-percent-outline",
+      label: "Mis Tickets",
+      onPress: () => navigation.navigate("Tabs", { screen: "History" }),
       show: true,
     },
     {
@@ -60,6 +60,12 @@ export default function MenuScreen() {
       label: "Términos y Condiciones",
       onPress: () => navigation.navigate("Terms"),
       show: true,
+    },
+    {
+      icon: "clipboard-list-outline",
+      label: "Auditoría",
+      onPress: () => navigation.navigate("Audit"),
+      show: isOwner,
     },
     {
       icon: isDark ? "weather-sunny" : "weather-night",

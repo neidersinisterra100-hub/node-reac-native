@@ -9,8 +9,14 @@ import { useAuth } from '../context/AuthContext';
 import { getAllRoutes } from '../services/route.service';
 import { tripService } from '../services/trip.service';
 import { getAllCompanies, getMyCompanies } from '../services/company.service';
+import { getMyTickets } from '../services/ticket.service';
 import { colors } from '../theme/colors';
 import { formatTimeAmPm } from '../utils/time';
+import { DashboardSkeleton } from '../components/ui/Skeletons';
+import { styled } from "nativewind";
+
+const StyledView = styled(View);
+const StyledText = styled(Text);
 
 export default function DashboardScreen() {
     const { user } = useAuth();
@@ -87,7 +93,7 @@ export default function DashboardScreen() {
     const renderRouteItem = (item: any) => (
         <TouchableOpacity
             key={item.id || item._id || Math.random().toString()}
-            style={styles.listItem}
+            className="flex-row items-center p-4 mb-3 bg-white dark:bg-dark-surface rounded-2xl border border-slate-100 dark:border-dark-border/50 shadow-sm"
             onPress={() =>
                 navigation.navigate('RouteDetails', {
                     routeId: item.id || item._id,
@@ -97,16 +103,20 @@ export default function DashboardScreen() {
                 })
             }
         >
-            <View style={[styles.iconBox, { backgroundColor: '#e0f2f1' }]}>
-                <MaterialCommunityIcons name="compass-outline" size={24} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.itemTitle}>{item.origin} → {item.destination}</Text>
-                <Text style={styles.itemSubtitle}>
+            <StyledView className="w-[50px] h-[50px] rounded-xl justify-center items-center bg-emerald-50 dark:bg-emerald-900/20">
+                <MaterialCommunityIcons name="compass-outline" size={24} color="#009688" />
+            </StyledView>
+            <StyledView className="flex-1 ml-3">
+                <StyledView className="flex-row items-center flex-wrap">
+                    <StyledText className="text-base font-bold text-slate-800 dark:text-dark-text mr-2">{item.origin}</StyledText>
+                    <MaterialCommunityIcons name="arrow-right" size={14} color="#94a3b8" style={{ marginRight: 6 }} />
+                    <StyledText className="text-base font-bold text-slate-800 dark:text-dark-text">{item.destination}</StyledText>
+                </StyledView>
+                <StyledText className="text-[10px] text-slate-500 dark:text-dark-text-muted mt-0.5 font-medium uppercase">
                     {getRouteCompanyName(item)}
-                </Text>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#ccc" />
+                </StyledText>
+            </StyledView>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#cbd5e1" />
         </TouchableOpacity>
     );
 
@@ -118,7 +128,7 @@ export default function DashboardScreen() {
         return (
             <TouchableOpacity
                 key={item.id || item._id || Math.random().toString()}
-                style={styles.listItem}
+                className="flex-row items-center p-4 mb-3 bg-white dark:bg-dark-surface rounded-2xl border border-slate-100 dark:border-dark-border/50 shadow-sm"
                 onPress={() =>
                     navigation.navigate('TripDetails', {
                         tripId: item._id || item.id,
@@ -126,31 +136,30 @@ export default function DashboardScreen() {
                     })
                 }
             >
-                <View style={[styles.iconBox, { backgroundColor: '#e8f5e9' }]}>
+                <StyledView className="w-[50px] h-[50px] rounded-xl justify-center items-center bg-green-50 dark:bg-green-900/20">
                     <MaterialCommunityIcons name="sail-boat" size={24} color="#2e7d32" />
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={styles.itemTitle}>{origin} → {dest}</Text>
-                    <Text style={styles.itemSubtitle}>
+                </StyledView>
+                <StyledView className="flex-1 ml-3">
+                    <StyledView className="flex-row flex-wrap items-center">
+                        <StyledText className="text-base font-bold text-slate-800 dark:text-dark-text mr-2">{origin}</StyledText>
+                        <MaterialCommunityIcons name="arrow-right" size={14} color="#94a3b8" style={{ marginRight: 6 }} />
+                        <StyledText className="text-base font-bold text-slate-800 dark:text-dark-text">{dest}</StyledText>
+                    </StyledView>
+                    <StyledText className="text-[11px] text-slate-500 dark:text-dark-text-muted mt-0.5 font-medium">
                         {new Date(item.date).toLocaleDateString()} • {formatTimeAmPm(item.departureTime)}
-                    </Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.statusBadge, { color: isActive ? '#2e7d32' : '#c62828' }]}>
+                    </StyledText>
+                </StyledView>
+                <StyledView className="items-end">
+                    <StyledText className={`text-[12px] font-bold px-2 py-0.5 rounded-lg ${isActive ? 'text-green-700 bg-green-50 dark:bg-green-900/20' : 'text-red-700 bg-red-50 dark:bg-red-900/20'}`}>
                         {isActive ? 'Activo' : 'Cancelado'}
-                    </Text>
-                </View>
+                    </StyledText>
+                </StyledView>
             </TouchableOpacity>
         );
     };
 
     return (
-        <View style={[
-            styles.container,
-            {
-                // backgroundColor: scheme === "dark" ? "#020617" : "#f8fafc",
-            },
-        ]}>
+        <View className="flex-1 bg-nautic-bg dark:bg-dark-bg transition-colors duration-200">
             {/* Header con Gradiente */}
             <LinearGradient
                 colors={['#1e3a8a', '#3b82f6']}
@@ -164,7 +173,7 @@ export default function DashboardScreen() {
                             size={48}
                             label={user?.name?.substring(0, 2).toUpperCase() || "CP"}
                             style={{ backgroundColor: 'white' }}
-                            color="#1e3a8a"
+                            color="#080c14"
                         />
                         <View style={{ marginLeft: 12 }}>
                             <Text style={styles.userName}>{user?.name?.toUpperCase()}</Text>
@@ -194,21 +203,40 @@ export default function DashboardScreen() {
                         <LinearGradient colors={['#3b82f6', '#2563eb']} style={styles.shortcutIconBg}>
                             <MaterialCommunityIcons name="compass-outline" size={28} color="white" />
                         </LinearGradient>
-                        <Text style={styles.shortcutText}>Rutas</Text>
+                        <StyledText className="text-[11px] text-slate-600 dark:text-dark-text-muted font-bold text-center">Rutas</StyledText>
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={() => navigation.navigate("AllTrips")} style={styles.shortcutBtn}>
                         <LinearGradient colors={['#10b981', '#059669']} style={styles.shortcutIconBg}>
                             <MaterialCommunityIcons name="anchor" size={28} color="white" />
                         </LinearGradient>
-                        <Text style={styles.shortcutText}>Viajes</Text>
+                        <StyledText className="text-[11px] text-slate-600 dark:text-dark-text-muted font-bold text-center">Viajes</StyledText>
                     </TouchableOpacity>
 
-                    <TouchableOpacity onPress={() => navigation.navigate("MyTickets")} style={styles.shortcutBtn}>
+                    <TouchableOpacity
+                        onPress={async () => {
+                            if (isOwner) {
+                                navigation.navigate("Passengers");
+                                return;
+                            }
+                            try {
+                                const tickets = await getMyTickets();
+                                if (tickets.length > 0) {
+                                    // Abrimos el primero (más reciente por el sort: -1 del backend)
+                                    navigation.navigate("Ticket", { ticketId: tickets[0]._id });
+                                } else {
+                                    navigation.navigate("MyTickets");
+                                }
+                            } catch (e) {
+                                navigation.navigate("MyTickets");
+                            }
+                        }}
+                        style={styles.shortcutBtn}
+                    >
                         <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.shortcutIconBg}>
                             <MaterialCommunityIcons name="ticket-confirmation" size={28} color="white" />
                         </LinearGradient>
-                        <Text style={styles.shortcutText}>Tickets</Text>
+                        <StyledText className="text-[11px] text-slate-600 dark:text-dark-text-muted font-bold text-center">Tickets</StyledText>
                     </TouchableOpacity>
 
                     {isOwner && (
@@ -216,13 +244,13 @@ export default function DashboardScreen() {
                             <LinearGradient colors={['#8b5cf6', '#7c3aed']} style={styles.shortcutIconBg}>
                                 <MaterialCommunityIcons name="domain" size={28} color="white" />
                             </LinearGradient>
-                            <Text style={styles.shortcutText}>Empresas</Text>
+                            <StyledText className="text-[11px] text-slate-600 dark:text-dark-text-muted font-bold text-center">Empresas</StyledText>
                         </TouchableOpacity>
                     )}
                 </View>
 
                 {loading ? (
-                    <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+                    <DashboardSkeleton />
                 ) : (
                     <>
                         {/* Card 1: Rutas Activas */}

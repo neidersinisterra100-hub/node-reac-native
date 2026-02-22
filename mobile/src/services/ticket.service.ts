@@ -20,16 +20,16 @@ export interface TicketApi {
    * - objeto populado (cuando backend usa populate)
    */
   trip:
-    | string
-    | {
-        date?: string;
-        departureTime?: string;
-        transportType?: string;
-        route?: {
-          origin?: string;
-          destination?: string;
-        };
-      };
+  | string
+  | {
+    date?: string;
+    departureTime?: string;
+    transportType?: string;
+    routeId?: {
+      origin?: string;
+      destination?: string;
+    };
+  };
 
   passenger: string;
   passengerName: string;
@@ -37,11 +37,11 @@ export interface TicketApi {
   seatNumber?: string;
 
   status:
-    | "active"
-    | "used"
-    | "cancelled"
-    | "expired"
-    | "pending_payment";
+  | "active"
+  | "used"
+  | "cancelled"
+  | "expired"
+  | "pending_payment";
 
   qrCode?: string;
   purchaseDate: string;
@@ -61,11 +61,11 @@ export interface TicketApi {
      ========================= */
   payment: {
     status:
-      | "PENDING"
-      | "APPROVED"
-      | "DECLINED"
-      | "VOIDED"
-      | "ERROR";
+    | "PENDING"
+    | "APPROVED"
+    | "DECLINED"
+    | "VOIDED"
+    | "ERROR";
     reference?: string;
     transactionId?: string;
     paymentMethod?: "WOMPI" | "CASH";
@@ -110,8 +110,8 @@ function mapTicketToUI(ticket: TicketApi): UITicket {
   return {
     _id: ticket._id,
 
-    routeName: trip?.route
-      ? `${trip.route.origin ?? "Origen"} → ${trip.route.destination ?? "Destino"}`
+    routeName: trip?.routeId
+      ? `${trip.routeId.origin ?? "Origen"} → ${trip.routeId.destination ?? "Destino"}`
       : "Ruta",
 
     transport: trip?.transportType ?? "Lancha",
@@ -150,6 +150,7 @@ export async function buyTicket(data: {
   passengerName: string;
   passengerId: string;
   seatNumber?: string;
+  seatNumbers?: number[];
 }): Promise<BuyTicketResponse> {
   const response = await api.post("/tickets/buy", data);
   return response.data;
@@ -168,6 +169,16 @@ export async function buyTicket(data: {
 export async function getMyTickets(): Promise<UITicket[]> {
   const response = await api.get<TicketApi[]>("/tickets/my");
   return response.data.map(mapTicketToUI);
+}
+
+/**
+ * getTicketById
+ *
+ * Obtiene los detalles de un ticket específico
+ */
+export async function getTicketById(id: string): Promise<UITicket> {
+  const response = await api.get<TicketApi>(`/tickets/${id}`);
+  return mapTicketToUI(response.data);
 }
 
 /* =========================================================
@@ -201,17 +212,14 @@ export async function getPassengersByTrip(tripId: string) {
  *
  * Registra un pasajero manual (pago en efectivo)
  */
-export async function registerManualPassenger(
-  tripId: string,
-  passengerName: string
-) {
-  const response = await api.post(
-    "/tickets/manual",
-    {
-      tripId,
-      passengerName,
-    }
-  );
+export async function registerManualPassenger(data: {
+  tripId: string;
+  passengerName: string;
+  passengerId: string;
+  seatNumber?: string;
+  seatNumbers?: number[];
+}) {
+  const response = await api.post("/tickets/manual", data);
   return response.data;
 }
 

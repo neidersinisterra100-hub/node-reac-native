@@ -1,6 +1,7 @@
 import { RequestHandler } from "express";
 import { PaymentService } from "../services/payment.service.js";
 import { TicketModel } from "../models/ticket.model.js";
+import { SeatReservationModel } from "../models/seatReservation.model.js";
 import { wompiConfig } from "../config/wompi.js";
 
 /* =========================================================
@@ -102,62 +103,62 @@ export const wompiWebhook: RequestHandler = async (req, res) => {
     console.log(`🔔 WOMPI → ${reference} → ${status}`);
 
     /* =========================
-       5. BUSCAR TICKET
+       5. BUSCAR TICKETS ASOCIADOS
        ========================= */
-
-    const ticket = await TicketModel.findOne({
+    const tickets = await TicketModel.find({
       "payment.reference": reference,
     });
 
-    /**
-     * ⚠️ IMPORTANTE:
-     * Si no existe el ticket, respondemos 200
-     * para que Wompi NO reintente indefinidamente.
-     */
-    if (!ticket) {
-      console.error("⚠️ Ticket no encontrado:", reference);
+    if (tickets.length === 0) {
+      console.error("⚠️ No se encontraron tickets para la referencia:", reference);
       return res.sendStatus(200);
     }
 
     /* =========================
        6. IDEMPOTENCIA
        ========================= */
-
-    /**
-     * Si el ticket ya fue procesado,
-     * NO se vuelve a tocar.
-     */
-    if (ticket.status !== "pending_payment") {
+    // Si todos los tickets ya fueron procesados, ignoramos
+    const allProcessed = tickets.every(t => t.status !== "pending_payment");
+    if (allProcessed) {
       return res.sendStatus(200);
     }
 
     /* =========================
-       7. ACTUALIZAR ESTADO
+       7. ACTUALIZAR ESTADO (MASIVO)
        ========================= */
+    const updateData: any = {};
 
     if (status === "APPROVED") {
-      ticket.status = "active";
-      ticket.payment.status = "APPROVED";
-      ticket.payment.transactionId = transactionId;
-      ticket.payment.paidAt = new Date(created_at);
-      ticket.payment.paymentMethod = "WOMPI";
+      updateData.status = "active";
+      updateData["payment.status"] = "APPROVED";
+      updateData["payment.transactionId"] = transactionId;
+      updateData["payment.paidAt"] = new Date(created_at);
+      updateData["payment.paymentMethod"] = "WOMPI";
+    } else if (status === "DECLINED" || status === "ERROR" || status === "VOIDED") {
+      updateData.status = "cancelled";
+      updateData["payment.status"] = "DECLINED";
     }
 
-    if (status === "DECLINED" || status === "ERROR" || status === "VOIDED") {
-      ticket.status = "cancelled";
-      ticket.payment.status = "DECLINED";
+    if (Object.keys(updateData).length > 0) {
+      await TicketModel.updateMany(
+        { "payment.reference": reference, status: "pending_payment" },
+        { $set: updateData }
+      );
+
+      /* =========================
+         8. LIBERAR RESERVAS (SI APROBADO)
+         ========================= */
+      if (status === "APPROVED") {
+        const deletePromises = tickets.map(t =>
+          SeatReservationModel.deleteOne({
+            tripId: t.trip,
+            seatNumber: t.seatNumber
+          })
+        );
+        await Promise.all(deletePromises);
+      }
     }
 
-    await ticket.save();
-
-    /* =========================
-       8. RESPONDER A WOMPI
-       ========================= */
-
-    /**
-     * ⚠️ Wompi espera SIEMPRE 200
-     * si el evento fue recibido correctamente.
-     */
     return res.sendStatus(200);
 
   } catch (error) {

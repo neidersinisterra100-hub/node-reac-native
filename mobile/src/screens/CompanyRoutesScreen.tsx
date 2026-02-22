@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { styled } from "nativewind";
+import { ListSkeleton } from "../components/ui/Skeletons";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -137,14 +138,16 @@ export const CompanyRoutesScreen = () => {
               </StyledView>
 
               <StyledView className="flex-1">
-                <StyledText className="font-extrabold text-nautic-primary dark:text-blue-400 text-lg leading-tight">
-                  {item.origin}
-                </StyledText>
-                <StyledView className="flex-row items-center mt-1">
-                  <ArrowRight size={12} color="#94a3b8" />
-                  <StyledText className="ml-1 text-sm text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider">
-                    {item.destination}
+                <StyledView className="flex-row flex-wrap items-center">
+                  <StyledText className="font-extrabold text-nautic-primary dark:text-blue-400 text-lg leading-tight mr-2">
+                    {item.origin}
                   </StyledText>
+                  <StyledView className="flex-row items-center">
+                    <ArrowRight size={14} color="#94a3b8" style={{ marginRight: 4 }} />
+                    <StyledText className="text-sm text-slate-600 dark:text-slate-300 font-bold uppercase tracking-tight">
+                      {item.destination}
+                    </StyledText>
+                  </StyledView>
                 </StyledView>
 
                 <StyledView className="mt-2 flex-row">
@@ -216,11 +219,7 @@ export const CompanyRoutesScreen = () => {
       </StyledView>
 
       {loading ? (
-        <ActivityIndicator
-          size="large"
-          color="#0B4F9C"
-          className="mt-8"
-        />
+        <ListSkeleton count={4} />
       ) : (
         <FlatList
           data={routes}

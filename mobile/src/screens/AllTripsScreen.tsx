@@ -1,4 +1,5 @@
 import { View, FlatList, Alert, TouchableOpacity, Text, ActivityIndicator } from "react-native";
+import { ListSkeleton } from "../components/ui/Skeletons";
 import { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { Ship, Calendar, Clock } from "lucide-react-native";
@@ -35,30 +36,30 @@ export default function AllTripsScreen() {
     loadTrips();
   }, []);
 
-const handlePressTrip = (trip: Trip) => {
-  if (!trip.isActive) {
-    Alert.alert("Viaje no disponible", "Este viaje está desactivado");
-    return;
-  }
+  const handlePressTrip = (trip: Trip) => {
+    if (!trip.isActive) {
+      Alert.alert("Viaje no disponible", "Este viaje está desactivado");
+      return;
+    }
 
-  if (!trip.route || typeof trip.route !== "object") {
-    Alert.alert("Error", "Información de ruta incompleta");
-    return;
-  }
+    if (!trip.route || typeof trip.route !== "object") {
+      Alert.alert("Error", "Información de ruta incompleta");
+      return;
+    }
 
-  navigation.navigate("SeatSelection", {
-    tripId: trip._id ?? trip.id,
-    routeName: `${trip.route.origin} - ${trip.route.destination}`,
-    price: trip.price,
-    date: trip.date,
-    time: trip.departureTime,
+    navigation.navigate("SeatSelection", {
+      tripId: trip._id ?? trip.id,
+      routeName: `${trip.route.origin} - ${trip.route.destination}`,
+      price: trip.price,
+      date: trip.date,
+      time: trip.departureTime,
 
-    // 🔐 BLOQUEO POR CAPACIDAD
-    capacity: trip.capacity,
-    soldSeats: trip.soldSeats ?? 0, // backend
-    isActive: trip.isActive,
-  });
-};
+      // 🔐 BLOQUEO POR CAPACIDAD
+      capacity: trip.capacity,
+      soldSeats: trip.soldSeats ?? 0, // backend
+      isActive: trip.isActive,
+    });
+  };
 
 
   const renderItem = ({ item }: { item: Trip }) => {
@@ -94,15 +95,26 @@ const handlePressTrip = (trip: Trip) => {
           </StyledView>
 
           <StyledView className="flex-1">
-            <StyledText className="text-slate-800 dark:text-dark-text font-bold">
-              {item.company && typeof item.company === "object"
-                ? item.company.name
-                : "Empresa"}
-            </StyledText>
+            <StyledView className="flex-row flex-wrap items-center">
+              <Text className="font-extrabold text-indigo-700 dark:text-indigo-400 text-lg leading-tight mr-2">
+                {item.route && typeof item.route === "object" ? item.route.origin : "Origen"}
+              </Text>
 
-            <StyledText className="text-slate-500 dark:text-dark-textMuted text-xs">
-              {routeName}
-            </StyledText>
+              <StyledView className="flex-row items-center">
+                <Ship size={12} color="#64748b" style={{ marginRight: 4 }} />
+                <Text className="text-sm text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider">
+                  {item.route && typeof item.route === "object" ? item.route.destination : "Destino"}
+                </Text>
+              </StyledView>
+            </StyledView>
+
+            <StyledView className="flex-row items-center mt-2">
+              <StyledView className="bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-100 dark:border-slate-700">
+                <Text className="text-[10px] text-nautic-primary font-black uppercase">
+                  {item.company && typeof item.company === "object" ? item.company.name : "Empresa"}
+                </Text>
+              </StyledView>
+            </StyledView>
           </StyledView>
 
           <StyledView className="bg-emerald-50 dark:bg-emerald-900 px-3 py-1 rounded-lg">
@@ -149,9 +161,7 @@ const handlePressTrip = (trip: Trip) => {
       />
 
       {loading ? (
-        <StyledView className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#00B4D8" />
-        </StyledView>
+        <ListSkeleton count={5} />
       ) : (
         <FlatList
           data={trips}

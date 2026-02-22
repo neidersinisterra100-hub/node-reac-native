@@ -30,7 +30,7 @@ declare global {
   namespace Express {
     interface UserPayload {
       id: string; // ID del usuario (string, no ObjectId)
-      role: "user" | "admin" | "owner" | "super_owner";
+      role: "user" | "admin" | "owner" | "super_owner" | "driver";
       companyId?: string; // Presente solo para roles con empresa
     }
 
@@ -59,4 +59,4 @@ declare global {
  * Necesario para que TypeScript trate este archivo
  * como un módulo y no como script global suelto.
  */
-export {};
+export { };

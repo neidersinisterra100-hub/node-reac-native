@@ -5,6 +5,7 @@ import TabNavigator from "./TabNavigator";
 import { RootStackParamList } from "./types";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { NavigationContainer } from "@react-navigation/native";
+import { navigationRef } from "./navigationRef";
 import { View, ActivityIndicator } from "react-native";
 import { useAuth } from "../context/AuthContext";
 
@@ -16,8 +17,10 @@ import { RouteDetailScreen } from "../screens/booking/RouteDetailScreen";
 import { SeatSelectionScreen } from "../screens/booking/SeatSelectionScreen";
 import { PaymentScreen } from "../screens/booking/PaymentScreen";
 import { TicketScreen } from "../screens/booking/TicketScreen";
+import { MyTripsScreen } from "../screens/profile/MyTripsScreen";
 import { CompanyDashboardScreen } from "../screens/company/CompanyDashboardScreen";
 import { CompanyAdminsScreen } from "../screens/company/CompanyAdminsScreen";
+import AuditScreen from "../screens/company/AuditScreen";
 
 // Legacy / Existing screens
 import CreateCompanyScreen from "../screens/CreateCompanyScreen";
@@ -30,7 +33,6 @@ import TripsScreen from "../screens/TripsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import MenuScreen from "../screens/MenuScreen";
 import BalanceScreen from "../screens/BalanceScreen";
-import MyTicketsScreen from "../screens/MyTicketsScreen";
 import ValidateTicketScreen from "../screens/ValidateTicketScreen";
 import ReportsScreen from "../screens/ReportsScreen";
 import CalendarScreen from "../screens/CalendarScreen";
@@ -38,6 +40,7 @@ import SettingsScreen from "./PrivateStack/SettingsScreen";
 import ConfirmTicketModal from "./PrivateStack/ConfirmTicketModal";
 import TicketReceiptModal from "./PrivateStack/TicketReceiptModal";
 import PassengersScreen from "../screens/PassengersScreen";
+import TerrestreRideScreen from "../screens/terrestre/TerrestreRideScreen";
 import AllRoutesScreen from "../screens/AllRoutesScreen";
 import ManageLocationsScreen from "../screens/ManageLocationsScreen";
 
@@ -55,7 +58,7 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
 
         {!user ? (
@@ -83,13 +86,12 @@ export default function AppNavigator() {
             <Stack.Screen name="RouteDetails" component={RouteDetailScreen} />
             <Stack.Screen name="SeatSelection" component={SeatSelectionScreen} />
             <Stack.Screen name="Payment" component={PaymentScreen} />
-            <Stack.Screen name="TicketDetail" component={TicketScreen} />
-
             <Stack.Screen name="Ticket" component={TicketScreen} />
 
             {/* 🏢 Company Flow */}
             <Stack.Screen name="CompanyDashboard" component={CompanyDashboardScreen} />
             <Stack.Screen name="CompanyAdmins" component={CompanyAdminsScreen} />
+            <Stack.Screen name="Audit" component={AuditScreen} />
             <Stack.Screen name="CreateCompany" component={CreateCompanyScreen} />
             <Stack.Screen name="ManageLocations" component={ManageLocationsScreen} />
             <Stack.Screen name="MyCompanies" component={MyCompaniesScreen} />
@@ -112,8 +114,9 @@ export default function AppNavigator() {
               }}
             />
             <Stack.Screen name="Balance" component={BalanceScreen} />
-            <Stack.Screen name="MyTickets" component={MyTicketsScreen} />
+            <Stack.Screen name="MyTickets" component={MyTripsScreen} />
             <Stack.Screen name="ValidateTicket" component={ValidateTicketScreen} />
+            <Stack.Screen name="TerrestreRide" component={TerrestreRideScreen} />
             <Stack.Screen name="Reports" component={ReportsScreen} />
             <Stack.Screen name="Calendar" component={CalendarScreen} />
 

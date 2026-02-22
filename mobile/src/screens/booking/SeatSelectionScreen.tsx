@@ -60,22 +60,28 @@ export const SeatSelectionScreen = () => {
 
   const [seats, setSeats] = useState<Seat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
+  const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
 
   /* =========================================================
      CARGA DE ASIENTOS
-     ---------------------------------------------------------
-     🔑 CLAVE:
-     - useFocusEffect → se ejecuta CADA VEZ que la pantalla
-       entra en foco (volver atrás, reabrir, etc.)
-     - Esto garantiza UX consistente
-   ========================================================= */
+     ========================================================= */
 
   const loadSeats = async () => {
     try {
       setLoading(true);
       const data = await getTripSeats(tripId, companyId);
       setSeats(data);
+
+      /* 🚀 RECUPERAR SELECCIONADOS:
+         Si ya estaban bloqueados por mí en el backend (ej: volviendo de Confirm),
+         marcarlos como seleccionados localmente. */
+      const alreadyReserved = data
+        .filter(s => s.isReservedByMe)
+        .map(s => s.seatNumber);
+
+      if (alreadyReserved.length > 0) {
+        setSelectedSeats(alreadyReserved);
+      }
     } catch (error) {
       console.error(error);
       Alert.alert(
@@ -89,11 +95,8 @@ export const SeatSelectionScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      // 🔄 Siempre refrescamos estado real del backend
-      setSelectedSeat(null);
+      setSelectedSeats([]);
       loadSeats();
-
-      // cleanup no necesario aquí
       return () => { };
     }, [tripId])
   );
@@ -103,59 +106,58 @@ export const SeatSelectionScreen = () => {
      ========================================================= */
 
   const handleSelectSeat = (seatNumber: number) => {
-    setSelectedSeat(prev =>
-      prev === seatNumber ? null : seatNumber
+    setSelectedSeats(prev =>
+      prev.includes(seatNumber)
+        ? prev.filter(s => s !== seatNumber)
+        : [...prev, seatNumber]
     );
   };
 
   /* =========================================================
-     CONFIRMAR ASIENTO (BLOQUEO REAL EN BACKEND)
+     CONFIRMAR ASIENTOS (BLOQUEO REAL EN BACKEND)
      ========================================================= */
 
   const handleConfirm = async () => {
-    if (!selectedSeat) return;
+    if (selectedSeats.length === 0) return;
 
     try {
+      setLoading(true);
       await reserveSeat({
         tripId,
-        seatNumber: selectedSeat,
+        seatNumbers: selectedSeats,
       });
 
-      // 👉 El backend ya bloqueó el asiento
+      // 👉 El backend ya bloqueó los asientos
       navigation.navigate("ConfirmTicketModal", {
         tripId,
         routeName,
         price,
         date,
         time,
-        seatNumber: selectedSeat,
+        seatNumbers: selectedSeats,
       });
-    } catch {
-      Alert.alert(
-        "Asiento no disponible",
-        "Este asiento acaba de ser tomado por otro pasajero."
-      );
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || "Uno o más asientos acaban de ser tomados.";
+      Alert.alert("Error", msg);
       loadSeats(); // 🔄 refrescar estado real
+    } finally {
+      setLoading(false);
     }
   };
 
   /* =========================================================
-     VOLVER ATRÁS (LIBERAR ASIENTO)
-     ---------------------------------------------------------
-     🔥 CRÍTICO:
-     - Evita abuso
-     - Evita bloqueos fantasma
-   ========================================================= */
+     VOLVER ATRÁS (LIBERAR ASIENTOS)
+     ========================================================= */
 
   const handleGoBack = async () => {
-    if (selectedSeat) {
+    if (selectedSeats.length > 0) {
       try {
         await releaseSeat({
           tripId,
-          seatNumber: selectedSeat,
+          seatNumbers: selectedSeats,
         });
       } catch (error) {
-        console.warn("No se pudo liberar el asiento");
+        console.warn("No se pudieron liberar los asientos");
       }
     }
 
@@ -167,7 +169,7 @@ export const SeatSelectionScreen = () => {
      ========================================================= */
 
   const SeatItem = ({ seat }: { seat: Seat }) => {
-    const isSelected = selectedSeat === seat.seatNumber;
+    const isSelected = selectedSeats.includes(seat.seatNumber);
 
     return (
       <TouchableOpacity
@@ -186,10 +188,10 @@ export const SeatSelectionScreen = () => {
       >
         <StyledText
           className={`font-bold text-lg ${!seat.available
-              ? "text-gray-400"
-              : isSelected
-                ? "text-white"
-                : "text-gray-600"
+            ? "text-gray-400"
+            : isSelected
+              ? "text-white"
+              : "text-gray-600"
             }`}
         >
           {seat.seatNumber}
@@ -214,12 +216,12 @@ export const SeatSelectionScreen = () => {
             className="p-0 mr-4"
           />
           <StyledText className="text-xl font-bold text-nautic-primary">
-            Elige tu asiento
+            Elige tus asientos
           </StyledText>
         </StyledView>
 
         {/* BODY */}
-        {loading ? (
+        {loading && seats.length === 0 ? (
           <StyledView className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="#0B4F9C" />
           </StyledView>
@@ -248,20 +250,25 @@ export const SeatSelectionScreen = () => {
         )}
 
         {/* FOOTER */}
-        <StyledView className="absolute bottom-4 left-4 right-4 bg-white/90 p-4 border-t border-gray-100">
+        <StyledView className="absolute bottom-4 left-4 right-4 bg-white/90 p-4 border-t border-gray-100 shadow-lg rounded-xl">
           <StyledView className="flex-row justify-between items-center mb-4">
-            <StyledText className="text-gray-500">
-              Asiento seleccionado:
-            </StyledText>
-            <StyledText className="text-xl font-bold text-nautic-primary">
-              {selectedSeat ? `#${selectedSeat}` : "-"}
+            <StyledView>
+              <StyledText className="text-gray-500 text-xs">
+                Asientos ({selectedSeats.length}):
+              </StyledText>
+              <StyledText className="text-sm font-bold text-nautic-primary">
+                {selectedSeats.length > 0 ? selectedSeats.sort((a, b) => a - b).join(", ") : "Ninguno"}
+              </StyledText>
+            </StyledView>
+            <StyledText className="text-lg font-bold text-nautic-primary">
+              ${(price * selectedSeats.length).toLocaleString("es-CO")}
             </StyledText>
           </StyledView>
 
           <Button
-            title="Continuar"
+            title={loading ? "Procesando..." : "Continuar"}
             onPress={handleConfirm}
-            disabled={!selectedSeat}
+            disabled={selectedSeats.length === 0 || loading}
           />
         </StyledView>
       </StyledView>

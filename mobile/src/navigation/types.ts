@@ -112,11 +112,12 @@ export type RootStackParamList = {
     date: string;
     time: string;
     seatNumber?: number;
+    seatNumbers?: number[];
   };
 
   Ticket: {
     ticketId: string;
-    seatNumber: number;
+    seatNumber?: number;
     transactionId?: string;
   };
 
@@ -125,7 +126,7 @@ export type RootStackParamList = {
 
   TicketDetail: {
     ticketId: string;
-    seatNumber: number;
+    seatNumber?: number;
     transactionId?: string;
   };
 
@@ -143,6 +144,11 @@ export type RootStackParamList = {
   CompanyAdmins: {
     companyId: string;
     companyName: string;
+  };
+
+  Audit: {
+    companyId: string;
+    companyName?: string;
   };
 
   Trips: {
@@ -176,6 +182,7 @@ export type RootStackParamList = {
   };
 
   ValidateTicket: undefined;
+  TerrestreRide: undefined;
 };
 
 

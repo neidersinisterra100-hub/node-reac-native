@@ -5,4 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  companyId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

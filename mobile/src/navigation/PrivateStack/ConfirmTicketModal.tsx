@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { View, Text, Alert } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { resetTo } from "../../navigation/navigationRef";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
 
-import { buyTicket } from "../../services/ticket.service";
+import { buyTicket, registerManualPassenger } from "../../services/ticket.service";
 import { releaseSeat } from "../../services/seat.service";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/ui/Button";
@@ -19,6 +20,7 @@ type RouteParams = {
   date: string;
   time?: string;
   seatNumber?: number;
+  seatNumbers?: number[];
   isActive?: boolean;
 };
 
@@ -26,15 +28,6 @@ type RouteParams = {
    CONSTANTES
    ========================================================= */
 const RESERVE_TIME_SECONDS = 5 * 60; // 5 minutos (UX)
-
-/**
- * ⚠️ IMPORTANTE
- * ---------------------------------------------------------
- * Este contador es SOLO UX.
- * La verdad absoluta es:
- * - TTL en Mongo
- * - /seats/release
- */
 
 export default function ConfirmTicketModal() {
   const navigation = useNavigation<any>();
@@ -48,51 +41,55 @@ export default function ConfirmTicketModal() {
     date,
     time,
     seatNumber,
+    seatNumbers = [],
     isActive = true,
   } = route.params as RouteParams;
+
+  // Normalizar lista de asientos
+  const finalSeats = seatNumbers.length > 0
+    ? seatNumbers
+    : (seatNumber ? [seatNumber] : []);
+
+  const totalPrice = price * finalSeats.length;
 
   const [loading, setLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(RESERVE_TIME_SECONDS);
   const [expired, setExpired] = useState(false);
+  const purchasedRef = useRef(false);
 
   /* =========================================================
      FORMATO HORA AM / PM
      ========================================================= */
   const formattedTime = useMemo(() => {
     if (!time) return "—";
-
     const [hourStr, minute = "00"] = time.split(":");
     const hour = Number(hourStr);
     if (Number.isNaN(hour)) return time;
-
     const isPM = hour >= 12;
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minute} ${isPM ? "PM" : "AM"}`;
   }, [time]);
 
   /* =========================================================
-     LIBERAR ASIENTO (UTILIDAD CENTRAL)
+     LIBERAR ASIENTOS (UTILIDAD CENTRAL)
      ========================================================= */
-  const releaseCurrentSeat = useCallback(async () => {
-    if (!seatNumber) return;
-
+  const releaseCurrentSeats = useCallback(async () => {
+    if (finalSeats.length === 0) return;
     try {
       await releaseSeat({
         tripId,
-        seatNumber,
+        seatNumbers: finalSeats,
       });
     } catch (error) {
-      // ❌ No alertamos: liberar es "best effort"
-      console.warn("No se pudo liberar asiento", error);
+      console.warn("No se pudieron liberar asientos", error);
     }
-  }, [tripId, seatNumber]);
+  }, [tripId, finalSeats]);
 
   /* =========================================================
      COUNTDOWN UX
      ========================================================= */
   useEffect(() => {
     if (expired) return;
-
     const interval = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
@@ -103,45 +100,34 @@ export default function ConfirmTicketModal() {
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(interval);
   }, [expired]);
 
   /* =========================================================
-     EXPIRACIÓN → LIBERAR ASIENTO
+     EXPIRACIÓN → LIBERAR ASIENTOS
      ========================================================= */
   useEffect(() => {
     if (!expired) return;
-
     (async () => {
-      await releaseCurrentSeat();
-
+      await releaseCurrentSeats();
       Alert.alert(
         "Reserva vencida",
         "El tiempo para completar la compra terminó.",
-        [
-          {
-            text: "Entendido",
-            onPress: () => navigation.goBack(),
-          },
-        ]
+        [{ text: "Entendido", onPress: () => navigation.goBack() }]
       );
     })();
-  }, [expired, navigation, releaseCurrentSeat]);
+  }, [expired, navigation, releaseCurrentSeats]);
 
   /* =========================================================
-     CLEANUP GLOBAL (GO BACK / CLOSE MODAL)
-     =========================================================
-     🔥 CLAVE:
-     - cancelar
-     - swipe down
-     - navegación atrás
+     CLEANUP GLOBAL
      ========================================================= */
   useEffect(() => {
     return () => {
-      releaseCurrentSeat();
+      if (!purchasedRef.current) {
+        releaseCurrentSeats();
+      }
     };
-  }, [releaseCurrentSeat]);
+  }, [releaseCurrentSeats]);
 
   /* =========================================================
      FORMATO MM:SS
@@ -153,14 +139,11 @@ export default function ConfirmTicketModal() {
   }, [secondsLeft]);
 
   /* =========================================================
-     CONFIRMAR COMPRA
+     CONFIRMAR COMPRA (SIMULACIÓN MANUAL / DESARROLLO)
      ========================================================= */
   const handleConfirm = async () => {
     if (expired) {
-      Alert.alert(
-        "Tiempo agotado",
-        "La reserva del asiento venció. Selecciona otro asiento."
-      );
+      Alert.alert("Tiempo agotado", "La reserva venció.");
       navigation.goBack();
       return;
     }
@@ -168,50 +151,37 @@ export default function ConfirmTicketModal() {
     try {
       setLoading(true);
 
-      const response = await buyTicket({
+      const response = await registerManualPassenger({
         tripId,
         passengerName: user?.name || "Pasajero",
-        passengerId: "000000", // TODO: documento real
-        seatNumber: seatNumber ? String(seatNumber) : "General",
+        passengerId: "000000",
+        seatNumbers: finalSeats,
       });
 
-      const { paymentData } = response;
+      purchasedRef.current = true;
 
-      if (!paymentData?.reference) {
-        Alert.alert("Error", "Datos de pago inválidos");
-        return;
-      }
+      const firstTicketId = response.firstTicketId
+        ? String(response.firstTicketId)
+        : null;
 
-      const checkoutUrl =
-        `https://checkout.wompi.co/p/?` +
-        `public-key=${paymentData.publicKey}` +
-        `&currency=${paymentData.currency}` +
-        `&amount-in-cents=${paymentData.amountInCents}` +
-        `&reference=${paymentData.reference}` +
-        `&signature:integrity=${paymentData.signature}` +
-        `&customer-email=${paymentData.customerEmail}` +
-        `&redirect-url=${paymentData.redirectUrl}`;
+      console.log("✅ Compra exitosa. Navegando a ticket:", firstTicketId);
 
-      await Linking.openURL(checkoutUrl);
+      // Alert.alert no funciona en web — navegamos directamente
+      navigation.reset({
+        index: firstTicketId ? 1 : 0,
+        routes: firstTicketId
+          ? [{ name: "Tabs" as any }, { name: "Ticket" as any, params: { ticketId: firstTicketId } }]
+          : [{ name: "Tabs" as any }],
+      });
+
     } catch (error: any) {
       const status = error?.response?.status;
-
       if (status === 409) {
-        Alert.alert(
-          "Asiento no disponible",
-          error?.response?.data?.message ||
-            "El asiento ya fue ocupado. Elige otro."
-        );
+        Alert.alert("Error", "Uno o más asientos ya no están disponibles.");
         navigation.goBack();
         return;
       }
-
-      if (status === 403) {
-        Alert.alert("Acceso denegado", "No tienes permisos");
-        return;
-      }
-
-      Alert.alert("Error", "No se pudo iniciar la compra");
+      Alert.alert("Error", "No se pudo procesar la compra manual.");
     } finally {
       setLoading(false);
     }
@@ -225,26 +195,15 @@ export default function ConfirmTicketModal() {
       <View className="bg-white rounded-t-3xl px-6 pt-6 pb-8 items-center">
         {/* ICON */}
         <View className="w-20 h-20 rounded-full bg-blue-50 items-center justify-center mb-4">
-          <MaterialCommunityIcons
-            name="ticket-confirmation"
-            size={44}
-            color="#0B4F9C"
-          />
+          <MaterialCommunityIcons name="ticket-confirmation" size={44} color="#0B4F9C" />
         </View>
 
-        {/* TITLE */}
-        <Text className="text-2xl font-bold text-slate-900">
-          Confirmar compra
-        </Text>
-        <Text className="text-sm text-slate-500 mb-6">
-          Revisa los detalles de tu viaje
-        </Text>
+        <Text className="text-2xl font-bold text-slate-900">Confirmar compra</Text>
+        <Text className="text-sm text-slate-500 mb-6">Revisa los detalles de tu viaje</Text>
 
         {!isActive && (
           <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 w-full">
-            <Text className="text-red-600 font-bold text-sm text-center">
-              🚫 Este viaje no está disponible para compra
-            </Text>
+            <Text className="text-red-600 font-bold text-sm text-center">🚫 Viaje no disponible</Text>
           </View>
         )}
 
@@ -252,30 +211,21 @@ export default function ConfirmTicketModal() {
         <View className="w-full rounded-2xl bg-slate-50 p-4 mb-6">
           <DetailRow label="Ruta" value={routeName || "Ruta seleccionada"} />
           <Divider />
-          <DetailRow
-            label="Fecha"
-            value={new Date(date).toLocaleDateString("es-CO")}
-          />
+          <DetailRow label="Fecha" value={new Date(date).toLocaleDateString("es-CO")} />
           <Divider />
           <DetailRow label="Hora" value={formattedTime} />
           <Divider />
 
           <View className="flex-row justify-between items-center py-2">
-            <Text className="text-slate-500 text-sm">Asiento</Text>
+            <Text className="text-slate-500 text-sm">Asientos ({finalSeats.length})</Text>
             <Text className="text-nautic-primary font-extrabold text-xl">
-              {seatNumber ? `#${seatNumber}` : "General"}
+              {finalSeats.sort((a,b)=>a-b).map(s => `#${s}`).join(", ")}
             </Text>
           </View>
 
           <View className="mt-3 items-center">
-            <Text className="text-xs text-slate-500">
-              Asiento reservado por
-            </Text>
-            <Text
-              className={`text-lg font-bold ${
-                secondsLeft <= 60 ? "text-red-600" : "text-green-600"
-              }`}
-            >
+            <Text className="text-xs text-slate-500">Reserva expira en</Text>
+            <Text className={`text-lg font-bold ${secondsLeft <= 60 ? "text-red-600" : "text-green-600"}`}>
               ⏱️ {formattedCountdown}
             </Text>
           </View>
@@ -283,16 +233,7 @@ export default function ConfirmTicketModal() {
           <View className="mt-5 pt-4 border-t border-slate-200">
             <Text className="text-sm text-slate-500 mb-1">Total a pagar</Text>
             <Text className="text-3xl font-extrabold text-nautic-primary text-right">
-              ${price.toLocaleString("es-CO")}
-            </Text>
-          </View>
-
-          <View className="mt-3 items-center">
-            <Text className="text-[10px] text-slate-400">
-              Pagos procesados de forma segura por
-            </Text>
-            <Text className="text-xs font-black tracking-widest text-slate-800">
-              WOMPI
+              ${totalPrice.toLocaleString("es-CO")}
             </Text>
           </View>
         </View>
@@ -300,13 +241,7 @@ export default function ConfirmTicketModal() {
         {/* ACTIONS */}
         <View className="w-full gap-3">
           <Button
-            title={
-              expired
-                ? "Reserva vencida"
-                : loading
-                ? "Procesando..."
-                : `Pagar $${price.toLocaleString("es-CO")}`
-            }
+            title={expired ? "Reserva vencida" : loading ? "Procesando..." : `Pagar $${totalPrice.toLocaleString("es-CO")}`}
             onPress={handleConfirm}
             loading={loading}
             disabled={loading || expired || !isActive}
@@ -316,7 +251,7 @@ export default function ConfirmTicketModal() {
             title="Cancelar"
             variant="ghost"
             onPress={async () => {
-              await releaseCurrentSeat();
+              await releaseCurrentSeats();
               navigation.goBack();
             }}
             disabled={loading}
@@ -751,19 +686,6 @@ function Divider() {
 //             </View>
 //             <Divider style={styles.divider} />
 //             <View style={styles.row}>
-//                 <Text style={styles.label}>Hora:</Text>
-//                 <Text style={styles.value}>{time}</Text>
-//             </View>
-//             <Divider style={styles.divider} />
-//             <View style={styles.row}>
-//                 <Text style={styles.label}>Pasajero:</Text>
-//                 <Text style={styles.value}>{user?.name}</Text>
-//             </View>
-            
-//             <View style={styles.totalRow}>
-//                 <Text style={styles.totalLabel}>Total a Pagar:</Text>
-//                 <Text style={styles.totalValue}>
-//                     ${price.toLocaleString("es-CO")}
 //                 </Text>
 //             </View>
             

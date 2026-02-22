@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { SeatGridSkeleton } from "../components/ui/Skeletons";
 import { useEffect, useState } from "react";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { getTripSeats, Seat } from "../services/seat.service";
@@ -45,7 +46,7 @@ export default function TripSeatsScreen() {
 
             <View style={styles.container}>
                 {loading ? (
-                    <ActivityIndicator size="large" color="#ff6b00" style={{ marginTop: 50 }} />
+                    <SeatGridSkeleton count={20} />
                 ) : (
                     <View style={styles.grid}>
                         {seats.map((seat) => (

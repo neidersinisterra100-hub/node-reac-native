@@ -9,6 +9,8 @@ import { TripModel } from "../models/trip.model.js";
 import { RouteModel } from "../models/route.model.js";
 import { CompanyModel } from "../models/company.model.js";
 import { SeatReservationModel } from "../models/seatReservation.model.js";
+import { TicketModel } from "../models/ticket.model.js";
+import { AuditLogModel } from "../models/auditLog.model.js";
 
 // ===============================
 // CONSTANTES / SERVICIOS
@@ -119,7 +121,13 @@ export const getTrips: RequestHandler = async (_req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    return res.json(trips.map(toTripDTO));
+    // 🚀 Agregar soldSeats a cada viaje (contado desde Tickets vendidos)
+    const enrichedTrips = await attachSoldSeats(trips);
+
+    return res.json(enrichedTrips.map(t => ({
+      ...toTripDTO(t),
+      soldSeats: t.soldSeats,
+    })));
   } catch (error) {
     console.error("❌ [getTrips] Error:", error);
     return res.status(500).json({ message: "Error al obtener viajes" });
@@ -138,17 +146,34 @@ GET TRIPS (MANAGE)
 
 export const getManageTrips: RequestHandler = async (req, res) => {
   try {
-    const company = req.company;
+    if (!req.user) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
 
-    // Log para validar que req.company esté definido
-    console.log('req.company:', company);
+    let companyIds: Types.ObjectId[] = [];
 
-    if (!company) {
-      return res.status(500).json({ message: 'Empresa no encontrada en el contexto de la solicitud' });
+    // Prioridad 1: req.company (poblado por ownershipGuard en rutas con :companyId)
+    if (req.company) {
+      companyIds = [req.company._id];
+    } else {
+      // Prioridad 2: Buscar empresas según rol del usuario (ruta /manage sin params)
+      const { role, companyId, id: userId } = req.user;
+      const companyFilter: Record<string, unknown> = {};
+
+      if (role === "admin" && companyId) {
+        companyIds = [new Types.ObjectId(companyId as string)];
+      } else if (role === "owner" || role === "super_owner") {
+        const companies = await CompanyModel.find({ owner: userId }).select("_id").lean();
+        companyIds = companies.map(c => c._id) as Types.ObjectId[];
+      }
+    }
+
+    if (companyIds.length === 0) {
+      return res.json([]);
     }
 
     const trips = await TripModel.find({
-      companyId: company._id,
+      companyId: { $in: companyIds },
     })
       .populate("routeId", "origin destination isActive")
       .populate("companyId", "name")
@@ -165,7 +190,7 @@ export const getManageTrips: RequestHandler = async (req, res) => {
     );
   } catch (error) {
     console.error("[getManageTrips]", error);
-    return res.status(500).json({ message: "Error al obtener viajes" });
+    return res.status(500).json({ message: "Error al obtener viajes de gestión" });
   }
 };
 
@@ -319,6 +344,21 @@ export const createTrip: RequestHandler = async (req, res) => {
 
     await trip.populate(["routeId", "companyId"]);
 
+    // 🔍 Registrar en auditoría
+    await AuditLogModel.create({
+      action: "trip.create",
+      entity: "trip",
+      entityId: trip._id,
+      performedBy: req.user.id,
+      source: "manual",
+      metadata: {
+        companyId: company._id.toString(),
+        companyName: company.name,
+        tripDate: date,
+        routeName: `${route.origin} → ${route.destination}`,
+      },
+    }).catch(() => { });
+
     return res.status(201).json(toTripDTO(trip));
   } catch (error) {
     await session.abortTransaction();
@@ -391,6 +431,21 @@ export const toggleTripActive: RequestHandler = async (req, res) => {
 
     await trip.save();
     await trip.populate(["routeId", "companyId"]);
+
+    // 🔍 Registrar en auditoría
+    const action = trip.isActive ? "trip.activate" : "trip.deactivate";
+    await AuditLogModel.create({
+      action,
+      entity: "trip",
+      entityId: trip._id,
+      performedBy: req.user.id,
+      source: "manual",
+      metadata: {
+        companyId: company._id.toString(),
+        companyName: company.name,
+        tripDate: trip.date,
+      },
+    }).catch(() => { });
 
     return res.json(toTripDTO(trip));
   } catch (error) {
@@ -558,16 +613,20 @@ async function attachSoldSeats(
 ): Promise<TripWithSoldSeats[]> {
   const tripIds = trips.map(t => t._id);
 
-  const stats = await SeatReservationModel.aggregate([
+  /**
+   * 🚀 CORREGIDO: Contar desde TicketModel con status activo/usado/pending_payment
+   * NO desde SeatReservationModel (que son reservas temporales TTL sin status 'confirmed')
+   */
+  const stats = await TicketModel.aggregate([
     {
       $match: {
-        tripId: { $in: tripIds },
-        status: "confirmed",
+        trip: { $in: tripIds },
+        status: { $in: ["active", "used", "pending_payment"] },
       },
     },
     {
       $group: {
-        _id: "$tripId",
+        _id: "$trip",
         soldSeats: { $sum: 1 },
       },
     },

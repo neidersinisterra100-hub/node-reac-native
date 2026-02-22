@@ -9,7 +9,7 @@ import {
 import { styled } from "nativewind";
 import { ScreenContainer } from "../../components/ui/ScreenContainer";
 import { PressableCard } from "../../components/ui/Card";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { getMyTickets } from "../../services/ticket.service";
@@ -30,19 +30,25 @@ const StyledView = styled(View);
 export const MyTripsScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const isFocused = useIsFocused();
 
   const [tickets, setTickets] = useState<UITicket[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTickets();
-  }, []);
+    if (isFocused) {
+      loadTickets();
+    }
+  }, [isFocused]);
 
   const loadTickets = async () => {
     setLoading(true);
     try {
       const data = await getMyTickets();
+      // Ordenar por fecha de creación (más recientes primero)
       setTickets(data);
+    } catch (err) {
+      console.error("Error loading tickets", err);
     } finally {
       setLoading(false);
     }
@@ -53,7 +59,8 @@ export const MyTripsScreen = () => {
       onPress={() =>
         navigation.navigate("Ticket", {
           ticketId: item._id,
-          seatNumber: Number(item.seatNumber),
+          // Pasamos el asiento como string o número si es posible, sin forzar Number() que causa NaN
+          seatNumber: item.seatNumber ? parseInt(item.seatNumber) : undefined,
           transactionId: item.code,
         })
       }
@@ -68,13 +75,13 @@ export const MyTripsScreen = () => {
           </StyledText>
         </StyledView>
 
-        <StyledText className="text-green-600 text-xs font-bold bg-green-100 px-2 py-0.5 rounded">
-          CONFIRMADO
+        <StyledText className="text-green-600 text-[10px] font-bold bg-green-100 px-2 py-0.5 rounded">
+          ✓ CONFIRMADO
         </StyledText>
       </StyledView>
 
       {/* ROUTE */}
-      <StyledText className="text-lg font-bold text-nautic-primary mb-2">
+      <StyledText className="text-lg font-bold text-nautic-primary mb-1">
         {item.routeName}
       </StyledText>
 
@@ -82,31 +89,31 @@ export const MyTripsScreen = () => {
       <StyledView className="flex-row justify-between mt-2">
         <StyledView className="flex-row items-center">
           <Calendar size={14} color="#64748B" />
-          <StyledText className="ml-1 text-xs text-gray-500">
-            {item.date?.toString().substring(0, 10)}
+          <StyledText className="ml-1 text-xs text-slate-500">
+            {item.date ? new Date(item.date).toLocaleDateString("es-CO") : '-'}
           </StyledText>
         </StyledView>
 
         <StyledView className="flex-row items-center">
           <Clock size={14} color="#64748B" />
-          <StyledText className="ml-1 text-xs text-gray-500">
+          <StyledText className="ml-1 text-xs text-slate-500">
             {formatTimeAmPm(item.departureAt)}
           </StyledText>
         </StyledView>
       </StyledView>
 
       {/* FOOTER */}
-      <StyledView className="flex-row justify-between items-center border-t border-gray-100 mt-3 pt-3">
-        <StyledText className="text-xs text-gray-400">
+      <StyledView className="flex-row justify-between items-center border-t border-slate-100 mt-3 pt-3">
+        <StyledText className="text-xs text-slate-400">
           Asiento:{" "}
-          <StyledText className="font-bold text-nautic-text">
-            {item.seatNumber}
+          <StyledText className="font-bold text-nautic-primary">
+            {item.seatNumber || "General"}
           </StyledText>
         </StyledText>
 
         <StyledView className="flex-row items-center">
-          <StyledText className="mr-1 text-sm font-bold text-nautic-accent">
-            Ver ticket
+          <StyledText className="mr-1 text-xs font-bold text-nautic-accent">
+            Ver detalle
           </StyledText>
           <TicketIcon size={14} color="#00B4D8" />
         </StyledView>
@@ -116,9 +123,9 @@ export const MyTripsScreen = () => {
 
   return (
     <ScreenContainer withPadding={false}>
-      <AppHeader title="Mis Viajes" showBack showAvatar={false} />
+      <AppHeader title="Mis Tickets" showBack={false} />
 
-      {loading ? (
+      {loading && tickets.length === 0 ? (
         <StyledView className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#0B4F9C" />
         </StyledView>
@@ -133,18 +140,21 @@ export const MyTripsScreen = () => {
           contentContainerStyle={{
             paddingTop: 12,
             paddingBottom: 100,
-            paddingHorizontal: 16, // ✅ MISMO ANCHO QUE ROUTES
+            paddingHorizontal: 0,
           }}
           ListEmptyComponent={() => (
-            <StyledView className="items-center justify-center p-8">
-              <TicketIcon size={48} color="#CBD5E1" />
-              <StyledText className="mt-4 text-center text-gray-400">
-                No tienes viajes programados.
+            <StyledView className="items-center justify-center p-8 mt-10">
+              <TicketIcon size={64} color="#CBD5E1" />
+              <StyledText className="mt-4 text-center text-slate-400 font-medium text-lg">
+                Aún no tienes tickets.
+              </StyledText>
+              <StyledText className="text-center text-slate-400 text-sm mt-1">
+                Tus viajes comprados aparecerán aquí.
               </StyledText>
               <Button
-                title="Buscar viajes"
+                title="Explorar Rutas"
                 onPress={() => navigation.navigate("LocationSelection")}
-                className="mt-6"
+                className="mt-8 px-8"
               />
             </StyledView>
           )}
@@ -153,97 +163,3 @@ export const MyTripsScreen = () => {
     </ScreenContainer>
   );
 };
-
-
-
-// import React, { useEffect, useState } from 'react';
-// import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
-// import { styled } from 'nativewind';
-// import { ScreenContainer } from '../../components/ui/ScreenContainer';
-// import { PressableCard } from "../../components/ui/Card";
-// import { useNavigation } from '@react-navigation/native';
-// import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// import { RootStackParamList } from '../../navigation/types';
-// import { getMyTickets } from '../../services/ticket.service';
-// import { Ticket as UITicket } from '../../types/ticket';
-// import { Ticket as TicketIcon, Calendar, Clock, Ship } from 'lucide-react-native';
-// import { Button } from '../../components/ui/Button';
-// import AppHeader from '../../components/ui/AppHeader';
-
-// const StyledText = styled(Text);
-// const StyledView = styled(View);
-
-// export const MyTripsScreen = () => {
-//   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-//   const [tickets, setTickets] = useState<UITicket[]>([]);
-//   const [loading, setLoading] = useState(true);
-
-//   useEffect(() => {
-//     loadTickets();
-//   }, []);
-
-//   const loadTickets = async () => {
-//     setLoading(true);
-//     try {
-//       const data = await getMyTickets();
-//       setTickets(data);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const renderTicket = ({ item }: { item: UITicket }) => (
-//     <PressableCard
-//   onPress={() =>
-//     navigation.navigate("TicketDetail", {
-//       ticketId: item._id,
-//       seatNumber: Number(item.seatNumber),
-//       transactionId: item.code,
-//     })
-//   }
-//   className="mx-4 mt-2 mb-2 border-l-4 border-l-nautic-primary"
-// >
-//   ...
-// </PressableCard>
-
-//   );
-
-//   return (
-//     <ScreenContainer withPadding={false}>
-//       <AppHeader title="Mis Viajes" showBack showAvatar={false} />
-
-//       {loading ? (
-//         <StyledView className="flex-1 items-center justify-center">
-//           <ActivityIndicator size="large" color="#0B4F9C" />
-//         </StyledView>
-//       ) : (
-//         <FlatList
-//           data={tickets}
-//           keyExtractor={(item) => item._id}
-//           renderItem={renderTicket}
-//           refreshControl={
-//             <RefreshControl refreshing={loading} onRefresh={loadTickets} />
-//           }
-//           contentContainerStyle={{
-//             paddingTop: 12,
-//             paddingBottom: 100,
-//             paddingHorizontal: 16, // 🔥 MISMO QUE ROUTES
-//           }}
-//           ListEmptyComponent={() => (
-//             <StyledView className="items-center justify-center p-8">
-//               <TicketIcon size={48} color="#CBD5E1" />
-//               <StyledText className="text-gray-400 mt-4 text-center">
-//                 No tienes viajes programados.
-//               </StyledText>
-//               <Button
-//                 title="Buscar viajes"
-//                 onPress={() => navigation.navigate("LocationSelection")}
-//                 className="mt-6"
-//               />
-//             </StyledView>
-//           )}
-//         />
-//       )}
-//     </ScreenContainer>
-//   );
-// };

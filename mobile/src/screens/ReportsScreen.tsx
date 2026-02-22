@@ -10,6 +10,7 @@ import AppHeader from '../components/ui/AppHeader';
 import { useTheme } from '../context/ThemeContext';
 import { colors } from '../theme/colors';
 import { getSalesReport, getOccupancyReport, SalesReport, OccupancyReport } from '../services/report.service';
+import { DetailSkeleton } from '../components/ui/Skeletons';
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -159,7 +160,7 @@ export default function ReportsScreen() {
                 )}
 
                 {loading ? (
-                    <Text style={{ textAlign: 'center', marginTop: 20, color: theme.colors.textPrimary }}>Cargando reportes...</Text>
+                    <DetailSkeleton />
                 ) : (
                     <>
                         {/* Show empty state if no data */}

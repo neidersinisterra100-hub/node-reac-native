@@ -23,20 +23,21 @@ export const getSalesReport: RequestHandler = async (req, res) => {
     const { from, to } = req.query;
     let companyIds: mongoose.Types.ObjectId[] = [];
 
-    // Si el usuario tiene companyId en el token (admin), usar ese
-    if (authReq.user.companyId) {
-      companyIds = [new mongoose.Types.ObjectId(authReq.user.companyId)];
-    } else {
-      // Si es owner, buscar todas sus empresas
+    // 🚀 MEJORA: Priorizar el rol owner para ver TODAS sus empresas
+    if (authReq.user.role === "owner") {
       const companies = await CompanyModel.find({
         owner: authReq.user.id,
       }).select("_id");
 
       if (companies.length === 0) {
-        return res.json([]); // No tiene empresas, retornar array vacío
+        return res.json([]);
       }
-
       companyIds = companies.map(c => c._id as mongoose.Types.ObjectId);
+    } else if (authReq.user.companyId) {
+      // Si es admin, usar la de su token
+      companyIds = [new mongoose.Types.ObjectId(authReq.user.companyId)];
+    } else {
+      return res.json([]); // No tiene empresas asignadas
     }
 
     if (!from || !to) {
@@ -62,7 +63,7 @@ export const getSalesReport: RequestHandler = async (req, res) => {
       { $unwind: "$tripData" },
       {
         $match: {
-          "tripData.company": { $in: companyIds },
+          "tripData.companyId": { $in: companyIds },
           status: { $in: ["active", "used"] },
           createdAt: { $gte: startDate, $lte: endDate },
         },
@@ -107,27 +108,28 @@ export const getOccupancyReport: RequestHandler = async (req, res) => {
 
     let companyIds: mongoose.Types.ObjectId[] = [];
 
-    // Si el usuario tiene companyId en el token (admin), usar ese
-    if (authReq.user.companyId) {
-      companyIds = [new mongoose.Types.ObjectId(authReq.user.companyId)];
-    } else {
-      // Si es owner, buscar todas sus empresas
+    // 🚀 MEJORA: Priorizar el rol owner para ver TODAS sus empresas
+    if (authReq.user.role === "owner") {
       const companies = await CompanyModel.find({
         owner: authReq.user.id,
       }).select("_id");
 
       if (companies.length === 0) {
-        return res.json([]); // No tiene empresas, retornar array vacío
+        return res.json([]);
       }
-
       companyIds = companies.map(c => c._id as mongoose.Types.ObjectId);
+    } else if (authReq.user.companyId) {
+      // Si es admin, usar la de su token
+      companyIds = [new mongoose.Types.ObjectId(authReq.user.companyId)];
+    } else {
+      return res.json([]);
     }
 
     /* ---------- Obtener viajes ---------- */
     const trips = await TripModel.find({
-      company: { $in: companyIds },
-      active: true,
-    }).select("date route capacity");
+      companyId: { $in: companyIds },
+      isActive: true,
+    }).select("date routeId capacity");
 
     const report = await Promise.all(
       trips.map(async (trip) => {

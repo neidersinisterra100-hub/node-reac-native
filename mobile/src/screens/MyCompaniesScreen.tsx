@@ -18,6 +18,7 @@ import {
 } from "../services/company.service";
 import { useAuth } from "../context/AuthContext";
 import { colors } from "../theme/colors";
+import { ListSkeleton } from "../components/ui/Skeletons";
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
@@ -186,9 +187,7 @@ export default function MyCompaniesScreen() {
             )}
 
             {loading ? (
-                <StyledView className="flex-1 justify-center items-center">
-                    <ActivityIndicator size="large" color={colors.primary} />
-                </StyledView>
+                <ListSkeleton count={4} />
             ) : (
                 <FlatList
                     data={isOwner ? companies : companies.filter(c => c.isActive)}

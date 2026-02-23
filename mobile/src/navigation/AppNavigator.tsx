@@ -44,6 +44,8 @@ import TerrestreRideScreen from "../screens/terrestre/TerrestreRideScreen";
 import AllRoutesScreen from "../screens/AllRoutesScreen";
 import ManageLocationsScreen from "../screens/ManageLocationsScreen";
 import { WeatherMarineScreen } from "../screens/WeatherMarineScreen";
+import CompleteProfileScreen from "../screens/CompleteProfileScreen";
+import NauticBotScreen from "../screens/NauticBotScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -121,6 +123,16 @@ export default function AppNavigator() {
             <Stack.Screen name="Reports" component={ReportsScreen} />
             <Stack.Screen name="Calendar" component={CalendarScreen} />
             <Stack.Screen name="WeatherMarine" component={WeatherMarineScreen} />
+            <Stack.Screen
+              name="CompleteProfile"
+              component={CompleteProfileScreen}
+              options={{ animation: "slide_from_right" }}
+            />
+            <Stack.Screen
+              name="NauticBot"
+              component={NauticBotScreen}
+              options={{ animation: "slide_from_bottom", headerShown: false }}
+            />
 
 
 

@@ -16,8 +16,17 @@ export interface IUser extends Document {
   // Relación jerárquica (opcional)
   ownerId?: Types.ObjectId | null;
 
-  // Para futuro multi-empresa
+  // For futuro multi-empresa
   managedCompanies?: Types.ObjectId[];
+
+  // 📝 PROFILE COMPLETION
+  identificationNumber?: string; // Encrypted
+  phone?: string;
+  birthDate?: Date;
+  address?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  isProfileComplete: boolean;
 
   // 🔐 SECURITY: Brute force protection
   failedLoginAttempts?: number;
@@ -76,6 +85,15 @@ const UserSchema = new Schema<IUser>(
         ref: "Company",
       },
     ],
+
+    // 📝 PROFILE COMPLETION
+    identificationNumber: { type: String, default: null, index: true },
+    phone: { type: String, default: null },
+    birthDate: { type: Date, default: null },
+    address: { type: String, default: null },
+    emergencyContactName: { type: String, default: null },
+    emergencyContactPhone: { type: String, default: null },
+    isProfileComplete: { type: Boolean, default: false },
 
     // 🔐 SECURITY: Brute force protection
     failedLoginAttempts: {

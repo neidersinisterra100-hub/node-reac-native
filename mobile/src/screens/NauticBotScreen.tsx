@@ -1,0 +1,775 @@
+/**
+ * NauticBot — AI Conversational Assistant
+ * Features: intent detection, real API data, voice recording (expo-av),
+ *           TTS (expo-speech), trip booking flow, human personality.
+ */
+import React, {
+    useState, useRef, useCallback, useEffect,
+} from "react";
+import {
+    View, Text, TextInput, TouchableOpacity, FlatList,
+    KeyboardAvoidingView, Platform, Animated, Easing,
+    ActivityIndicator, Keyboard, StatusBar, Pressable,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Bot, Send, X, Mic, MicOff, Volume2, VolumeX } from "lucide-react-native";
+import { Audio } from "expo-av";
+import * as Speech from "expo-speech";
+
+import { tripService } from "../services/trip.service";
+import { getAllRoutes } from "../services/route.service";
+import { useAuth } from "../context/AuthContext";
+
+/* ═══════════════════════════════════════════════════════════════
+   TYPES
+═══════════════════════════════════════════════════════════════ */
+type Role = "bot" | "user";
+type BookingStep = "idle" | "select_trip" | "confirm" | "done";
+
+interface TripOption {
+    id: string;
+    origin: string;
+    destination: string;
+    date: string;
+    time: string;
+    price: number;
+    capacity: number;
+    soldSeats: number;
+    company: string;
+}
+
+interface Message {
+    id: string;
+    role: Role;
+    text: string;
+    timestamp: Date;
+    quickReplies?: string[];
+    tripOptions?: TripOption[];    // for booking cards
+    isVoice?: boolean;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HUMAN PERSONALITY — varied phrases for each intent
+═══════════════════════════════════════════════════════════════ */
+const PHRASES = {
+    greeting: [
+        "¡Hola! 👋 Soy **NauticBot**, tu asistente acuático. ¿En qué te ayudo hoy?",
+        "¡Qué bueno verte por aquí! 🌊 Soy **NauticBot**. ¿Buscas un viaje, información de rutas o algo más?",
+        "¡Bienvenido/a a bordo! ⚓ Cuéntame, ¿qué necesitas saber?",
+    ],
+    thinking: [
+        "Déjame ver eso... 🔍",
+        "Un momento, consultando la información... ⏳",
+        "Buscando lo mejor para ti... 🌊",
+        "Ya mismo te digo... 🤿",
+    ],
+    noTrips: [
+        "En este momento no hay viajes activos. 😕 Intenta más tarde o cambia el municipio seleccionado.",
+        "No encontré viajes disponibles justo ahora. Puede que en un rato hayan más opciones. 🚢",
+    ],
+    bookingStart: [
+        "¡Claro! Vamos a reservar tu viaje. 🎉 Estos son los que tenemos disponibles:",
+        "Con gusto te ayudo a reservar. ⚓ Elige el viaje que más te conviene:",
+        "¡Perfecto! Mira las opciones disponibles y escoge la que prefieras: 🛥️",
+    ],
+    bookingConfirm: [
+        "¿Confirmamos este viaje? Es tu turno de decidir. 😊",
+        "Revisemos juntos: ¿todo se ve bien para ti?",
+        "Solo dime **Confirmar** y enseguida lo reservamos.",
+    ],
+    bookingDone: [
+        "¡Listo! ✅ Tu reserva quedó hecha. ¡Buen viaje! 🌊",
+        "¡Reservado con éxito! 🎊 Espero que disfrutes el recorrido.",
+        "¡Todo quedó confirmado! Que tengas un viaje increíble. ⛵",
+    ],
+    bookingCancel: [
+        "De acuerdo, cancelamos. Si cambias de opinión, aquí estaré. 😊",
+        "Sin problema, reserva cancelada. ¿Puedo ayudarte con algo más?",
+    ],
+    unknown: [
+        "Hmm, no te entendí del todo. 🤔 ¿Puedes reformularlo? Puedo ayudarte con **viajes, rutas, precios, horarios** y **reservas**.",
+        "No capté bien eso. Intenta preguntarme sobre **viajes disponibles**, **precios** o **cómo reservar**.",
+        "¿Podrías ser un poco más específico? Soy bueno con **viajes, rutas, disponibilidad y reservas**. 🧭",
+    ],
+    voiceReceived: [
+        "Escuché tu nota de voz 🎙️. Por ahora solo proceso texto, pero pronto podré entenderte por voz. ¿Qué necesitas?",
+        "¡Nota de voz recibida! 🎙️ La transcripción automática llega pronto. Mientras tanto, ¿qué te puedo ayudar?",
+    ],
+};
+
+function pick(arr: string[]) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INTENT DETECTION
+═══════════════════════════════════════════════════════════════ */
+function norm(t: string) {
+    return t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+const KW: Record<string, string[]> = {
+    greeting: ["hola", "buenos", "buenas", "hey", "ola", "buen dia", "inicio"],
+    book: ["reservar", "reserva", "quiero reservar", "comprar tiquete", "como reservo", "quiero un viaje", "apartar"],
+    prices: ["precio", "precios", "costo", "costos", "tarifa", "vale", "cuanto cuesta", "cuanto vale"],
+    times: ["hora", "horas", "horario", "cuando sale", "salen", "que hora"],
+    availability: ["disponible", "disponibles", "cupos", "silla", "sillas", "quedan", "hay cupo"],
+    trips: ["viaje", "viajes", "lancha", "lanchas", "embarcacion", "activos"],
+    routes: ["ruta", "rutas", "origen", "destino", "trayecto", "trayectos"],
+    help: ["ayuda", "ayudame", "que puedes", "puedes hacer", "opciones", "info"],
+    cancel: ["cancelar", "cancela", "no quiero", "olvida", "volver"],
+    confirm: ["confirmar", "confirmo", "si", "sí", "acepto", "dale", "listo", "ok", "adelante"],
+};
+
+function detectIntent(text: string, bookingStep: BookingStep): string {
+    const t = norm(text);
+
+    // while in booking flow
+    if (bookingStep === "select_trip") return "booking_select";
+    if (bookingStep === "confirm") {
+        if (KW.confirm.some(k => t.includes(k))) return "booking_confirmed";
+        if (KW.cancel.some(k => t.includes(k))) return "booking_cancelled";
+        return "booking_confirm_prompt";
+    }
+
+    for (const [intent, kws] of Object.entries(KW)) {
+        if (kws.some(k => t.includes(k))) return intent;
+    }
+    return "unknown";
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TRIP UTILITIES
+═══════════════════════════════════════════════════════════════ */
+async function fetchActiveTrips(): Promise<TripOption[]> {
+    const raw = await tripService.getAll();
+    return raw
+        .filter((t: any) => t.isActive)
+        .map((t: any) => ({
+            id: t._id || t.id,
+            origin: t.route?.origin || "Origen",
+            destination: t.route?.destination || "Destino",
+            date: t.date || "",
+            time: t.departureTime || "--:--",
+            price: t.price || 0,
+            capacity: t.capacity || 0,
+            soldSeats: t.soldSeats || 0,
+            company: typeof t.company === "object" ? t.company?.name : "Empresa",
+        }));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOKING SERVICE (conecta con la API real de reservas)
+═══════════════════════════════════════════════════════════════ */
+async function createReservation(tripId: string, userId: string): Promise<boolean> {
+    try {
+        const { api } = await import("../services/api");
+        await api.post("/seats/reserve", { tripId, seats: 1 });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BOT BRAIN
+═══════════════════════════════════════════════════════════════ */
+interface BotState {
+    bookingStep: BookingStep;
+    tripOptions: TripOption[];
+    selectedTrip: TripOption | null;
+}
+
+async function generateResponse(
+    intent: string,
+    state: BotState,
+    userId: string,
+): Promise<{
+    text: string;
+    quickReplies?: string[];
+    tripOptions?: TripOption[];
+    newState?: Partial<BotState>;
+}> {
+    try {
+        switch (intent) {
+
+            case "greeting":
+                return {
+                    text: pick(PHRASES.greeting),
+                    quickReplies: ["🛥️ Viajes disponibles", "💰 Ver precios", "📅 Horarios", "🎟️ Reservar viaje"],
+                };
+
+            case "book": {
+                const trips = await fetchActiveTrips();
+                if (!trips.length) return { text: pick(PHRASES.noTrips) };
+                return {
+                    text: pick(PHRASES.bookingStart),
+                    tripOptions: trips.slice(0, 5),
+                    newState: { bookingStep: "select_trip", tripOptions: trips },
+                };
+            }
+
+            case "trips": {
+                const trips = await fetchActiveTrips();
+                if (!trips.length) return { text: pick(PHRASES.noTrips), quickReplies: ["🔄 Intentar de nuevo"] };
+                const lines = trips.slice(0, 5).map(t =>
+                    `• 🛥️ **${t.origin} → ${t.destination}**\n  🕐 ${t.time}  |  💰 $${t.price.toLocaleString()}  |  🪑 ${t.capacity - t.soldSeats} cupos`
+                );
+                return {
+                    text: `Encontré **${trips.length}** viaje(s) activo(s):\n\n${lines.join("\n\n")}`,
+                    quickReplies: ["🎟️ Quiero reservar", "💰 Más detalles de precios", "🪑 Disponibilidad"],
+                };
+            }
+
+            case "prices": {
+                const trips = await fetchActiveTrips();
+                if (!trips.length) return { text: pick(PHRASES.noTrips) };
+                const lines = trips.slice(0, 5).map(t =>
+                    `• ${t.origin} → ${t.destination}: **$${t.price.toLocaleString()}**`
+                );
+                const min = Math.min(...trips.map(t => t.price));
+                const max = Math.max(...trips.map(t => t.price));
+                return {
+                    text: `💰 Tarifas actuales:\n\n${lines.join("\n")}\n\nRango: $${min.toLocaleString()} – $${max.toLocaleString()}`,
+                    quickReplies: ["🎟️ Reservar ahora", "📅 Horarios", "🪑 Disponibilidad"],
+                };
+            }
+
+            case "times": {
+                const trips = await fetchActiveTrips();
+                const sorted = trips.sort((a, b) => a.time.localeCompare(b.time)).slice(0, 6);
+                if (!sorted.length) return { text: pick(PHRASES.noTrips) };
+                const lines = sorted.map(t =>
+                    `• 🕐 **${t.time}** — ${t.origin} → ${t.destination}`
+                );
+                return {
+                    text: `Horarios de hoy:\n\n${lines.join("\n")}`,
+                    quickReplies: ["🎟️ Reservar", "💰 Precios", "🪑 Disponibilidad"],
+                };
+            }
+
+            case "availability": {
+                const trips = await fetchActiveTrips();
+                if (!trips.length) return { text: pick(PHRASES.noTrips) };
+                const lines = trips.slice(0, 5).map(t => {
+                    const avail = t.capacity - t.soldSeats;
+                    const dot = avail > 5 ? "🟢" : avail > 2 ? "🟡" : "🔴";
+                    return `• ${t.origin} → ${t.destination}: ${dot} **${avail} cupo(s)**`;
+                });
+                return {
+                    text: `Disponibilidad actual:\n\n${lines.join("\n")}`,
+                    quickReplies: ["🎟️ Reservar un cupo", "💰 Precios", "📅 Horarios"],
+                };
+            }
+
+            case "routes": {
+                const routes = await getAllRoutes();
+                if (!routes.length) return { text: "No encontré rutas registradas en este momento." };
+                const lines = routes.slice(0, 6).map((r: any) =>
+                    `• ⛵ **${r.origin}** → **${r.destination}**`
+                );
+                return {
+                    text: `Rutas habilitadas:\n\n${lines.join("\n")}\n\n¿Quieres saber precios u horarios de alguna en particular? 🗺️`,
+                    quickReplies: ["💰 Precios por ruta", "📅 Horarios", "🎟️ Reservar"],
+                };
+            }
+
+            case "help":
+                return {
+                    text: "Puedo ayudarte con:\n\n🛥️ **Viajes** — cuáles están activos\n💰 **Precios** — tarifas por ruta\n📅 **Horarios** — cuándo salen\n🪑 **Disponibilidad** — cuántos cupos quedan\n🗺️ **Rutas** — todos los trayectos\n🎟️ **Reservar** — reserva un viaje aquí mismo\n\n¿Qué necesitas?",
+                    quickReplies: ["🛥️ Viajes", "🎟️ Reservar", "💰 Precios", "📅 Horarios"],
+                };
+
+            // ── BOOKING FLOW ──
+            case "booking_confirm_prompt":
+                return {
+                    text: pick(PHRASES.bookingConfirm),
+                    quickReplies: ["✅ Confirmar", "❌ Cancelar"],
+                };
+
+            case "booking_confirmed": {
+                if (!state.selectedTrip) return { text: "No había ningún viaje seleccionado. ¿Quieres empezar de nuevo?" };
+                const ok = await createReservation(state.selectedTrip.id, userId);
+                return {
+                    text: ok ? pick(PHRASES.bookingDone) : "Hubo un problema procesando tu reserva 😔. Intenta de nuevo o contáctanos directamente.",
+                    quickReplies: ok ? ["🏠 Ir al inicio", "🛥️ Ver más viajes"] : ["🔄 Intentar de nuevo"],
+                    newState: { bookingStep: "done", selectedTrip: null },
+                };
+            }
+
+            case "booking_cancelled":
+                return {
+                    text: pick(PHRASES.bookingCancel),
+                    quickReplies: ["🏠 Inicio", "🛥️ Ver viajes", "💰 Precios"],
+                    newState: { bookingStep: "idle", selectedTrip: null },
+                };
+
+            case "cancel":
+                return {
+                    text: pick(PHRASES.bookingCancel),
+                    quickReplies: ["🏠 Inicio", "🛥️ Ver viajes"],
+                    newState: { bookingStep: "idle", selectedTrip: null, tripOptions: [] },
+                };
+
+            default:
+                return {
+                    text: pick(PHRASES.unknown),
+                    quickReplies: ["🛥️ Viajes", "🎟️ Reservar", "💰 Precios", "🆘 Ayuda"],
+                };
+        }
+    } catch {
+        return { text: "Tuve un problema consultando la información 😔. Revisa tu conexión e intenta de nuevo." };
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TYPING INDICATOR
+═══════════════════════════════════════════════════════════════ */
+function BotTyping() {
+    const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+    useEffect(() => {
+        const loop = Animated.loop(
+            Animated.stagger(160, dots.map(v =>
+                Animated.sequence([
+                    Animated.timing(v, { toValue: -7, duration: 280, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+                    Animated.timing(v, { toValue: 0, duration: 280, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+                ])
+            ))
+        );
+        loop.start();
+        return () => loop.stop();
+    }, []);
+    return (
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 8 }}>
+            <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "#1e3a8a", justifyContent: "center", alignItems: "center", marginRight: 8 }}>
+                <Bot size={17} color="white" />
+            </View>
+            <View style={{ backgroundColor: "white", borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 6, elevation: 2 }}>
+                {dots.map((v, i) => (
+                    <Animated.View key={i} style={{ transform: [{ translateY: v }] }}>
+                        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#94a3b8" }} />
+                    </Animated.View>
+                ))}
+            </View>
+        </View>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MARKDOWN-LITE
+═══════════════════════════════════════════════════════════════ */
+function BotText({ text, white }: { text: string; white?: boolean }) {
+    const color = white ? "white" : "#1e293b";
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return (
+        <Text style={{ fontSize: 14.5, lineHeight: 22, color }}>
+            {parts.map((p, i) =>
+                p.startsWith("**") && p.endsWith("**")
+                    ? <Text key={i} style={{ fontWeight: "700" }}>{p.slice(2, -2)}</Text>
+                    : <Text key={i}>{p}</Text>
+            )}
+        </Text>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TRIP BOOKING CARD
+═══════════════════════════════════════════════════════════════ */
+function TripCard({ trip, onSelect }: { trip: TripOption; onSelect: (t: TripOption) => void }) {
+    const avail = trip.capacity - trip.soldSeats;
+    const status = avail > 5 ? "#22c55e" : avail > 2 ? "#f59e0b" : "#ef4444";
+    return (
+        <Pressable
+            onPress={() => onSelect(trip)}
+            style={({ pressed }) => ({
+                backgroundColor: pressed ? "#eff6ff" : "white",
+                borderRadius: 16, borderWidth: 1.5, borderColor: "#dbeafe",
+                padding: 12, marginBottom: 8, marginRight: 4,
+                shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
+            })}
+        >
+            <Text style={{ fontSize: 13, fontWeight: "800", color: "#1e3a8a" }}>{trip.origin} → {trip.destination}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, gap: 12 }}>
+                <Text style={{ fontSize: 12, color: "#64748b" }}>🕐 {trip.time}</Text>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: "#1e3a8a" }}>💰 ${trip.price.toLocaleString()}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: status }} />
+                    <Text style={{ fontSize: 11, color: status, fontWeight: "700" }}>{avail} cupos</Text>
+                </View>
+            </View>
+            <Text style={{ fontSize: 10, color: "#94a3b8", marginTop: 4 }}>{trip.company}</Text>
+        </Pressable>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MESSAGE BUBBLE
+═══════════════════════════════════════════════════════════════ */
+function Bubble({ msg, onQuickReply, onTripSelect }: {
+    msg: Message;
+    onQuickReply: (t: string) => void;
+    onTripSelect: (t: TripOption) => void;
+}) {
+    const anim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.spring(anim, { toValue: 1, tension: 60, friction: 9, useNativeDriver: true }).start();
+    }, []);
+
+    const isBot = msg.role === "bot";
+
+    return (
+        <Animated.View style={{
+            opacity: anim,
+            transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+            marginBottom: 10, paddingHorizontal: 12,
+            alignItems: isBot ? "flex-start" : "flex-end",
+        }}>
+            <View style={{ flexDirection: isBot ? "row" : "row-reverse", alignItems: "flex-end", maxWidth: "88%" }}>
+                {isBot && (
+                    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "#1e3a8a", justifyContent: "center", alignItems: "center", marginRight: 8, marginBottom: 2 }}>
+                        <Bot size={17} color="white" />
+                    </View>
+                )}
+                <View style={{ flex: 1 }}>
+                    {isBot ? (
+                        <View style={{ backgroundColor: "white", borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+                            <BotText text={msg.text} />
+                        </View>
+                    ) : (
+                        <LinearGradient
+                            colors={msg.isVoice ? ["#7c3aed", "#4f46e5"] : ["#1e3a8a", "#2563eb"]}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                            style={{ borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10 }}
+                        >
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                {msg.isVoice && <Mic size={12} color="rgba(255,255,255,0.8)" />}
+                                <BotText text={msg.text} white />
+                            </View>
+                        </LinearGradient>
+                    )}
+
+                    <Text style={{ fontSize: 10, color: "#94a3b8", marginTop: 4, textAlign: isBot ? "left" : "right", marginHorizontal: 2 }}>
+                        {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </Text>
+
+                    {/* Trip booking cards */}
+                    {isBot && msg.tripOptions && msg.tripOptions.length > 0 && (
+                        <View style={{ marginTop: 8 }}>
+                            {msg.tripOptions.map(t => (
+                                <TripCard key={t.id} trip={t} onSelect={onTripSelect} />
+                            ))}
+                        </View>
+                    )}
+
+                    {/* Quick replies */}
+                    {isBot && msg.quickReplies && msg.quickReplies.length > 0 && (
+                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                            {msg.quickReplies.map(q => (
+                                <TouchableOpacity
+                                    key={q} onPress={() => onQuickReply(q)}
+                                    style={{ backgroundColor: "#eff6ff", borderWidth: 1, borderColor: "#bfdbfe", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 }}
+                                >
+                                    <Text style={{ fontSize: 12, color: "#1d4ed8", fontWeight: "600" }}>{q}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+                </View>
+            </View>
+        </Animated.View>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MIC BUTTON
+═══════════════════════════════════════════════════════════════ */
+function MicButton({ onVoiceMessage }: { onVoiceMessage: (text: string) => void }) {
+    const [recording, setRecording] = useState(false);
+    const [rec, setRec] = useState<Audio.Recording | null>(null);
+    const pulseAnim = useRef(new Animated.Value(1)).current;
+
+    const startPulse = () => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, { toValue: 1.3, duration: 500, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
+            ])
+        ).start();
+    };
+    const stopPulse = () => { pulseAnim.stopAnimation(); pulseAnim.setValue(1); };
+
+    const startRecording = async () => {
+        try {
+            const { granted } = await Audio.requestPermissionsAsync();
+            if (!granted) return;
+            await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+            const { recording: r } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+            setRec(r);
+            setRecording(true);
+            startPulse();
+        } catch { }
+    };
+
+    const stopRecording = async () => {
+        try {
+            stopPulse();
+            setRecording(false);
+            if (!rec) return;
+            await rec.stopAndUnloadAsync();
+            setRec(null);
+            // For now, trigger a voice placeholder message (n8n transcription hook goes here)
+            onVoiceMessage(pick(PHRASES.voiceReceived));
+        } catch { setRecording(false); }
+    };
+
+    return (
+        <TouchableOpacity
+            onPressIn={startRecording}
+            onPressOut={stopRecording}
+            style={{ width: 44, height: 44, borderRadius: 22, overflow: "hidden" }}
+        >
+            <Animated.View style={{ transform: [{ scale: pulseAnim }], flex: 1 }}>
+                <LinearGradient
+                    colors={recording ? ["#7c3aed", "#4f46e5"] : ["#475569", "#64748b"]}
+                    style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+                >
+                    {recording ? <MicOff size={18} color="white" /> : <Mic size={18} color="white" />}
+                </LinearGradient>
+            </Animated.View>
+        </TouchableOpacity>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN SCREEN
+═══════════════════════════════════════════════════════════════ */
+const WELCOME: Message = {
+    id: "welcome",
+    role: "bot",
+    text: pick(["¡Hola! 👋 Soy **NauticBot**, tu asistente para viajes acuáticos.\n\nPuedo darte información sobre rutas, precios, horarios y también **reservar tu viaje aquí mismo**. ¿En qué te ayudo?",
+        "¡Bienvenido/a a bordo! ⚓ Soy **NauticBot**.\n\nConsulta rutas, precios, horarios o **reserva un viaje** directamente desde el chat. ¿Qué necesitas?"]),
+    timestamp: new Date(),
+    quickReplies: ["🛥️ Viajes disponibles", "🎟️ Reservar viaje", "💰 Precios", "📅 Horarios"],
+};
+
+export default function NauticBotScreen() {
+    const navigation = useNavigation<any>();
+    const { user } = useAuth();
+    const flatListRef = useRef<FlatList>(null);
+
+    const [messages, setMessages] = useState<Message[]>([WELCOME]);
+    const [input, setInput] = useState("");
+    const [typing, setTyping] = useState(false);
+    const [ttsEnabled, setTtsEnabled] = useState(true);
+
+    const botStateRef = useRef<BotState>({
+        bookingStep: "idle",
+        tripOptions: [],
+        selectedTrip: null,
+    });
+
+    const speak = (text: string) => {
+        if (!ttsEnabled) return;
+        const clean = text.replace(/\*\*/g, "").replace(/[🛥️🎟️💰📅⚓🌊⛵🗺️🪑🔍⏳🤿🎉🕐🟢🟡🔴🎙️✅🎊🏠]/gu, "");
+        Speech.speak(clean, { language: "es-CO", rate: 0.92, pitch: 1.05 });
+    };
+
+    const addBotMessage = (msg: Partial<Message>) => {
+        const full: Message = {
+            id: Date.now().toString(),
+            role: "bot",
+            text: "",
+            timestamp: new Date(),
+            ...msg,
+        };
+        setMessages(prev => [...prev, full]);
+        if (full.text) speak(full.text);
+    };
+
+    const send = useCallback(async (text: string, isVoiceBot?: boolean) => {
+        const trimmed = text.trim();
+        if (!trimmed || typing) return;
+
+        Keyboard.dismiss();
+        setInput("");
+
+        if (!isVoiceBot) {
+            const userMsg: Message = {
+                id: Date.now().toString(),
+                role: "user",
+                text: trimmed,
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, userMsg]);
+        }
+
+        setTyping(true);
+
+        const delay = 600 + Math.random() * 800 + Math.min(trimmed.length * 8, 600);
+        await new Promise(r => setTimeout(r, delay));
+
+        const intent = detectIntent(trimmed, botStateRef.current.bookingStep);
+        const { text: botText, quickReplies, tripOptions, newState } = await generateResponse(
+            intent,
+            botStateRef.current,
+            (user as any)?._id || (user as any)?.id || "",
+        );
+
+        if (newState) {
+            botStateRef.current = { ...botStateRef.current, ...newState };
+        }
+
+        addBotMessage({ text: botText, quickReplies, tripOptions });
+        setTyping(false);
+    }, [typing, ttsEnabled]);
+
+    // When user taps a trip card → auto-select it
+    const handleTripSelect = useCallback((trip: TripOption) => {
+        botStateRef.current = { ...botStateRef.current, selectedTrip: trip, bookingStep: "confirm" };
+        const userMsg: Message = {
+            id: Date.now().toString(),
+            role: "user",
+            text: `Seleccioné: ${trip.origin} → ${trip.destination} a las ${trip.time}`,
+            timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, userMsg]);
+
+        setTimeout(async () => {
+            setTyping(true);
+            await new Promise(r => setTimeout(r, 700));
+            addBotMessage({
+                text: `Perfecto ✨\n\n🛥️ **${trip.origin} → ${trip.destination}**\n🕐 Salida: ${trip.time}\n💰 Precio: $${trip.price.toLocaleString()}\n🪑 Cupos disponibles: ${trip.capacity - trip.soldSeats}\n🏢 Empresa: ${trip.company}\n\n${pick(PHRASES.bookingConfirm)}`,
+                quickReplies: ["✅ Confirmar reserva", "❌ Cancelar"],
+            });
+            setTyping(false);
+        }, 200);
+    }, [ttsEnabled]);
+
+    // Voice: bot received note, post as a bot-side reply
+    const handleVoiceMessage = useCallback((text: string) => {
+        const voiceUserMsg: Message = {
+            id: Date.now().toString(),
+            role: "user",
+            text: "🎙️ Nota de voz enviada",
+            timestamp: new Date(),
+            isVoice: true,
+        };
+        setMessages(prev => [...prev, voiceUserMsg]);
+        setTimeout(async () => {
+            setTyping(true);
+            await new Promise(r => setTimeout(r, 900));
+            addBotMessage({ text, quickReplies: ["🛥️ Viajes", "🎟️ Reservar", "💰 Precios"] });
+            setTyping(false);
+        }, 300);
+    }, [ttsEnabled]);
+
+    useEffect(() => {
+        if (messages.length > 0) {
+            setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 120);
+        }
+    }, [messages, typing]);
+
+    // Stop TTS on unmount
+    useEffect(() => () => { Speech.stop(); }, []);
+
+    return (
+        <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+            <StatusBar barStyle="light-content" />
+
+            {/* ── Header ── */}
+            <LinearGradient
+                colors={["#0f172a", "#1e3a8a", "#1d4ed8"]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={{ paddingTop: Platform.OS === "ios" ? 56 : 48, paddingBottom: 18, paddingHorizontal: 20 }}
+            >
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                        <View>
+                            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.15)", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: "rgba(255,255,255,0.3)" }}>
+                                <Bot size={26} color="white" />
+                            </View>
+                            <View style={{ position: "absolute", bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: "#22c55e", borderWidth: 2, borderColor: "#1e3a8a" }} />
+                        </View>
+                        <View>
+                            <Text style={{ color: "white", fontWeight: "800", fontSize: 17 }}>NauticBot</Text>
+                            <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>Asistente de viajes acuáticos · En línea</Text>
+                        </View>
+                    </View>
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                        {/* TTS toggle */}
+                        <TouchableOpacity
+                            onPress={() => { setTtsEnabled(p => !p); Speech.stop(); }}
+                            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", justifyContent: "center", alignItems: "center" }}
+                        >
+                            {ttsEnabled ? <Volume2 size={16} color="white" /> : <VolumeX size={16} color="rgba(255,255,255,0.4)" />}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => { Speech.stop(); navigation.goBack(); }}
+                            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", justifyContent: "center", alignItems: "center" }}
+                        >
+                            <X size={18} color="white" />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </LinearGradient>
+
+            {/* ── Chat ── */}
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+                <FlatList
+                    ref={flatListRef}
+                    data={messages}
+                    keyExtractor={m => m.id}
+                    renderItem={({ item }) => (
+                        <Bubble msg={item} onQuickReply={send} onTripSelect={handleTripSelect} />
+                    )}
+                    contentContainerStyle={{ paddingTop: 16, paddingBottom: 8 }}
+                    showsVerticalScrollIndicator={false}
+                    ListFooterComponent={typing ? <BotTyping /> : null}
+                />
+
+                {/* ── Input bar ── */}
+                <View style={{
+                    flexDirection: "row", alignItems: "flex-end",
+                    paddingHorizontal: 12, paddingVertical: 10,
+                    backgroundColor: "white", borderTopWidth: 1, borderTopColor: "#e2e8f0", gap: 8,
+                }}>
+                    {/* Mic — press and hold */}
+                    <MicButton onVoiceMessage={handleVoiceMessage} />
+
+                    <View style={{
+                        flex: 1, backgroundColor: "#f1f5f9", borderRadius: 24,
+                        borderWidth: 1, borderColor: "#e2e8f0",
+                        paddingHorizontal: 16, paddingVertical: 10, minHeight: 44,
+                    }}>
+                        <TextInput
+                            value={input}
+                            onChangeText={setInput}
+                            placeholder="Escribe o mantén 🎙️ para hablar..."
+                            placeholderTextColor="#94a3b8"
+                            style={{ fontSize: 14, color: "#1e293b", maxHeight: 100 }}
+                            multiline
+                            returnKeyType="send"
+                            onSubmitEditing={() => { if (input.trim()) send(input); }}
+                            blurOnSubmit
+                        />
+                    </View>
+
+                    {/* Send */}
+                    <TouchableOpacity
+                        onPress={() => { if (input.trim()) send(input); }}
+                        disabled={!input.trim() || typing}
+                        style={{ width: 44, height: 44, borderRadius: 22, overflow: "hidden", opacity: !input.trim() || typing ? 0.4 : 1 }}
+                    >
+                        <LinearGradient
+                            colors={["#1e3a8a", "#2563eb"]}
+                            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+                        >
+                            <Send size={18} color="white" />
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+            </KeyboardAvoidingView>
+        </View>
+    );
+}

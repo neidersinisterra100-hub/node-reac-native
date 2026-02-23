@@ -31,6 +31,7 @@ type AuthContextType = {
   login: (payload: LoginPayload) => Promise<boolean>;
   register: (payload: RegisterPayload) => Promise<boolean>;
   logout: () => Promise<void>;
+  updateUser: (user: Partial<User>) => void;
 };
 
 const AuthContext =
@@ -184,6 +185,10 @@ export function AuthProvider({
     }
   };
 
+  const updateUser = (partial: Partial<User>) => {
+    setUser(prev => prev ? { ...prev, ...partial } : prev);
+  };
+
   /* =====================================================
      PROVIDER
      ===================================================== */
@@ -197,6 +202,7 @@ export function AuthProvider({
         login,
         register,
         logout,
+        updateUser,
       }}
     >
       {children}

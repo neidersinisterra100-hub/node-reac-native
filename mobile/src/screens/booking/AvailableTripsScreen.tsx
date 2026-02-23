@@ -43,21 +43,21 @@ export const AvailableTripsScreen = () => {
   const loadTrips = async () => {
     setLoading(true);
     try {
+      const munId = selectedMunicipio?._id;
       const [allTrips, companies] = await Promise.all([
-        getTrips(),
-        getAllCompanies(),
+        getTrips(undefined, munId),
+        getAllCompanies(munId),
       ]);
 
       let filtered = allTrips;
 
+      // Mantener filtro de origen/destino si existe (sigue siendo client-side por ahora)
       if (origin && destination) {
         filtered = allTrips.filter(
           (t: any) =>
             t.route?.origin === origin &&
             t.route?.destination === destination
         );
-      } else if (selectedMunicipio?._id) {
-        filtered = allTrips.filter((t: any) => t.municipioId === selectedMunicipio._id);
       }
 
       setTrips(filtered);

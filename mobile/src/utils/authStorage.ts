@@ -15,12 +15,10 @@ export async function saveSession(user: User, token: string) {
 
 export async function loadSession() {
   try {
-    console.log("💾 [Storage] Reading keys from AsyncStorage...");
     const [[, user], [, token]] = await AsyncStorage.multiGet([
       USER_KEY,
       TOKEN_KEY,
     ]);
-    console.log("💾 [Storage] Keys read successfully");
 
     let parsedUser: User | null = null;
     if (user) {

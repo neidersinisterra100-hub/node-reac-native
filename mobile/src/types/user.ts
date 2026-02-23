@@ -8,4 +8,12 @@ export interface User {
   companyId?: string;
   createdAt?: string;
   updatedAt?: string;
+  // Profile completion
+  phone?: string;
+  identificationNumber?: string; // masked
+  birthDate?: string;
+  address?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  isProfileComplete?: boolean;
 }

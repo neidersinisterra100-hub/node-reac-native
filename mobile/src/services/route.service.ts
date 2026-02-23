@@ -22,11 +22,12 @@ export interface Route {
  * - Owner/Admin → solo rutas de SUS empresas
  * - Usuario/Público → rutas públicas
  */
-export async function getAllRoutes(): Promise<Route[]> {
+export async function getAllRoutes(municipioId?: string): Promise<Route[]> {
   try {
     const session = await loadSession();
     const role = session?.user?.role;
     const isPrivileged = role === "owner" || role === "admin";
+    const params = municipioId ? { params: { municipioId } } : {};
 
     /* =================================================
        OWNER / ADMIN → rutas de sus empresas
@@ -34,7 +35,8 @@ export async function getAllRoutes(): Promise<Route[]> {
     if (isPrivileged) {
       try {
         const { data: companies } = await api.get<Company[]>(
-          "/companies/my"
+          "/companies/my",
+          params
         );
 
         if (!companies.length) {
@@ -46,10 +48,11 @@ export async function getAllRoutes(): Promise<Route[]> {
 
         const routesByCompany = await Promise.all(
           companies.map((company) => {
-            const coId = company.id || company._id; // ✅ FIX: Handle both
+            const coId = company.id || company._id;
             return api
               .get<Route[]>(
-                `/routes/company/${coId}`
+                `/routes/company/${coId}`,
+                params
               )
               .then((res) => res.data)
               .catch(() => []);
@@ -73,7 +76,7 @@ export async function getAllRoutes(): Promise<Route[]> {
     /* =================================================
        USUARIO / PÚBLICO → rutas públicas
        ================================================= */
-    const { data } = await api.get<Route[]>("/routes");
+    const { data } = await api.get<Route[]>("/routes", params);
     return data;
   } catch (error) {
     console.error(

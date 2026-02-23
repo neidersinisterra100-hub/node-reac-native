@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Animated, Easing } from 'react-native';
 import { styled } from 'nativewind';
 import { ScreenContainer } from '../../components/ui/ScreenContainer';
 import { PressableCard } from '../../components/ui/Card';
@@ -8,7 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { getAllRoutes } from '../../services/route.service';
-import { tripService } from '../../services/trip.service';
+import { getTrips, tripService } from '../../services/trip.service';
 import { Map, MapIcon, Compass, Anchor, Ticket, Building2, Search, Menu, Calendar, Ship, MapPin } from 'lucide-react-native';
 import { WeatherWidget } from '../../components/dashboard/WeatherWidget';
 import { useLocation } from '../../context/LocationContext';
@@ -44,30 +44,18 @@ export const CompanyDashboardScreen = () => {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [routesData, tripsData, companies] = await Promise.all([
-                getAllRoutes(),
-                tripService.getAll(),
-                canUseMyCompanies ? getMyCompanies() : getAllCompanies(),
-            ]);
-
             const munId = selectedMunicipio?._id;
 
-            const filteredCompanies = munId
-                ? companies.filter((c: any) => c.municipioId === munId || c.municipio === munId)
-                : companies;
+            const [routesData, tripsData, companies] = await Promise.all([
+                getAllRoutes(munId),
+                getTrips(undefined, munId),
+                canUseMyCompanies ? getMyCompanies(munId) : getAllCompanies(munId),
+            ]);
 
-            const filteredRoutes = munId
-                ? routesData.filter((r: any) => r.municipioId === munId)
-                : routesData;
+            setRoutes(routesData.slice(0, 2));
+            setTrips(tripsData.slice(0, 2));
 
-            const filteredTrips = munId
-                ? tripsData.filter((t: any) => t.municipioId === munId)
-                : tripsData;
-
-            setRoutes(filteredRoutes.slice(0, 2));
-            setTrips(filteredTrips.slice(0, 2));
-
-            const companyMap = filteredCompanies.reduce<Record<string, string>>((acc, company: any) => {
+            const companyMap = companies.reduce<Record<string, string>>((acc, company: any) => {
                 if (company.id) acc[company.id] = company.name;
                 if (company._id) acc[company._id] = company.name;
                 return acc;
@@ -536,6 +524,55 @@ export const CompanyDashboardScreen = () => {
                     )
                 )}
             </ScrollView>
+
+            {/* NauticBot FAB */}
+            <FloatingBotButton onPress={() => navigation.navigate('NauticBot')} />
+
         </ScreenContainer>
     );
 };
+
+/* ─── Floating Bot Button ─── */
+function FloatingBotButton({ onPress }: { onPress: () => void }) {
+    const pulse = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulse, { toValue: 1.18, duration: 900, easing: Easing.out(Easing.sin), useNativeDriver: true }),
+                Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.in(Easing.sin), useNativeDriver: true }),
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <View style={{
+            position: 'absolute', bottom: 28, right: 20,
+            zIndex: 999, elevation: 20,
+            width: 62, height: 62,
+            justifyContent: 'center', alignItems: 'center',
+        }}>
+            <Animated.View style={{
+                position: 'absolute',
+                width: 62, height: 62, borderRadius: 31,
+                backgroundColor: 'rgba(37, 99, 235, 0.22)',
+                transform: [{ scale: pulse }]
+            }} />
+            <TouchableOpacity
+                onPress={onPress}
+                activeOpacity={0.82}
+                style={{
+                    width: 62, height: 62, borderRadius: 31,
+                    overflow: 'hidden',
+                    backgroundColor: '#1e3a8a',
+                    justifyContent: 'center', alignItems: 'center',
+                    elevation: 20,
+                    shadowColor: '#1e3a8a', shadowOpacity: 0.55,
+                    shadowRadius: 14, shadowOffset: { width: 0, height: 7 }
+                }}
+            >
+                <MaterialCommunityIcons name="robot" size={30} color="white" />
+            </TouchableOpacity>
+        </View>
+    );
+}

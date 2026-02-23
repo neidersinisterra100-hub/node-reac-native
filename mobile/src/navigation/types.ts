@@ -184,6 +184,8 @@ export type RootStackParamList = {
   ValidateTicket: undefined;
   TerrestreRide: undefined;
   WeatherMarine: undefined;
+  CompleteProfile: undefined;
+  NauticBot: undefined;
 };
 
 

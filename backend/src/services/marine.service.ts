@@ -56,32 +56,38 @@ export class MarineService {
                 { timeout: 5000 }
             );
 
+            if (!response.data || !response.data.current) {
+                console.warn('[MarineService] Incomplete weather data from Open-Meteo');
+                return this.getEmergencyWeather();
+            }
+
             const {
-                temperature_2m,
-                apparent_temperature,
-                relative_humidity_2m,
-                weather_code,
-                wind_speed_10m,
-                wind_direction_10m
+                temperature_2m = 26,
+                apparent_temperature = 28,
+                relative_humidity_2m = 80,
+                weather_code = 0,
+                wind_speed_10m = 0,
+                wind_direction_10m = 0
             } = response.data.current;
-            const daily = response.data.daily;
+
+            const daily = response.data.daily || {};
 
             const currentInfo = this.getWeatherInfo(weather_code);
             const windDir = this.getWindDirectionLabel(wind_direction_10m);
 
-            const forecast = daily.time.map((time: string, index: number) => {
-                const code = daily.weather_code[index];
+            const forecast = (daily.time || []).map((time: string, index: number) => {
+                const code = daily.weather_code?.[index] ?? 0;
                 const info = this.getWeatherInfo(code);
                 const date = dayjs(time);
 
-                let dayLabel = date.format('ddd'); // default to day name
+                let dayLabel = date.format('ddd');
                 if (index === 0) dayLabel = 'Hoy';
                 else if (index === 1) dayLabel = 'Mañana';
 
                 return {
                     day: dayLabel,
-                    max: Math.round(daily.temperature_2m_max[index]),
-                    min: Math.round(daily.temperature_2m_min[index]),
+                    max: Math.round(daily.temperature_2m_max?.[index] ?? 30),
+                    min: Math.round(daily.temperature_2m_min?.[index] ?? 24),
                     condition: info.label,
                     icon: info.icon
                 };
@@ -92,20 +98,19 @@ export class MarineService {
                     temp: Math.round(temperature_2m),
                     feelsLike: Math.round(apparent_temperature),
                     humidity: relative_humidity_2m,
-                    uvIndex: daily.uv_index_max[0] || 0,
-                    sunrise: dayjs(daily.sunrise[0]).format('HH:mm'),
-                    sunset: dayjs(daily.sunset[0]).format('HH:mm'),
+                    uvIndex: daily.uv_index_max?.[0] || 0,
+                    sunrise: daily.sunrise?.[0] ? dayjs(daily.sunrise[0]).format('HH:mm') : '06:00',
+                    sunset: daily.sunset?.[0] ? dayjs(daily.sunset[0]).format('HH:mm') : '18:00',
                     condition: currentInfo.label,
                     description: this.getAestheticDescription(weather_code, temperature_2m),
                     icon: currentInfo.icon,
                     windSpeed: Math.round(wind_speed_10m),
                     windDirection: windDir
                 },
-                forecast
+                forecast: forecast.length > 0 ? forecast : this.getEmergencyWeather().forecast
             };
         } catch (error) {
             console.error('[MarineService] Weather Error:', error);
-            // Emergency fallback handled by the server
             return this.getEmergencyWeather();
         }
     }

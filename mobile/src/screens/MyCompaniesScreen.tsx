@@ -40,18 +40,13 @@ export default function MyCompaniesScreen() {
             setLoading(true);
             setErrorMsg(null);
             let data: Company[] = [];
+            const munId = selectedMunicipio?._id;
 
             if (isOwner) {
-                data = await getMyCompanies();
+                data = await getMyCompanies(munId);
             } else {
-                data = await getAllCompanies();
+                data = await getAllCompanies(munId);
             }
-
-            const munId = selectedMunicipio?._id;
-            if (munId) {
-                data = data.filter((c: any) => c.municipioId === munId || c.municipio === munId);
-            }
-
             setCompanies(data);
         } catch (error: any) {
             setErrorMsg("No se pudieron cargar las empresas.");

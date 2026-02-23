@@ -67,28 +67,33 @@ export interface Trip {
    El backend decide qué endpoint responde.
    ========================================================= */
 
-export async function getTrips(companyId?: string): Promise<Trip[]> {
+export async function getTrips(companyId?: string, municipioId?: string): Promise<Trip[]> {
   try {
+    const params = municipioId ? { params: { municipioId } } : {};
+
     if (companyId) {
       const { data } = await api.get<Trip[]>(
-        `/trips/companies/${companyId}/trips/manage`
+        `/trips/companies/${companyId}/trips/manage`,
+        params
       );
       return data;
     }
 
-    // Si no hay companyId, intentar endpoint público o manejar según lógica de negocio
-    const { data } = await api.get<Trip[]>("/trips");
+    // Si no hay companyId, intentar endpoint público
+    const { data } = await api.get<Trip[]>("/trips", params);
     return data;
   } catch (error: any) {
     if (
       error?.response?.status === 401 ||
       error?.response?.status === 403
     ) {
-      const { data } = await api.get<Trip[]>("/trips");
+      const params = municipioId ? { params: { municipioId } } : {};
+      const { data } = await api.get<Trip[]>("/trips", params);
       return data;
     }
     // Fallback
-    const { data } = await api.get<Trip[]>("/trips");
+    const params = municipioId ? { params: { municipioId } } : {};
+    const { data } = await api.get<Trip[]>("/trips", params);
     return data;
   }
 }

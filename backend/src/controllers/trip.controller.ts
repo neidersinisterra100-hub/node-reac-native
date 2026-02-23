@@ -47,18 +47,14 @@ interface TripDTO {
  * - Devuelve objetos route y company cuando existen
  */
 function toTripDTO(trip: any): TripDTO & { route?: any; company?: any } {
+  const routeId = trip.routeId ? (typeof trip.routeId === "object" ? (trip.routeId as any)._id : trip.routeId) : null;
+  const companyId = trip.companyId ? (typeof trip.companyId === "object" ? (trip.companyId as any)._id : trip.companyId) : null;
+
   return {
     id: trip._id.toString(),
 
-    routeId:
-      typeof trip.routeId === "object"
-        ? trip.routeId._id.toString()
-        : trip.routeId.toString(),
-
-    companyId:
-      typeof trip.companyId === "object"
-        ? trip.companyId._id.toString()
-        : trip.companyId.toString(),
+    routeId: routeId?.toString() || "",
+    companyId: companyId?.toString() || "",
 
     date: trip.date,
     departureTime: trip.departureTime,
@@ -71,19 +67,19 @@ function toTripDTO(trip: any): TripDTO & { route?: any; company?: any } {
     createdAt: trip.createdAt,
 
     route:
-      trip.routeId && typeof trip.routeId === "object"
+      trip.routeId && typeof trip.routeId === "object" && (trip.routeId as any)._id
         ? {
-          id: trip.routeId._id.toString(),
-          origin: trip.routeId.origin,
-          destination: trip.routeId.destination,
+          id: (trip.routeId as any)._id.toString(),
+          origin: (trip.routeId as any).origin,
+          destination: (trip.routeId as any).destination,
         }
         : undefined,
 
     company:
-      trip.companyId && typeof trip.companyId === "object"
+      trip.companyId && typeof trip.companyId === "object" && (trip.companyId as any)._id
         ? {
-          id: trip.companyId._id.toString(),
-          name: trip.companyId.name,
+          id: (trip.companyId as any)._id.toString(),
+          name: (trip.companyId as any).name,
         }
         : undefined,
   };
@@ -111,9 +107,16 @@ const createTripSchema = z.object({
     .optional(),
 });
 
-export const getTrips: RequestHandler = async (_req, res) => {
+export const getTrips: RequestHandler = async (req, res) => {
   try {
-    const trips = await TripModel.find({ isActive: true })
+    const { municipioId } = req.query;
+    const filter: any = { isActive: true };
+
+    if (municipioId && mongoose.Types.ObjectId.isValid(municipioId as string)) {
+      filter.municipioId = new Types.ObjectId(municipioId as string);
+    }
+
+    const trips = await TripModel.find(filter)
       .populate({
         path: "routeId",
         select: "origin destination isActive",
@@ -176,9 +179,16 @@ export const getManageTrips: RequestHandler = async (req, res) => {
       return res.json([]);
     }
 
-    const trips = await TripModel.find({
+    const { municipioId } = req.query;
+    const filter: any = {
       companyId: { $in: companyIds },
-    })
+    };
+
+    if (municipioId && mongoose.Types.ObjectId.isValid(municipioId as string)) {
+      filter.municipioId = new Types.ObjectId(municipioId as string);
+    }
+
+    const trips = await TripModel.find(filter)
       .populate("routeId", "origin destination isActive")
       .populate("companyId", "name")
       .sort({ createdAt: -1 })

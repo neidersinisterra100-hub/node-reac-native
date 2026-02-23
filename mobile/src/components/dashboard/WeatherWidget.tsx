@@ -53,7 +53,7 @@ export const WeatherWidget: React.FC = () => {
     const WeatherIcon = IconMap[weather.current.icon] || Cloud;
 
     return (
-        <StyledView className="bg-white dark:bg-dark-surface p-4 rounded-[24px] mb-2 shadow-sm border border-slate-100 dark:border-dark-border/50">
+        <StyledView className="bg-white dark:bg-dark-surface p-4 rounded-[24px] mb-6 shadow-sm border border-slate-100 dark:border-dark-border/50">
             <StyledView className="flex-row items-center justify-between mb-2 px-1">
                 <StyledView className="flex-row items-center">
                     <MapPin size={12} color="#94a3b8" />

@@ -35,17 +35,13 @@ export default function AllRoutesScreen() {
   const loadRoutes = async () => {
     try {
       setLoading(true);
+      const munId = selectedMunicipio?._id;
       const [routesData, companiesData] = await Promise.all([
-        getAllRoutes(),
-        getAllCompanies(),
+        getAllRoutes(munId),
+        getAllCompanies(munId),
       ]);
 
-      const munId = selectedMunicipio?._id;
-      const filtered = munId
-        ? routesData.filter(r => r.municipioId === munId)
-        : routesData;
-
-      setRoutes(filtered);
+      setRoutes(routesData);
 
       const companyMap = companiesData.reduce<Record<string, string>>((acc, company: any) => {
         if (company.id) acc[company.id] = company.name;

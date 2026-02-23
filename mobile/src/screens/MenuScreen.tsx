@@ -46,6 +46,13 @@ export default function MenuScreen() {
 
   const menuItems = [
     {
+      icon: "account-check-outline",
+      label: "Completar mi información",
+      onPress: () => navigation.navigate("CompleteProfile"),
+      show: true,
+      isPriority: true,
+    },
+    {
       icon: "account-circle-outline",
       label: "Mi Perfil",
       onPress: () => navigation.navigate("Profile"),

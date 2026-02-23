@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { ScrollView, View, StyleSheet, TouchableOpacity, ActivityIndicator, Animated, Easing } from 'react-native';
 import { Text, Avatar, IconButton } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -212,6 +212,26 @@ export default function DashboardScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
+                {/* Location Banner */}
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('Menu')}
+                    style={{
+                        flexDirection: 'row', alignItems: 'center',
+                        backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#bbf7d0',
+                        borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10,
+                        marginTop: 16, marginHorizontal: 16
+                    }}
+                >
+                    <MaterialCommunityIcons name="map-marker" size={18} color="#16a34a" />
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={{ fontSize: 10, color: '#16a34a', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 }}>Viendo guía de</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#15803d' }}>
+                            {selectedMunicipio?.name || 'Todos los municipios'}
+                        </Text>
+                    </View>
+                    <MaterialCommunityIcons name="pencil-outline" size={16} color="#16a34a" />
+                </TouchableOpacity>
+
                 {/* Accesos Rápidos - BOTONES GRANDES Y COLORIDOS */}
                 <View style={styles.shortcutsRow}>
                     <TouchableOpacity onPress={() => navigation.navigate("AllRoutes")} style={styles.shortcutBtn}>
@@ -269,7 +289,7 @@ export default function DashboardScreen() {
                 ) : (
                     <>
                         {/* Card 1: Rutas Activas */}
-                        <View style={styles.cardContainer}>
+                        <View style={[styles.cardContainer, { marginTop: 28 }]}>
                             <LinearGradient
                                 colors={['#2563eb', '#1d4ed8']}
                                 start={{ x: 0, y: 0 }}
@@ -320,6 +340,58 @@ export default function DashboardScreen() {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* ─── NauticBot Floating Button ─── */}
+            <FloatingBotButton onPress={() => navigation.navigate('NauticBot')} />
+
+        </View>
+    );
+}
+
+/* ─── Floating Bot Button ─── */
+function FloatingBotButton({ onPress }: { onPress: () => void }) {
+    const pulse = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulse, { toValue: 1.18, duration: 900, easing: Easing.out(Easing.sin), useNativeDriver: true }),
+                Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.in(Easing.sin), useNativeDriver: true }),
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <View style={{
+            position: 'absolute', bottom: 28, right: 20,
+            zIndex: 999, elevation: 20,
+            width: 62, height: 62,
+            justifyContent: 'center', alignItems: 'center',
+        }}>
+            {/* Pulse ring */}
+            <Animated.View style={{
+                position: 'absolute',
+                width: 62, height: 62, borderRadius: 31,
+                backgroundColor: 'rgba(37, 99, 235, 0.22)',
+                transform: [{ scale: pulse }]
+            }} />
+            <TouchableOpacity
+                onPress={onPress}
+                activeOpacity={0.82}
+                style={{ width: 62, height: 62, borderRadius: 31, overflow: 'hidden' }}
+            >
+                <LinearGradient
+                    colors={['#1e3a8a', '#2563eb']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    style={{
+                        flex: 1, justifyContent: 'center', alignItems: 'center',
+                        shadowColor: '#1e3a8a', shadowOpacity: 0.55,
+                        shadowRadius: 14, shadowOffset: { width: 0, height: 7 }
+                    }}
+                >
+                    <MaterialCommunityIcons name="robot" size={30} color="white" />
+                </LinearGradient>
+            </TouchableOpacity>
         </View>
     );
 }

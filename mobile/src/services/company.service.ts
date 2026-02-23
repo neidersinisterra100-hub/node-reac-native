@@ -71,17 +71,19 @@ export async function createCompanyWithAdmin(data: CreateCompanyWithAdminInput) 
 }
 
 /* ================= GET COMPANIES ================= */
-export async function getMyCompanies() {
-  const response = await api.get("/companies/my");
+export async function getMyCompanies(municipioId?: string) {
+  const params = municipioId ? { params: { municipioId } } : {};
+  const response = await api.get("/companies/my", params);
   return response.data as Company[];
 }
 
-export async function getAllCompanies() {
+export async function getAllCompanies(municipioId?: string) {
   try {
-    const response = await api.get("/companies");
+    const params = municipioId ? { params: { municipioId } } : {};
+    const response = await api.get("/companies", params);
     return response.data as Company[];
   } catch (error) {
-    console.log("Error fetching public companies (endpoint might not exist yet):", error);
+    console.log("Error fetching public companies:", error);
     return [];
   }
 }

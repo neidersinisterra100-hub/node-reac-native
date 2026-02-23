@@ -239,7 +239,12 @@ export const getRoutesByRole: RequestHandler = async (req, res) => {
   try {
     const authReq = req as AuthRequest;
 
+    const { municipioId } = req.query;
     const filter: any = {};
+
+    if (municipioId && mongoose.Types.ObjectId.isValid(municipioId as string)) {
+      filter.municipioId = new Types.ObjectId(municipioId as string);
+    }
 
     if (authReq.user?.role === "admin" && authReq.user.companyId) {
       filter.companyId = authReq.user.companyId;

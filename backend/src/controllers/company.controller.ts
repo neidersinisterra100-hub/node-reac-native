@@ -139,15 +139,25 @@ export const getMyCompanies: RequestHandler = async (req, res) => {
     return res.status(401).json({ message: "No autenticado" });
   }
 
-  const { role, id, companyId } = req.user;
+  const { id, role, companyId } = req.user;
+  const { municipioId } = req.query;
+  const filter: any = {};
 
-  const companies =
-    role === "owner"
-      ? await CompanyModel.find({ owner: id })
-      : role === "admin" && companyId
-        ? await CompanyModel.find({ _id: companyId })
-        : [];
+  if (role === "owner") {
+    filter.owner = id;
+  } else if (role === "admin" && companyId) {
+    filter._id = companyId;
+  } else if (role === "super_owner") {
+    // Super owners see everything
+  } else {
+    return res.json([]);
+  }
 
+  if (municipioId && mongoose.Types.ObjectId.isValid(municipioId as string)) {
+    filter.municipioId = new Types.ObjectId(municipioId as string);
+  }
+
+  const companies = await CompanyModel.find(filter);
   res.json(companies.map(toCompanyDTO));
 };
 
@@ -158,9 +168,16 @@ export const getMyCompanies: RequestHandler = async (req, res) => {
    - Usado principalmente por el Dashboard y AllRoutes
    ========================================================= */
 
-export const getPublicCompanies: RequestHandler = async (_req, res) => {
+export const getPublicCompanies: RequestHandler = async (req, res) => {
   try {
-    const companies = await CompanyModel.find({ isActive: true });
+    const { municipioId } = req.query;
+    const filter: any = { isActive: true };
+
+    if (municipioId && mongoose.Types.ObjectId.isValid(municipioId as string)) {
+      filter.municipioId = new Types.ObjectId(municipioId as string);
+    }
+
+    const companies = await CompanyModel.find(filter);
     res.json(companies.map(toCompanyDTO));
   } catch (error) {
     console.error("❌ getPublicCompanies error:", error);

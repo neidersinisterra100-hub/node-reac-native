@@ -6,6 +6,7 @@ import { Provider as PaperProvider } from "react-native-paper";
 
 import { AuthProvider } from "./src/context/AuthContext";
 import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
+import { LocationProvider } from "./src/context/LocationContext";
 
 import AppNavigator from "./src/navigation/AppNavigator";
 import SplashScreen from "./src/screens/SplashScreen";
@@ -72,11 +73,13 @@ export default function App() {
   return (
     <PaperProvider>
       <AuthProvider>
-        <ThemeProvider>
-          <ThemeRoot>
-            <Main />
-          </ThemeRoot>
-        </ThemeProvider>
+        <LocationProvider>
+          <ThemeProvider>
+            <ThemeRoot>
+              <Main />
+            </ThemeRoot>
+          </ThemeProvider>
+        </LocationProvider>
       </AuthProvider>
     </PaperProvider>
   );

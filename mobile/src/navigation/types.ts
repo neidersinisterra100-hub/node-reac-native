@@ -183,6 +183,7 @@ export type RootStackParamList = {
 
   ValidateTicket: undefined;
   TerrestreRide: undefined;
+  WeatherMarine: undefined;
 };
 
 

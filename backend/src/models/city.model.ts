@@ -25,6 +25,8 @@ const CitySchema = new Schema<ICity>(
 
         createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
         isActive: { type: Boolean, default: true },
+        latitude: { type: Number },
+        longitude: { type: Number },
     },
     { timestamps: true }
 );

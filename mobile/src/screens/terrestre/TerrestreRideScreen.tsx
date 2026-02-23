@@ -77,8 +77,8 @@ export default function TerrestreRideScreen() {
                 location={location}
                 customMapStyle={isDark ? darkMapStyle : []}
                 initialRegion={{
-                    latitude: 4.6097, // Bogota Default
-                    longitude: -74.0817,
+                    latitude: 2.77194, // Timbiquí
+                    longitude: -77.665,
                     latitudeDelta: 0.0922,
                     longitudeDelta: 0.0421,
                 }}

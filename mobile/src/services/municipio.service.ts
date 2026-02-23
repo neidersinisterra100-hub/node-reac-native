@@ -6,6 +6,8 @@ export interface Municipio {
     department: string;
     departmentId: string;
     isActive: boolean;
+    latitude?: number;
+    longitude?: number;
 }
 
 export const getAllMunicipios = async (active?: boolean): Promise<Municipio[]> => {

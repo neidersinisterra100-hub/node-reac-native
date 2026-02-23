@@ -10,15 +10,17 @@ export async function saveSession(user: User, token: string) {
       [USER_KEY, JSON.stringify(user)],
       [TOKEN_KEY, token],
     ]);
-  } catch {}
+  } catch { }
 }
 
 export async function loadSession() {
   try {
+    console.log("💾 [Storage] Reading keys from AsyncStorage...");
     const [[, user], [, token]] = await AsyncStorage.multiGet([
       USER_KEY,
       TOKEN_KEY,
     ]);
+    console.log("💾 [Storage] Keys read successfully");
 
     let parsedUser: User | null = null;
     if (user) {
@@ -47,7 +49,7 @@ export async function loadSession() {
 export async function clearSession() {
   try {
     await AsyncStorage.multiRemove([USER_KEY, TOKEN_KEY]);
-  } catch {}
+  } catch { }
 }
 
 

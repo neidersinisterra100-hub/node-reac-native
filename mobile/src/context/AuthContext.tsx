@@ -57,15 +57,19 @@ export function AuthProvider({
     let isMounted = true;
 
     const restoreSession = async () => {
+      console.log("🗝️ [Auth] Attempting to restore session...");
       try {
         const session = await loadSession();
+        console.log("🗝️ [Auth] Session loaded from storage:", session ? "Found" : "Empty");
 
         if (session?.user && isMounted) {
+          console.log("🗝️ [Auth] User found, setting state:", session.user.email);
           setUser(session.user);
         }
       } catch (err) {
-        console.log("❌ Error restaurando sesión", err);
+        console.error("❌ [Auth] Error restoring session:", err);
       } finally {
+        console.log("🗝️ [Auth] Initializing finished, setting loading to false");
         if (isMounted) {
           setLoading(false);
         }
@@ -111,8 +115,8 @@ export function AuthProvider({
         typeof (err as any)?.response?.data?.message === "string"
           ? (err as any).response.data.message
           : err instanceof Error
-          ? err.message
-          : "Error al iniciar sesión";
+            ? err.message
+            : "Error al iniciar sesión";
 
       setError(message);
       return false;
@@ -154,8 +158,8 @@ export function AuthProvider({
         typeof (err as any)?.response?.data?.message === "string"
           ? (err as any).response.data.message
           : err instanceof Error
-          ? err.message
-          : "Error al registrar usuario";
+            ? err.message
+            : "Error al registrar usuario";
 
       setError(message);
       return false;

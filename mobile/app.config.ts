@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+
 export default {
   expo: {
     name: "NauticGo",
@@ -26,6 +27,9 @@ export default {
 
         render:
           process.env.EXPO_PUBLIC_API_URL_RENDER ??
+          null,
+        ngrok:
+          process.env.EXPO_PUBLIC_API_URL_NGROK ??
           null,
       },
     },

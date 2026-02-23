@@ -42,6 +42,12 @@ const MunicipioSchema = new Schema<MunicipioDocument>(
         },
         deactivatedAt: {
             type: Date
+        },
+        latitude: {
+            type: Number
+        },
+        longitude: {
+            type: Number
         }
     },
     {

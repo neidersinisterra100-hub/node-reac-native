@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { styled } from 'nativewind';
-import { Sun, Cloud, CloudRain, CloudLightning, CloudSnow, CloudSun, Wind, Thermometer } from 'lucide-react-native';
+import { Sun, Cloud, CloudRain, CloudLightning, CloudSnow, CloudSun, Wind, Thermometer, MapPin } from 'lucide-react-native';
 import { getCurrentWeather, WeatherData } from '../../services/weather.service';
+import { useTheme } from '../../context/ThemeContext';
+import { useLocation } from '../../context/LocationContext';
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
@@ -18,17 +20,25 @@ const IconMap: Record<string, any> = {
 };
 
 export const WeatherWidget: React.FC = () => {
+    const { isDark } = useTheme();
+    const { selectedMunicipio, selectedCity } = useLocation();
     const [weather, setWeather] = useState<WeatherData | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchWeather = async () => {
-            const data = await getCurrentWeather();
-            setWeather(data);
-            setLoading(false);
+            try {
+                const data = await getCurrentWeather(selectedMunicipio?.latitude, selectedMunicipio?.longitude);
+                setWeather(data);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
         };
+
         fetchWeather();
-    }, []);
+    }, [selectedMunicipio]);
 
     if (loading) {
         return (
@@ -40,12 +50,24 @@ export const WeatherWidget: React.FC = () => {
 
     if (!weather) return null;
 
-    const WeatherIcon = IconMap[weather.icon] || Cloud;
+    const WeatherIcon = IconMap[weather.current.icon] || Cloud;
 
     return (
-        <StyledView
-            className="mx-1 mb-8 bg-white dark:bg-dark-surface rounded-[30px] p-6 shadow-sm border border-slate-100 dark:border-dark-border/50 overflow-hidden"
-        >
+        <StyledView className="bg-white dark:bg-dark-surface p-4 rounded-[24px] mb-2 shadow-sm border border-slate-100 dark:border-dark-border/50">
+            <StyledView className="flex-row items-center justify-between mb-2 px-1">
+                <StyledView className="flex-row items-center">
+                    <MapPin size={12} color="#94a3b8" />
+                    <StyledText className="text-[10px] font-black text-slate-400 dark:text-dark-text-muted uppercase tracking-[2px] ml-1">
+                        {selectedCity?.name || selectedMunicipio?.name || "Ubicación"}
+                    </StyledText>
+                </StyledView>
+                <StyledView className="bg-emerald-500/10 px-2 py-0.5 rounded-full flex-row items-center border border-emerald-500/10">
+                    <StyledText className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[2px]">
+                        {selectedCity?.name || selectedMunicipio?.name || "Timbiquí"} Hoy
+                    </StyledText>
+                </StyledView>
+            </StyledView>
+
             {/* Background Decoration */}
             <StyledView
                 className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/10 rounded-full"
@@ -58,39 +80,48 @@ export const WeatherWidget: React.FC = () => {
                             <Thermometer size={14} color="#10b981" />
                         </StyledView>
                         <StyledText className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[2px]">
-                            Pronóstico Actual
+                            {selectedMunicipio?.name || "Timbiquí"} Hoy
                         </StyledText>
                     </StyledView>
 
                     <StyledView className="flex-row items-baseline">
-                        <StyledText className="text-4xl font-black text-nautic-navy dark:text-white">
-                            {weather.temp}°
+                        <StyledText className="text-3xl font-black text-nautic-navy dark:text-white">
+                            {weather.current.temp}°
                         </StyledText>
                         <StyledText className="text-xl font-bold text-slate-400 dark:text-dark-text-muted ml-2">
-                            {weather.condition}
+                            {weather.current.condition}
                         </StyledText>
                     </StyledView>
 
-                    <StyledText className="text-xs text-slate-500 dark:text-dark-text-muted font-medium mt-1 leading-relaxed">
-                        {weather.description}
+                    <StyledText className="text-[10px] text-slate-500 dark:text-dark-text-muted font-medium mt-0.5 leading-tight pr-4">
+                        {weather.current.description}
                     </StyledText>
                 </StyledView>
 
-                <StyledView className="bg-emerald-50 dark:bg-emerald-900/20 w-16 h-16 rounded-2xl items-center justify-center border border-emerald-100 dark:border-emerald-800/30">
-                    <WeatherIcon size={32} color="#10b981" strokeWidth={2.5} />
+                <StyledView className="bg-emerald-50 dark:bg-emerald-900/20 w-12 h-12 rounded-xl items-center justify-center border border-emerald-100 dark:border-emerald-800/30">
+                    <WeatherIcon size={24} color="#10b981" strokeWidth={2.5} />
                 </StyledView>
             </StyledView>
 
-            {/* Micro details */}
-            <StyledView className="flex-row items-center mt-4 pt-4 border-t border-slate-50 dark:border-dark-border/30">
-                <StyledView className="flex-row items-center mr-6">
-                    <Wind size={12} color="#64748b" />
-                    <StyledText className="text-[10px] font-bold text-slate-400 ml-1.5">5 km/h</StyledText>
-                </StyledView>
-                <StyledView className="flex-row items-center">
-                    <Cloud size={12} color="#64748b" />
-                    <StyledText className="text-[10px] font-bold text-slate-400 ml-1.5">Humedad: 82%</StyledText>
-                </StyledView>
+            {/* Forecast Section */}
+            <StyledView className="flex-row items-center mt-2.5 pt-2.5 border-t border-slate-50 dark:border-dark-border/30 justify-between">
+                {weather.forecast.map((day, idx) => (
+                    <StyledView key={idx} className="flex-row items-center flex-1">
+                        <StyledView className="bg-slate-50 dark:bg-white/5 p-1.5 rounded-lg mr-2">
+                            {IconMap[day.icon] ? React.createElement(IconMap[day.icon], { size: 16, color: "#10b981" }) : <Cloud size={16} color="#10b981" />}
+                        </StyledView>
+                        <StyledView>
+                            <StyledText className="text-[8px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-wider">{day.label}</StyledText>
+                            <StyledView className="flex-row items-center">
+                                <StyledText className="text-xs font-bold text-nautic-navy dark:text-white">{day.maxTemp}°</StyledText>
+                                <StyledText className="text-[9px] text-slate-400 ml-1">/ {day.minTemp}°</StyledText>
+                            </StyledView>
+                            <StyledText className="text-[9px] font-medium text-slate-400 dark:text-dark-text-muted mt-0.5" numberOfLines={1}>
+                                {day.condition}
+                            </StyledText>
+                        </StyledView>
+                    </StyledView>
+                ))}
             </StyledView>
         </StyledView>
     );

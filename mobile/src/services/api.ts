@@ -25,51 +25,35 @@ import { loadSession } from "../utils/authStorage";
  * ❌ NO funciona en Expo Go móvil
  */
 const BASE_API = "http://localhost:3000/api";
+// const BASE_API = "http://10.142.77.225:3000/api";
 
 /**
- * 🟢 BACKEND LOCAL — MÓVIL FÍSICO / EXPO GO
- * 👉 Usa la IP de tu computador
+ * 🟢 OPCONES DE CONEXIÓN
+ * ⚠️ Solo una debe estar activa
  */
-// const BASE_API = "http://192.168.1.36:3000/api";
+// const BASE_API = "http://10.0.2.2:3000/api"; // Android Emulator
+// const BASE_API = Constants.expoConfig?.extra?.api?.ngrok; // ngrok
+// const BASE_API = Constants.expoConfig?.extra?.api?.cloudflare; // Cloudflare
 
-/**
- * 🟢 ANDROID EMULATOR
- */
-// const BASE_API = "http://10.0.2.2:3000/api";
-
-/**
- * 🟢 iOS SIMULATOR
- */
+// Referencia de URLs (comentar las que no se usen)
 // const BASE_API = "http://localhost:3000/api";
-
-/**
- * 🟡 CLOUDFLARE TUNNEL (DEV REMOTO)
- */
-// const BASE_API = Constants.expoConfig?.extra?.api?.cloudflare;
-
+// const BASE_API = "https://gramophonical-silvana-unmurmuringly.ngrok-free.dev/api";
 /**
  * 🔴 RENDER (PRODUCCIÓN)
  */
 // const BASE_API = Constants.expoConfig?.extra?.api?.render;
 
-/* =========================================================
-   🛑 VALIDACIÓN
-   ========================================================= */
-
+console.log("🌐 [API] Initializing with Base URL:", BASE_API);
 if (!BASE_API) {
-  throw new Error(
-    "❌ BASE_API no configurada. Descomenta un entorno válido."
-  );
+  console.warn("⚠️ [API] BASE_API is undefined! Check your .env and app.config.ts");
 }
-
-console.log("🌐 [API] Base URL:", BASE_API);
 
 /* =========================================================
    AXIOS INSTANCE
    ========================================================= */
 
 export const api = axios.create({
-  baseURL: BASE_API,
+  baseURL: BASE_API || "",
   timeout: 15000,
 });
 

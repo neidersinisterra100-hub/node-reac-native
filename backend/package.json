@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "node --import tsx src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "setup-driver": "node --import tsx scripts/setup-driver.ts",
+    "tunnel": "cloudflared tunnel --url http://localhost:3000",
+    "tunnel-expo": "cloudflared tunnel --url http://localhost:8081",
+    "tunnel-ngrok": "ngrok http 3000 --url=gramophonical-silvana-unmurmuringly.ngrok-free.dev"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

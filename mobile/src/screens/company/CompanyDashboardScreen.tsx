@@ -9,8 +9,9 @@ import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { getAllRoutes } from '../../services/route.service';
 import { tripService } from '../../services/trip.service';
-import { Map, MapIcon, Compass, Anchor, Ticket, Building2, Search, Menu, Calendar, Ship } from 'lucide-react-native';
+import { Map, MapIcon, Compass, Anchor, Ticket, Building2, Search, Menu, Calendar, Ship, MapPin } from 'lucide-react-native';
 import { WeatherWidget } from '../../components/dashboard/WeatherWidget';
+import { useLocation } from '../../context/LocationContext';
 import { getAllCompanies, getMyCompanies } from '../../services/company.service';
 import { getMyTickets } from '../../services/ticket.service';
 import { getAllMunicipios } from '../../services/municipio.service';
@@ -24,6 +25,7 @@ const StyledView = styled(View);
 
 export const CompanyDashboardScreen = () => {
     const { user } = useAuth();
+    const { selectedMunicipio, selectedCity } = useLocation();
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
     const isOwner = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'super_owner';
@@ -181,8 +183,8 @@ export const CompanyDashboardScreen = () => {
     return (
         <ScreenContainer withPadding={false}>
             {/* Header */}
-            <StyledView className="bg-nautic-primary pt-10 pb-5 px-6 rounded-b-[32px] shadow-lg">
-                <StyledView className="flex-row justify-between items-center mb-3">
+            <StyledView className="bg-nautic-primary pt-6 pb-3 px-6 rounded-b-[24px] shadow-lg">
+                <StyledView className="flex-row justify-between items-center mb-2">
                     <StyledView className="flex-row items-center">
                         <StyledView className="w-10 h-10 bg-white/20 rounded-full items-center justify-center mr-3 border border-white/30">
                             <StyledText className="text-white font-bold text-base">
@@ -243,11 +245,20 @@ export const CompanyDashboardScreen = () => {
                 </StyledView>
             </StyledView>
 
-            <ScrollView className="flex-1 px-4 pt-6" showsVerticalScrollIndicator={false}>
+            <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
                 {activeFacet === 'fluvial' ? (
                     <>
+                        {/* Location Indicator */}
+                        <StyledView className="flex-row items-center mb-4 bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10">
+                            <MapPin size={16} color="#10b981" />
+                            <StyledText className="ml-2 text-emerald-700 font-bold text-xs uppercase tracking-widest">
+                                Viendo Guía de: <StyledText className="font-black">{selectedCity?.name || selectedMunicipio?.name || "Timbiquí"}</StyledText>
+                                {selectedCity && selectedMunicipio ? ` (${selectedMunicipio.name})` : ''}
+                            </StyledText>
+                        </StyledView>
+
                         {/* Shortcuts */}
-                        <StyledView className="flex-row justify-between mb-8">
+                        <StyledView className="flex-row justify-between mb-4">
                             {isOwner ? (
                                 <>
                                     <Shortcut
@@ -318,8 +329,8 @@ export const CompanyDashboardScreen = () => {
                         ) : (
                             <>
                                 {/* Rutas Recientes */}
-                                <StyledView className="mb-8">
-                                    <StyledView className="flex-row justify-between items-center mb-5 px-1">
+                                <StyledView className="mb-4">
+                                    <StyledView className="flex-row justify-between items-center mb-2 px-1">
                                         <StyledView>
                                             <StyledText className="text-xl font-black text-nautic-navy dark:text-dark-text tracking-tight">Rutas Activas</StyledText>
                                             <StyledView className="h-1 w-8 bg-blue-500 rounded-full mt-1" />
@@ -374,8 +385,8 @@ export const CompanyDashboardScreen = () => {
                                 </StyledView>
 
                                 {/* Viajes Section */}
-                                <StyledView className="mb-12">
-                                    <StyledView className="flex-row justify-between items-center mb-5 px-1">
+                                <StyledView className="mb-6">
+                                    <StyledView className="flex-row justify-between items-center mb-2 px-1">
                                         <StyledView>
                                             <StyledText className="text-xl font-black text-nautic-navy dark:text-dark-text tracking-tight">
                                                 {isOwner ? "Próximos Viajes" : "Tu Próximo Viaje"}
@@ -396,7 +407,7 @@ export const CompanyDashboardScreen = () => {
                                         return (
                                             <PressableCard
                                                 key={item._id || item.id || `${item.date}-${item.departureTime}-${idx}`}
-                                                className="mb-4 p-5 shadow-sm border-0 bg-white dark:bg-dark-surface rounded-[24px]"
+                                                className="mb-6 p-6 shadow-sm border-0 bg-white dark:bg-dark-surface rounded-[24px]"
                                                 style={{ borderLeftWidth: 6, borderLeftColor: isActive ? "#10b981" : "#f43f5e" }}
                                                 onPress={() => handleTripPress(item)}
                                             >

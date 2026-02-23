@@ -18,12 +18,14 @@ import { getAllRoutes, Route } from "../services/route.service";
 import { getAllCompanies } from "../services/company.service";
 import { getTrips } from "../services/trip.service";
 import { useAuth } from "../context/AuthContext";
+import { useLocation } from "../context/LocationContext";
 
 const StyledView = styled(View);
 
 export default function AllRoutesScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const { selectedMunicipio } = useLocation();
 
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,7 +40,12 @@ export default function AllRoutesScreen() {
         getAllCompanies(),
       ]);
 
-      setRoutes(routesData);
+      const munId = selectedMunicipio?._id;
+      const filtered = munId
+        ? routesData.filter(r => r.municipioId === munId)
+        : routesData;
+
+      setRoutes(filtered);
 
       const companyMap = companiesData.reduce<Record<string, string>>((acc, company: any) => {
         if (company.id) acc[company.id] = company.name;
@@ -77,7 +84,7 @@ export default function AllRoutesScreen() {
 
   useEffect(() => {
     loadRoutes();
-  }, []);
+  }, [selectedMunicipio?._id]);
 
   const renderItem = ({ item }: { item: Route }) => {
     const companyName =

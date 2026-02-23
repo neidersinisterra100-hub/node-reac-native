@@ -12,6 +12,8 @@ export interface Route {
   company: string | { id?: string; _id?: string; name: string };
   active?: boolean;
   isActive?: boolean;
+  municipioId?: string;
+  cityId?: string;
 }
 
 /* ================= GET ALL ROUTES ================= */

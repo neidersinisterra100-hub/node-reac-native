@@ -19,6 +19,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { colors } from "../theme/colors";
 import { ListSkeleton } from "../components/ui/Skeletons";
+import { useLocation } from "../context/LocationContext";
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
@@ -32,6 +33,7 @@ export default function MyCompaniesScreen() {
     const [companies, setCompanies] = useState<Company[]>([]);
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const { selectedMunicipio } = useLocation();
 
     const loadCompanies = async () => {
         try {
@@ -44,6 +46,12 @@ export default function MyCompaniesScreen() {
             } else {
                 data = await getAllCompanies();
             }
+
+            const munId = selectedMunicipio?._id;
+            if (munId) {
+                data = data.filter((c: any) => c.municipioId === munId || c.municipio === munId);
+            }
+
             setCompanies(data);
         } catch (error: any) {
             setErrorMsg("No se pudieron cargar las empresas.");
@@ -54,7 +62,7 @@ export default function MyCompaniesScreen() {
 
     useEffect(() => {
         loadCompanies();
-    }, [user]);
+    }, [user, selectedMunicipio?._id]);
 
     const handleToggle = async (id: string, currentStatus: boolean) => {
         try {

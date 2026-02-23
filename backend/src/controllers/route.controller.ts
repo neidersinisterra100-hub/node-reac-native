@@ -18,6 +18,8 @@ export interface RouteDTO {
   destination: string;
   companyId: string;
   isActive: boolean;
+  municipioId?: string;
+  cityId?: string;
   createdAt: Date;
 }
 
@@ -28,6 +30,8 @@ function toRouteDTO(route: RouteDocument): RouteDTO {
     destination: route.destination,
     companyId: route.companyId.toString(),
     isActive: route.isActive,
+    municipioId: route.municipioId?.toString(),
+    cityId: route.cityId?.toString(),
     createdAt: route.createdAt,
   };
 }

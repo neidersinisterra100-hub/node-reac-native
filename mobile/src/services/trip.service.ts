@@ -52,6 +52,8 @@ export interface Trip {
   soldSeats?: number;
   transportType: TransportType;
   isActive: boolean;
+  municipioId?: string;
+  cityId?: string;
 }
 
 /* =========================================================

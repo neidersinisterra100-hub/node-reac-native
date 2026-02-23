@@ -12,6 +12,7 @@ import { getAllCompanies, getMyCompanies } from '../services/company.service';
 import { getMyTickets } from '../services/ticket.service';
 import { colors } from '../theme/colors';
 import { formatTimeAmPm } from '../utils/time';
+import { useLocation } from '../context/LocationContext';
 import { DashboardSkeleton } from '../components/ui/Skeletons';
 import { styled } from "nativewind";
 
@@ -21,6 +22,7 @@ const StyledText = styled(Text);
 export default function DashboardScreen() {
     const { user } = useAuth();
     const navigation = useNavigation<any>();
+    const { selectedMunicipio } = useLocation();
     const isOwner = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'super_owner';
     const canUseMyCompanies = user?.role === 'owner' || user?.role === 'admin';
 
@@ -31,7 +33,7 @@ export default function DashboardScreen() {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [selectedMunicipio?._id]);
 
     const loadData = async () => {
         try {
@@ -41,8 +43,21 @@ export default function DashboardScreen() {
                 tripService.getAll(),
                 canUseMyCompanies ? getMyCompanies() : getAllCompanies(),
             ]);
-            setRoutes(routesData.slice(0, 2));
-            setTrips(tripsData.slice(0, 2));
+
+            // Filter by Municipality (User side only, or for everyone?)
+            // Usually we want global filtering unless business requires otherwise.
+            const munId = selectedMunicipio?._id;
+
+            const filteredRoutes = munId
+                ? routesData.filter((r: any) => r.municipioId === munId)
+                : routesData;
+
+            const filteredTrips = munId
+                ? tripsData.filter((t: any) => t.municipioId === munId)
+                : tripsData;
+
+            setRoutes(filteredRoutes.slice(0, 2));
+            setTrips(filteredTrips.slice(0, 2));
 
             const companyMap = companiesData.reduce<Record<string, string>>((acc, company: any) => {
                 if (company.id) acc[company.id] = company.name;

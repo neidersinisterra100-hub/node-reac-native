@@ -8,7 +8,7 @@ import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { getCurrentWeather, WeatherData } from '../services/weather.service';
 import { getTideInfo, TideData } from '../services/tide.service';
 import { useLocation } from '../context/LocationContext';
-import { Cloud, Waves, Wind, Thermometer, ArrowUp, ArrowDown, Moon, Info, Calendar } from 'lucide-react-native';
+import { Cloud, Waves, Wind, Thermometer, ArrowUp, ArrowDown, Moon, Info, Calendar, Sunrise, Sunset, Sun, Droplets } from 'lucide-react-native';
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
@@ -21,6 +21,10 @@ export const WeatherMarineScreen = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [weather, setWeather] = useState<WeatherData | null>(null);
     const [tide, setTide] = useState<TideData | null>(null);
+
+    const uvValue = weather?.current.uvIndex ?? 0;
+    const uvLabel = uvValue > 7 ? 'Muy Alto' : uvValue > 5 ? 'Alto' : 'Moderado';
+    const uvColor = uvValue > 7 ? 'text-rose-500' : uvValue > 5 ? 'text-amber-500' : 'text-emerald-500';
 
     const loadData = async () => {
         try {
@@ -118,7 +122,7 @@ export const WeatherMarineScreen = () => {
                             </StyledText>
                         </StyledView>
 
-                        <StyledView className="flex-row justify-between">
+                        <StyledView className="flex-row justify-between mb-6">
                             <StyledView className="items-center flex-1 border-r border-slate-100 dark:border-dark-border/20">
                                 <StyledText className="text-slate-400 font-bold text-[9px] uppercase mb-1">Altura actual</StyledText>
                                 <StyledText className="text-emerald-500 text-xl font-black">{tide?.seaLevel} m</StyledText>
@@ -137,26 +141,93 @@ export const WeatherMarineScreen = () => {
                                 <StyledText className="text-nautic-navy dark:text-white font-black text-xs text-center">{tide?.moonPhase}</StyledText>
                             </StyledView>
                         </StyledView>
+
+                        {/* High/Low Tides Detail */}
+                        <StyledView className="flex-row gap-3">
+                            <StyledView className="flex-1 bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-2xl flex-row items-center">
+                                <ArrowUp size={14} color="#3b82f6" />
+                                <StyledView className="ml-2">
+                                    <StyledText className="text-[8px] font-bold text-slate-400 uppercase">Marea Alta</StyledText>
+                                    <StyledText className="text-[11px] font-black text-blue-600 dark:text-blue-400">{tide?.highTides?.join(' | ') || '--:--'}</StyledText>
+                                </StyledView>
+                            </StyledView>
+                            <StyledView className="flex-1 bg-rose-50/50 dark:bg-rose-900/10 p-3 rounded-2xl flex-row items-center">
+                                <ArrowDown size={14} color="#f43f5e" />
+                                <StyledView className="ml-2">
+                                    <StyledText className="text-[8px] font-bold text-slate-400 uppercase">Marea Baja</StyledText>
+                                    <StyledText className="text-[11px] font-black text-rose-600 dark:text-rose-400">{tide?.lowTides?.join(' | ') || '--:--'}</StyledText>
+                                </StyledView>
+                            </StyledView>
+                        </StyledView>
                     </StyledView>
 
-                    {/* Weather Details Grid */}
-                    <StyledView className="flex-row gap-4 mb-6">
-                        <StyledView className="flex-1 bg-white dark:bg-dark-surface p-5 rounded-[28px] shadow-sm border border-slate-100 dark:border-dark-border/50">
-                            <StyledView className="flex-row justify-between items-center mb-3">
-                                <Thermometer size={18} color="#10b981" />
-                                <StyledText className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Temp</StyledText>
+                    {/* Bento Grid: Weather Stats */}
+                    <StyledView className="bg-white dark:bg-dark-surface rounded-[32px] p-4 shadow-sm border border-slate-100 dark:border-dark-border/50 mb-6">
+                        <StyledView className="flex-row flex-wrap">
+                            {/* Temp / Feels Like */}
+                            <StyledView className="w-1/2 p-2 border-r border-b border-slate-50 dark:border-dark-border/10">
+                                <StyledView className="flex-row justify-between items-center mb-1">
+                                    <Thermometer size={16} color="#10b981" />
+                                    <StyledText className="text-[8px] font-black text-slate-300 uppercase">Temp</StyledText>
+                                </StyledView>
+                                <StyledView className="flex-row items-baseline">
+                                    <StyledText className="text-xl font-black text-nautic-navy dark:text-white">{weather?.current.temp}°</StyledText>
+                                    <StyledText className="text-[10px] text-slate-400 font-bold ml-1">/{weather?.current.feelsLike}°</StyledText>
+                                </StyledView>
+                                <StyledText className="text-[8px] text-emerald-500 font-bold uppercase">{weather?.current.condition}</StyledText>
                             </StyledView>
-                            <StyledText className="text-2xl font-black text-nautic-navy dark:text-white">{weather?.current.temp}°C</StyledText>
-                            <StyledText className="text-[10px] text-slate-500 dark:text-dark-text-muted mt-1 font-bold">{weather?.current.condition}</StyledText>
+
+                            {/* Wind */}
+                            <StyledView className="w-1/2 p-2 border-b border-slate-50 dark:border-dark-border/10">
+                                <StyledView className="flex-row justify-between items-center mb-1">
+                                    <Wind size={16} color="#3b82f6" />
+                                    <StyledText className="text-[8px] font-black text-slate-300 uppercase">Viento</StyledText>
+                                </StyledView>
+                                <StyledText className="text-xl font-black text-nautic-navy dark:text-white">{weather?.current.windSpeed} <StyledText className="text-[10px]">km/h</StyledText></StyledText>
+                                <StyledText className="text-[8px] text-blue-500 font-bold uppercase truncate">{weather?.current.windDirection}</StyledText>
+                            </StyledView>
+
+                            {/* UV Index */}
+                            <StyledView className="w-1/2 p-2 border-r border-slate-50 dark:border-dark-border/10">
+                                <StyledView className="flex-row justify-between items-center mb-1">
+                                    <Sun size={16} color="#f59e0b" />
+                                    <StyledText className="text-[8px] font-black text-slate-300 uppercase">Índice UV</StyledText>
+                                </StyledView>
+                                <StyledText className="text-xl font-black text-nautic-navy dark:text-white">{weather?.current.uvIndex ?? '--'}</StyledText>
+                                <StyledText className={`text-[8px] font-bold uppercase ${uvColor}`}>{uvLabel}</StyledText>
+                            </StyledView>
+
+                            {/* Humidity */}
+                            <StyledView className="w-1/2 p-2">
+                                <StyledView className="flex-row justify-between items-center mb-1">
+                                    <Droplets size={16} color="#06b6d4" />
+                                    <StyledText className="text-[8px] font-black text-slate-300 uppercase">Humedad</StyledText>
+                                </StyledView>
+                                <StyledText className="text-xl font-black text-nautic-navy dark:text-white">{weather?.current.humidity}%</StyledText>
+                                <StyledText className="text-[8px] text-cyan-500 font-bold uppercase">Relativa</StyledText>
+                            </StyledView>
                         </StyledView>
 
-                        <StyledView className="flex-1 bg-white dark:bg-dark-surface p-5 rounded-[28px] shadow-sm border border-slate-100 dark:border-dark-border/50">
-                            <StyledView className="flex-row justify-between items-center mb-3">
-                                <Wind size={18} color="#3b82f6" />
-                                <StyledText className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Viento</StyledText>
+                        {/* Astronomy Divider */}
+                        <StyledView className="h-[1px] bg-slate-50 dark:bg-dark-border/10 my-3" />
+
+                        {/* Astronomy Row */}
+                        <StyledView className="flex-row justify-around items-center py-1">
+                            <StyledView className="flex-row items-center">
+                                <Sunrise size={18} color="#f59e0b" />
+                                <StyledView className="ml-2">
+                                    <StyledText className="text-[7px] font-black text-slate-400 uppercase">Amanecer</StyledText>
+                                    <StyledText className="text-xs font-black text-nautic-navy dark:text-white">{weather?.current.sunrise}</StyledText>
+                                </StyledView>
                             </StyledView>
-                            <StyledText className="text-2xl font-black text-nautic-navy dark:text-white">5 km/h</StyledText>
-                            <StyledText className="text-[10px] text-slate-500 dark:text-dark-text-muted mt-1 font-bold">Dirección: O</StyledText>
+                            <StyledView className="w-[1px] h-6 bg-slate-100 dark:bg-dark-border/20" />
+                            <StyledView className="flex-row items-center">
+                                <Sunset size={18} color="#ea580c" />
+                                <StyledView className="ml-2">
+                                    <StyledText className="text-[7px] font-black text-slate-400 uppercase">Atardecer</StyledText>
+                                    <StyledText className="text-xs font-black text-nautic-navy dark:text-white">{weather?.current.sunset}</StyledText>
+                                </StyledView>
+                            </StyledView>
                         </StyledView>
                     </StyledView>
 
@@ -170,17 +241,25 @@ export const WeatherMarineScreen = () => {
                         </StyledView>
 
                         {weather?.forecast.map((day, idx) => (
-                            <StyledView key={idx} className={`flex-row items-center py-4 ${idx !== weather.forecast.length - 1 ? 'border-b border-slate-50 dark:border-dark-border/20' : ''}`}>
-                                <StyledText className="w-16 font-black text-slate-400 dark:text-slate-500 text-xs uppercase">{day.label}</StyledText>
+                            <StyledView key={idx} className={`flex-row items-center py-3 ${idx !== weather.forecast.length - 1 ? 'border-b border-slate-50 dark:border-dark-border/20' : ''}`}>
+                                <StyledText className="w-16 font-black text-slate-400 dark:text-slate-500 text-[10px] uppercase">{day.day}</StyledText>
                                 <StyledView className="flex-row items-center flex-1 px-4">
-                                    <StyledView className="bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded-xl mr-3">
-                                        <Cloud size={16} color="#10b981" />
+                                    <StyledView className="bg-emerald-50 dark:bg-emerald-900/20 p-1.5 rounded-lg mr-3">
+                                        <MaterialCommunityIcons
+                                            name={day.icon === 'sun' ? 'weather-sunny' : 'weather-cloudy'}
+                                            size={16}
+                                            color="#10b981"
+                                        />
                                     </StyledView>
-                                    <StyledText className="text-sm font-bold text-nautic-navy dark:text-white">{day.condition}</StyledText>
+                                    <StyledText className="text-xs font-bold text-nautic-navy dark:text-white">{day.condition}</StyledText>
                                 </StyledView>
                                 <StyledView className="flex-row items-center">
-                                    <StyledText className="font-black text-nautic-navy dark:text-white mr-2">{day.maxTemp}°</StyledText>
-                                    <StyledText className="text-slate-400 font-bold text-xs">{day.minTemp}°</StyledText>
+                                    <StyledText className="font-black text-nautic-navy dark:text-white mr-2 text-xs">
+                                        {day.max ?? '--'}°
+                                    </StyledText>
+                                    <StyledText className="text-slate-400 font-bold text-[10px]">
+                                        {day.min ?? '--'}°
+                                    </StyledText>
                                 </StyledView>
                             </StyledView>
                         ))}

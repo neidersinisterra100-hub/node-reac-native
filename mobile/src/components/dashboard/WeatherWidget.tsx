@@ -103,18 +103,18 @@ export const WeatherWidget: React.FC = () => {
                 </StyledView>
             </StyledView>
 
-            {/* Forecast Section */}
+            {/* Forecast Section: Limited to 2 days for Dashboard */}
             <StyledView className="flex-row items-center mt-2.5 pt-2.5 border-t border-slate-50 dark:border-dark-border/30 justify-between">
-                {weather.forecast.map((day, idx) => (
+                {weather.forecast.slice(0, 2).map((day, idx) => (
                     <StyledView key={idx} className="flex-row items-center flex-1">
                         <StyledView className="bg-slate-50 dark:bg-white/5 p-1.5 rounded-lg mr-2">
                             {IconMap[day.icon] ? React.createElement(IconMap[day.icon], { size: 16, color: "#10b981" }) : <Cloud size={16} color="#10b981" />}
                         </StyledView>
                         <StyledView>
-                            <StyledText className="text-[8px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-wider">{day.label}</StyledText>
+                            <StyledText className="text-[8px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-wider">{day.day}</StyledText>
                             <StyledView className="flex-row items-center">
-                                <StyledText className="text-xs font-bold text-nautic-navy dark:text-white">{day.maxTemp}°</StyledText>
-                                <StyledText className="text-[9px] text-slate-400 ml-1">/ {day.minTemp}°</StyledText>
+                                <StyledText className="text-xs font-bold text-nautic-navy dark:text-white">{day.max}°</StyledText>
+                                <StyledText className="text-[9px] text-slate-400 ml-1">/ {day.min}°</StyledText>
                             </StyledView>
                             <StyledText className="text-[9px] font-medium text-slate-400 dark:text-dark-text-muted mt-0.5" numberOfLines={1}>
                                 {day.condition}

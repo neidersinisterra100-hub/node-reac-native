@@ -17,6 +17,7 @@ import { getTrips, Trip } from "../../services/trip.service";
 import { getAllCompanies } from "../../services/company.service";
 import { Clock, Users, ArrowRight, Search, Calendar } from "lucide-react-native";
 import { formatTimeAmPm } from "../../utils/time";
+import { useLocation } from "../../context/LocationContext";
 
 const StyledText = styled(Text);
 const StyledView = styled(View);
@@ -27,6 +28,7 @@ export const AvailableTripsScreen = () => {
   const route = useRoute<AvailableTripsRouteProp>();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { selectedMunicipio } = useLocation();
 
   const { origin, destination } = route.params || {};
 
@@ -36,7 +38,7 @@ export const AvailableTripsScreen = () => {
 
   useEffect(() => {
     loadTrips();
-  }, [origin, destination]);
+  }, [origin, destination, selectedMunicipio?._id]);
 
   const loadTrips = async () => {
     setLoading(true);
@@ -54,6 +56,8 @@ export const AvailableTripsScreen = () => {
             t.route?.origin === origin &&
             t.route?.destination === destination
         );
+      } else if (selectedMunicipio?._id) {
+        filtered = allTrips.filter((t: any) => t.municipioId === selectedMunicipio._id);
       }
 
       setTrips(filtered);
@@ -152,10 +156,10 @@ export const AvailableTripsScreen = () => {
         <StyledView className="flex-row items-center">
           <Users size={18} color="#64748B" />
           <StyledText className={`ml-2 text-sm font-bold ${(item.capacity - (item.soldSeats ?? 0)) <= 3
-              ? "text-red-500"
-              : (item.capacity - (item.soldSeats ?? 0)) <= Math.ceil(item.capacity * 0.3)
-                ? "text-amber-500"
-                : "text-slate-500"
+            ? "text-red-500"
+            : (item.capacity - (item.soldSeats ?? 0)) <= Math.ceil(item.capacity * 0.3)
+              ? "text-amber-500"
+              : "text-slate-500"
             }`}>
             {Math.max(0, item.capacity - (item.soldSeats ?? 0))} cupos libres
           </StyledText>

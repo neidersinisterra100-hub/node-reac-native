@@ -36,6 +36,8 @@ interface TripDTO {
   transportType: string;
   capacity: number;
   isActive: boolean;
+  municipioId?: string;
+  cityId?: string;
   createdAt: Date;
 }
 
@@ -64,6 +66,8 @@ function toTripDTO(trip: any): TripDTO & { route?: any; company?: any } {
     transportType: trip.transportType,
     capacity: trip.capacity,
     isActive: trip.isActive,
+    municipioId: trip.municipioId?.toString(),
+    cityId: trip.cityId?.toString(),
     createdAt: trip.createdAt,
 
     route:

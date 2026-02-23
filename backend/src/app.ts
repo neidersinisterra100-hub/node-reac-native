@@ -18,6 +18,7 @@ import departmentRoutes from "./routes/department.routes.js";
 import auditRoutes from "./routes/audit.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
 import rideRoutes from "./routes/ride.routes.js";
+import marineRoutes from "./routes/marine.routes.js";
 
 /* ===============================
    MIDDLEWARES
@@ -70,6 +71,7 @@ app.use("/api/departments", departmentRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/api/rides", rideRoutes);
+app.use("/api/marine", marineRoutes);
 
 /* =========================================================
    404

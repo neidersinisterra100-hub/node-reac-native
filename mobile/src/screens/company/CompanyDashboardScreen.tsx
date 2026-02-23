@@ -39,7 +39,7 @@ export const CompanyDashboardScreen = () => {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [selectedMunicipio?._id]);
 
     const loadData = async () => {
         try {
@@ -49,10 +49,25 @@ export const CompanyDashboardScreen = () => {
                 tripService.getAll(),
                 canUseMyCompanies ? getMyCompanies() : getAllCompanies(),
             ]);
-            setRoutes(routesData.slice(0, 2));
-            setTrips(tripsData.slice(0, 2));
 
-            const companyMap = companies.reduce<Record<string, string>>((acc, company: any) => {
+            const munId = selectedMunicipio?._id;
+
+            const filteredCompanies = munId
+                ? companies.filter((c: any) => c.municipioId === munId || c.municipio === munId)
+                : companies;
+
+            const filteredRoutes = munId
+                ? routesData.filter((r: any) => r.municipioId === munId)
+                : routesData;
+
+            const filteredTrips = munId
+                ? tripsData.filter((t: any) => t.municipioId === munId)
+                : tripsData;
+
+            setRoutes(filteredRoutes.slice(0, 2));
+            setTrips(filteredTrips.slice(0, 2));
+
+            const companyMap = filteredCompanies.reduce<Record<string, string>>((acc, company: any) => {
                 if (company.id) acc[company.id] = company.name;
                 if (company._id) acc[company._id] = company.name;
                 return acc;

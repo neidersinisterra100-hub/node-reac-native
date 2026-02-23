@@ -244,29 +244,49 @@ export default function MenuScreen() {
                 <ActivityIndicator size="large" color="#10b981" />
               </StyledView>
             ) : (
-              <FlatList
-                data={(viewMode === 'municipio'
-                  ? municipios
-                  : cities.filter(c => (typeof c.municipio === 'object' ? (c.municipio as any)._id : c.municipio) === selectedMunicipio?._id)) as any}
-                keyExtractor={(item: any) => item._id}
-                renderItem={({ item }: { item: any }) => (
+              <>
+                {viewMode === 'city' && (
                   <TouchableOpacity
-                    className="flex-row items-center p-4 mb-2 rounded-2xl bg-slate-50 dark:bg-dark-bg border border-slate-100 dark:border-dark-border/20"
-                    onPress={async () => {
-                      if (viewMode === 'municipio') {
-                        await selectMunicipio(item);
-                        setViewMode('city');
-                      } else {
-                        await selectCity(item);
-                        setShowLocationModal(false);
-                      }
+                    className="mb-4 bg-emerald-500/10 p-4 rounded-2xl border border-dashed border-emerald-500/30 flex-row items-center justify-between"
+                    onPress={() => {
+                      selectCity(null);
+                      setShowLocationModal(false);
                     }}
                   >
-                    <MaterialCommunityIcons name="map-marker-outline" size={24} color="#10b981" />
-                    <StyledText className="ml-3 text-base font-bold text-slate-700 dark:text-white">{item.name}</StyledText>
+                    <StyledView className="flex-row items-center">
+                      <MaterialCommunityIcons name="check-circle-outline" size={24} color="#10b981" />
+                      <StyledText className="ml-3 font-bold text-emerald-700">Confirmar solo {selectedMunicipio?.name}</StyledText>
+                    </StyledView>
+                    <StyledText className="text-[10px] font-black text-emerald-600 uppercase">OMITIR CIUDAD</StyledText>
                   </TouchableOpacity>
                 )}
-              />
+                <FlatList
+                  data={(viewMode === 'municipio'
+                    ? municipios
+                    : cities.filter(c => {
+                      const mId = (typeof c.municipio === 'object' ? (c.municipio as any)._id : c.municipio) || (c as any).municipioId;
+                      return mId === selectedMunicipio?._id;
+                    })) as any}
+                  keyExtractor={(item: any) => item._id}
+                  renderItem={({ item }: { item: any }) => (
+                    <TouchableOpacity
+                      className="flex-row items-center p-4 mb-2 rounded-2xl bg-slate-50 dark:bg-dark-bg border border-slate-100 dark:border-dark-border/20"
+                      onPress={async () => {
+                        if (viewMode === 'municipio') {
+                          await selectMunicipio(item);
+                          setViewMode('city');
+                        } else {
+                          await selectCity(item);
+                          setShowLocationModal(false);
+                        }
+                      }}
+                    >
+                      <MaterialCommunityIcons name="map-marker-outline" size={24} color="#10b981" />
+                      <StyledText className="ml-3 text-base font-bold text-slate-700 dark:text-white">{item.name}</StyledText>
+                    </TouchableOpacity>
+                  )}
+                />
+              </>
             )}
           </StyledView>
         </StyledView>

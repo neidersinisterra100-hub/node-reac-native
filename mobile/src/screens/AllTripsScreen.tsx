@@ -11,12 +11,14 @@ import AppContainer from "../components/ui/AppContainer";
 import AppHeader from "../components/ui/AppHeader";
 import { tripService, Trip } from "../services/trip.service";
 import { formatTimeAmPm } from "../utils/time";
+import { useLocation } from "../context/LocationContext";
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
 
 export default function AllTripsScreen() {
   const navigation = useNavigation<any>();
+  const { selectedMunicipio } = useLocation();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +26,13 @@ export default function AllTripsScreen() {
     try {
       setLoading(true);
       const data = await tripService.getAll();
-      setTrips(data);
+
+      const munId = selectedMunicipio?._id;
+      const filtered = munId
+        ? data.filter(t => t.municipioId === munId)
+        : data;
+
+      setTrips(filtered);
     } catch {
       Alert.alert("Error", "No se pudieron cargar los viajes");
     } finally {
@@ -34,7 +42,7 @@ export default function AllTripsScreen() {
 
   useEffect(() => {
     loadTrips();
-  }, []);
+  }, [selectedMunicipio?._id]);
 
   const handlePressTrip = (trip: Trip) => {
     if (!trip.isActive) {

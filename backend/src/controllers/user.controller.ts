@@ -15,12 +15,17 @@ export const getProfile: RequestHandler = async (req, res) => {
         if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
 
         const userObj = user.toObject();
+        const { unmask } = req.query;
 
         // Security: Mask ID if encrypted
         if (userObj.identificationNumber) {
             try {
                 const plainId = decrypt(userObj.identificationNumber);
-                userObj.identificationNumber = maskIdentification(plainId);
+                if (unmask === "true") {
+                    userObj.identificationNumber = plainId;
+                } else {
+                    userObj.identificationNumber = maskIdentification(plainId);
+                }
             } catch (e) {
                 userObj.identificationNumber = "Error al desencriptar";
             }

@@ -34,7 +34,7 @@ export interface TicketDocument extends Document {
   /* =========================
      ESTADO DEL TICKET
      ========================= */
-  status: "active" | "used" | "cancelled" | "expired" | "pending_payment";
+  status: "active" | "used" | "cancelled" | "expired" | "pending_payment" | "reserved";
 
   qrCode?: string;
   purchaseDate: Date;
@@ -148,7 +148,7 @@ const TicketSchema = new Schema<TicketDocument>(
 
     status: {
       type: String,
-      enum: ["active", "used", "cancelled", "expired", "pending_payment"],
+      enum: ["active", "used", "cancelled", "expired", "pending_payment", "reserved"],
       default: "pending_payment", // ⚠️ CORRECCIÓN IMPORTANTE
       index: true,
     },
@@ -251,7 +251,7 @@ export const TicketModel: Model<TicketDocument> =
 
 //     status: {
 //       type: String,
-//       enum: ['active', 'used', 'cancelled', 'expired', 'pending_payment'],
+//       enum: ['active', 'used', 'cancelled', 'expired', 'pending_payment', 'reserved'],
 //       default: 'active',
 //       index: true
 //     },

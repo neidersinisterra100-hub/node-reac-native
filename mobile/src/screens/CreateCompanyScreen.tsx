@@ -57,7 +57,7 @@ type ComplianceKeys = keyof CreateCompanyForm["compliance"];
 
 export default function CreateCompanyScreen() {
     const navigation = useNavigation<any>();
-    const { user } = useAuth();
+    const { user, refreshSession } = useAuth();
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
     const [loading, setLoading] = useState(false);
@@ -169,8 +169,14 @@ export default function CreateCompanyScreen() {
                 ? await createCompanyWithAdmin(formData)
                 : await createCompany(formData);
 
+            // 🔄 Refrescar sesión para obtener el nuevo rol (owner) y companyId
+            await refreshSession();
+
             Alert.alert("Éxito", "Empresa creada correctamente");
             navigation.goBack();
+        } catch (error) {
+            console.error("Error creating company", error);
+            Alert.alert("Error", "No se pudo crear la empresa");
         } finally {
             setLoading(false);
         }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, ScrollView, Alert } from 'react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { styled } from 'nativewind';
 import { ScreenContainer } from '../../components/ui/ScreenContainer';
 import { Input } from '../../components/ui/Input';
@@ -20,6 +21,8 @@ export const RegisterScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const handleRegister = async () => {
@@ -73,17 +76,27 @@ export const RegisterScreen = () => {
                     />
                     <Input
                         label="Contraseña"
-                        placeholder="••••••••"
+                        placeholder=""
                         value={password}
                         onChangeText={setPassword}
-                        secureTextEntry
+                        secureTextEntry={!showPassword}
+                        rightIcon={
+                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff size={20} color="#94A3B8" /> : <Eye size={20} color="#94A3B8" />}
+                            </TouchableOpacity>
+                        }
                     />
                     <Input
                         label="Confirmar Contraseña"
-                        placeholder="••••••••"
+                        placeholder=""
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
-                        secureTextEntry
+                        secureTextEntry={!showConfirmPassword}
+                        rightIcon={
+                            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                {showConfirmPassword ? <EyeOff size={20} color="#94A3B8" /> : <Eye size={20} color="#94A3B8" />}
+                            </TouchableOpacity>
+                        }
                     />
 
                     <Button

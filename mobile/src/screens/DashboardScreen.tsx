@@ -45,14 +45,14 @@ export default function DashboardScreen() {
             ]);
 
             // Filter by Municipality (User side only, or for everyone?)
-            // Usually we want global filtering unless business requires otherwise.
             const munId = selectedMunicipio?._id;
+            const isPlaceholder = munId?.startsWith('default_');
 
-            const filteredRoutes = munId
+            const filteredRoutes = munId && !isPlaceholder
                 ? routesData.filter((r: any) => r.municipioId === munId)
                 : routesData;
 
-            const filteredTrips = munId
+            const filteredTrips = munId && !isPlaceholder
                 ? tripsData.filter((t: any) => t.municipioId === munId)
                 : tripsData;
 

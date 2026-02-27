@@ -7,7 +7,7 @@ import { Text, ActivityIndicator } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import {
     User, Smartphone, CreditCard, Calendar,
-    Home, HeartPulse, UserPlus, CheckCircle2, ChevronDown
+    Home, HeartPulse, UserPlus, CheckCircle2, ChevronDown, Eye, EyeOff
 } from "lucide-react-native";
 
 import AppContainer from "../components/ui/AppContainer";
@@ -120,9 +120,10 @@ function DatePickerModal({ visible, day, month, year, onConfirm, onClose }: {
 }
 
 /* ─── Shared Input ─── */
-function Input({ label, value, onChange, placeholder, keyboardType = "default", icon }: {
+function Input({ label, value, onChange, placeholder, keyboardType = "default", icon, rightIcon }: {
     label: string; value: string; onChange: (v: string) => void;
     placeholder: string; keyboardType?: any; icon?: React.ReactNode;
+    rightIcon?: React.ReactNode;
 }) {
     return (
         <View className="mb-4">
@@ -134,6 +135,7 @@ function Input({ label, value, onChange, placeholder, keyboardType = "default", 
                     placeholderTextColor="#94a3b8" keyboardType={keyboardType}
                     style={{ flex: 1, paddingVertical: 12, marginLeft: 12, color: "#0f172a" }}
                 />
+                {rightIcon}
             </View>
         </View>
     );
@@ -175,6 +177,9 @@ export default function CompleteProfileScreen() {
         emergencyContactPhone: "",
     });
 
+    const [isIdVisible, setIsIdVisible] = useState(false);
+    const [unmaskedId, setUnmaskedId] = useState("");
+
     useEffect(() => { loadCurrentProfile(); }, []);
 
     async function loadCurrentProfile() {
@@ -182,7 +187,7 @@ export default function CompleteProfileScreen() {
             const profile = await getProfile();
             setFormData({
                 name: profile.name || "",
-                identificationNumber: "",
+                identificationNumber: profile.identificationNumber || "",
                 phone: profile.phone || "",
                 address: profile.address || "",
                 emergencyContactName: profile.emergencyContactName || "",
@@ -198,6 +203,24 @@ export default function CompleteProfileScreen() {
             console.error(e);
         } finally {
             setFetching(false);
+        }
+    }
+
+    async function toggleIdVisibility() {
+        if (isIdVisible) {
+            setIsIdVisible(false);
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const profile = await getProfile(true); // Request unmasked
+            setUnmaskedId(profile.identificationNumber);
+            setIsIdVisible(true);
+        } catch (e) {
+            Alert.alert("Error", "No se pudo obtener la identificación real");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -220,11 +243,23 @@ export default function CompleteProfileScreen() {
         setLoading(true);
         try {
             const birthDate = new Date(selectedYear, selectedMonth, selectedDay).toISOString();
-            const res = await updateProfile({ ...formData, birthDate });
+            const finalData = { ...formData };
+            if (finalData.identificationNumber.includes("*")) {
+                delete (finalData as any).identificationNumber;
+            }
+
+            const res = await updateProfile({ ...finalData, birthDate });
             if (updateUser) updateUser(res.user);
-            Alert.alert("¡Listo!", "Perfil actualizado correctamente.", [
-                { text: "OK", onPress: () => navigation.goBack() }
-            ]);
+
+            if (Platform.OS === 'web') {
+                // Better feedback for web
+                Alert.alert("¡Éxito!", "Tu información ha sido guardada correctamente.");
+            } else {
+                Alert.alert("¡Listo!", "Perfil actualizado correctamente.", [
+                    { text: "OK", onPress: () => navigation.goBack() }
+                ]);
+            }
+            setIsIdVisible(false);
         } catch (error: any) {
             Alert.alert("Error", error.response?.data?.message || "No se pudo actualizar el perfil");
         } finally {
@@ -260,11 +295,26 @@ export default function CompleteProfileScreen() {
                             onChange={v => setFormData(p => ({ ...p, name: v }))}
                             placeholder="Tu nombre legal"
                             icon={<User size={18} color="#94a3b8" />} />
-                        <Input label="Cédula / DNI *" value={formData.identificationNumber}
-                            onChange={v => setFormData(p => ({ ...p, identificationNumber: v }))}
+                        <Input
+                            label="Cédula / T.I (tarjeta de identidad) *"
+                            value={isIdVisible ? unmaskedId : formData.identificationNumber}
+                            onChange={v => {
+                                if (isIdVisible) {
+                                    setUnmaskedId(v);
+                                    setFormData(p => ({ ...p, identificationNumber: v }));
+                                } else {
+                                    setFormData(p => ({ ...p, identificationNumber: v }));
+                                }
+                            }}
                             placeholder="Sin puntos ni guiones"
                             keyboardType="numeric"
-                            icon={<CreditCard size={18} color="#94a3b8" />} />
+                            icon={<CreditCard size={18} color="#94a3b8" />}
+                            rightIcon={
+                                <TouchableOpacity onPress={toggleIdVisibility} className="p-2">
+                                    {isIdVisible ? <EyeOff size={18} color="#0B4F9C" /> : <Eye size={18} color="#94a3b8" />}
+                                </TouchableOpacity>
+                            }
+                        />
                         <Input label="Celular (WhatsApp) *" value={formData.phone}
                             onChange={v => setFormData(p => ({ ...p, phone: v }))}
                             placeholder="+57 300 123 4567"
@@ -314,7 +364,7 @@ export default function CompleteProfileScreen() {
                             <Text style={{ marginLeft: 8, fontWeight: "700", color: "#1e40af" }}>Privacidad y Seguridad</Text>
                         </View>
                         <Text style={{ fontSize: 12, color: "#1d4ed8" }}>
-                            Tu identificación se almacena encriptada con AES-256. Nunca la compartimos.
+                            Tu identificación se almacena encriptada con AES-256 en nuestra base de datos.
                         </Text>
                     </View>
 

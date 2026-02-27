@@ -5,6 +5,7 @@ import { Sun, Cloud, CloudRain, CloudLightning, CloudSnow, CloudSun, Wind, Therm
 import { getCurrentWeather, WeatherData } from '../../services/weather.service';
 import { useTheme } from '../../context/ThemeContext';
 import { useLocation } from '../../context/LocationContext';
+import { useNavigation } from '@react-navigation/native';
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
@@ -20,6 +21,7 @@ const IconMap: Record<string, any> = {
 };
 
 export const WeatherWidget: React.FC = () => {
+    const navigation = useNavigation<any>();
     const { isDark } = useTheme();
     const { selectedMunicipio, selectedCity } = useLocation();
     const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -53,17 +55,16 @@ export const WeatherWidget: React.FC = () => {
     const WeatherIcon = IconMap[weather.current.icon] || Cloud;
 
     return (
-        <StyledView className="bg-white dark:bg-dark-surface p-4 rounded-[24px] mb-6 shadow-sm border border-slate-100 dark:border-dark-border/50">
+        <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('WeatherMarine')}
+            className="bg-white dark:bg-dark-surface p-4 rounded-[24px] mb-6 shadow-sm border border-slate-100 dark:border-dark-border/50"
+        >
             <StyledView className="flex-row items-center justify-between mb-2 px-1">
                 <StyledView className="flex-row items-center">
                     <MapPin size={12} color="#94a3b8" />
                     <StyledText className="text-[10px] font-black text-slate-400 dark:text-dark-text-muted uppercase tracking-[2px] ml-1">
                         {selectedCity?.name || selectedMunicipio?.name || "Ubicación"}
-                    </StyledText>
-                </StyledView>
-                <StyledView className="bg-emerald-500/10 px-2 py-0.5 rounded-full flex-row items-center border border-emerald-500/10">
-                    <StyledText className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[2px]">
-                        {selectedCity?.name || selectedMunicipio?.name || "Timbiquí"} Hoy
                     </StyledText>
                 </StyledView>
             </StyledView>
@@ -123,6 +124,6 @@ export const WeatherWidget: React.FC = () => {
                     </StyledView>
                 ))}
             </StyledView>
-        </StyledView>
+        </TouchableOpacity>
     );
 };

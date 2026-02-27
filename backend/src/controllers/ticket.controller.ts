@@ -140,7 +140,50 @@ export const buyTicket: RequestHandler = async (req, res) => {
     }
 
     /* =========================
-       6. CREAR TICKETS (PENDING)
+       6. REASIGNAR O CANCELAR RESERVAS PREVIAS (SOBREESCRITURA)
+       ========================= */
+    const overriddenTickets = await TicketModel.find({
+      trip: tripId,
+      seatNumber: { $in: finalSeats.map(String) },
+      status: "reserved"
+    });
+
+    if (overriddenTickets.length > 0) {
+      const [reservations, ticketsData] = await Promise.all([
+        SeatReservationModel.find({ tripId }).lean(),
+        TicketModel.find({
+          trip: tripId,
+          status: { $in: ["active", "used", "pending_payment", "reserved"] }
+        }).select("seatNumber").lean()
+      ]);
+
+      const occupied = new Set([
+        ...reservations.map(r => Number(r.seatNumber)),
+        ...ticketsData.map(t => Number(t.seatNumber)).filter(n => !isNaN(n))
+      ]);
+      finalSeats.forEach(sn => occupied.add(Number(sn)));
+
+      const availableQueue: number[] = [];
+      for (let i = trip.capacity; i >= 1; i--) {
+        if (!occupied.has(i)) {
+          availableQueue.push(i);
+        }
+      }
+
+      for (const t of overriddenTickets) {
+        if (availableQueue.length > 0) {
+          const newSeat = availableQueue.shift()!;
+          t.seatNumber = String(newSeat);
+          await t.save();
+        } else {
+          t.status = "cancelled";
+          await t.save();
+        }
+      }
+    }
+
+    /* =========================
+       7. CREAR TICKETS (PENDING)
        ========================= */
     // Calculamos el split para cada ticket individual (para reportes)
     const unitSplit = PaymentService.calculateSplit(unitPrice);
@@ -170,7 +213,7 @@ export const buyTicket: RequestHandler = async (req, res) => {
     const tickets = await Promise.all(ticketPromises);
 
     /* =========================
-       7. RESPUESTA (DATOS PAGO)
+       8. RESPUESTA (DATOS PAGO)
        ========================= */
     return res.status(201).json({
       message: "Pago iniciado",
@@ -226,6 +269,101 @@ export const getMyTickets: RequestHandler = async (req, res) => {
     return res.status(500).json({
       message: "Error al obtener tickets",
     });
+  }
+};
+
+/* =========================================================
+   RESERVAR TICKET (PAGO AL ABORDAR)
+   ========================================================= */
+export const reserveTicketOnBoarding: RequestHandler = async (req, res) => {
+  try {
+    const currentUser = req.user;
+    if (!currentUser) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
+
+    const userId = currentUser.id;
+
+    const { tripId, passengerName, passengerId, seatNumber, seatNumbers } = req.body;
+
+    // Normalizar a array de asientos
+    const finalSeats = Array.isArray(seatNumbers)
+      ? seatNumbers
+      : (seatNumber !== undefined ? [seatNumber] : []);
+
+    if (!tripId || !passengerName || !passengerId || finalSeats.length === 0) {
+      return res.status(400).json({ message: "Datos incompletos" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      return res.status(400).json({ message: "ID de viaje inválido" });
+    }
+
+    const trip = await TripModel.findById(tripId).populate("routeId").lean();
+    if (!trip || !trip.isActive) {
+      return res.status(400).json({ message: "Viaje inactivo o cancelado" });
+    }
+
+    const route: any = trip.routeId;
+
+    /* Verificar si los asientos ya están ocupados en TicketModel */
+    const existingTickets = await TicketModel.find({
+      trip: tripId,
+      seatNumber: { $in: finalSeats.map(String) },
+      status: { $in: ["active", "used", "pending_payment", "reserved"] }
+    }).select("seatNumber").lean();
+
+    if (existingTickets.length > 0) {
+      return res.status(409).json({ message: "Uno o más asientos ya están reservados o vendidos." });
+    }
+
+    /* Validar los bloqueos temporales de 5 minutos (SeatReservationModel) */
+    const blockedCount = await SeatReservationModel.countDocuments({
+      tripId,
+      seatNumber: { $in: finalSeats },
+      userId: currentUser.id,
+    });
+
+    if (blockedCount !== finalSeats.length) {
+      return res.status(409).json({
+        message: "Uno o más asientos no están bloqueados por ti o la sesión expiró",
+      });
+    }
+
+    const unitPrice = trip.price;
+    const unitSplit = PaymentService.calculateSplit(unitPrice);
+
+    const ticketPromises = finalSeats.map(sn => {
+      return TicketModel.create({
+        trip: trip._id,
+        passenger: userId,
+        passengerName,
+        passengerId,
+        seatNumber: String(sn),
+
+        departmentId: route.departmentId,
+        municipioId: route.municipioId,
+        cityId: route.cityId,
+
+        status: "reserved",
+        financials: { ...unitSplit },
+        payment: {
+          status: "PENDING",
+          paymentMethod: "CASH",
+        },
+      });
+    });
+
+    const tickets = await Promise.all(ticketPromises);
+
+    return res.status(201).json({
+      message: "Reserva creada exitosamente",
+      ticketsCount: tickets.length
+    });
+
+  } catch (error) {
+    console.error("❌ reserveTicketOnBoarding:", error);
+    return res.status(500).json({ message: "Error al reservar ticket" });
   }
 };
 
@@ -329,12 +467,12 @@ export const registerManualPassenger: RequestHandler = async (req, res) => {
 
     const { tripId, passengerName, passengerId, seatNumber, seatNumbers, price } = req.body;
 
-    // Normalizar a array de asientos
+    // Normalizar a array de asientos, si es 0 también se permite
     const finalSeats = Array.isArray(seatNumbers)
       ? seatNumbers.map(Number)
       : (seatNumber !== undefined ? [Number(seatNumber)] : []);
 
-    if (!tripId || !passengerName || !passengerId || finalSeats.length === 0) {
+    if (!tripId || !passengerName || !passengerId) {
       return res.status(400).json({ message: "Datos incompletos" });
     }
 
@@ -385,15 +523,48 @@ export const registerManualPassenger: RequestHandler = async (req, res) => {
     for (const sn of finalSeats) {
       if (occupiedSeats.has(sn)) {
         return res.status(409).json({
-          message: `El asiento #${sn} ya está ocupado o reservado`,
+          message: `El asiento #${sn} ya está ocupado`,
         });
+      }
+    }
+
+    // Sobreescribir cualquier 'reserved' previo para estos asientos reasignándolos
+    if (finalSeats.length > 0) {
+      const overriddenTickets = await TicketModel.find({
+        trip: tripId,
+        seatNumber: { $in: finalSeats.map(String) },
+        status: "reserved"
+      });
+
+      if (overriddenTickets.length > 0) {
+        const availableQueue: number[] = [];
+        for (let i = trip.capacity; i >= 1; i--) {
+          if (!occupiedSeats.has(i)) {
+            availableQueue.push(i);
+          }
+        }
+
+        for (const t of overriddenTickets) {
+          if (availableQueue.length > 0) {
+            const newSeat = availableQueue.shift()!;
+            t.seatNumber = String(newSeat);
+            occupiedSeats.add(newSeat); // Marcarlo ocupado para próximas iteraciones
+            await t.save();
+          } else {
+            t.status = "cancelled";
+            await t.save();
+          }
+        }
       }
     }
 
     const route: any = trip.routeId;
     const finalPrice = price ?? trip.price;
 
-    const ticketPromises = finalSeats.map(sn => {
+    // Si finalSeats está vacío pero capacity lo permite, creamos ticket "General"
+    const seatsToBook = finalSeats.length > 0 ? finalSeats : [undefined];
+
+    const ticketPromises = seatsToBook.map(sn => {
       return TicketModel.create({
         trip: trip._id,
         passenger: userId,
@@ -481,5 +652,40 @@ export const getTicketById: RequestHandler = async (req, res) => {
     return res.status(500).json({
       message: "Error al obtener ticket",
     });
+  }
+};
+
+/* =========================================================
+   CONFIRMAR RESERVA POR ADMIN (CASH)
+   ========================================================= */
+export const confirmAdminReservation: RequestHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID de ticket inválido" });
+    }
+
+    const ticket = await TicketModel.findById(id);
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket no encontrado" });
+    }
+
+    if (ticket.status !== "reserved") {
+      return res.status(400).json({ message: "Sólo se pueden confirmar tickets reservados" });
+    }
+
+    ticket.status = "active";
+    ticket.payment.status = "APPROVED";
+    ticket.payment.paymentMethod = "CASH";
+    ticket.payment.paidAt = new Date();
+
+    await ticket.save();
+
+    return res.json({ message: "Reserva confirmada exitosamente", ticket });
+  } catch (error) {
+    console.error("❌ Error confirmAdminReservation:", error);
+    return res.status(500).json({ message: "Error al confirmar reserva" });
   }
 };

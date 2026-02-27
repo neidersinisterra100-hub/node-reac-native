@@ -22,7 +22,7 @@ import {
 // ===============================
 // SECURITY
 // ===============================
-import { 
+import {
   SecurityRequest,
   incrementFailedAttempts,
   resetFailedAttempts,
@@ -86,7 +86,7 @@ export async function login(req: SecurityRequest, res: Response) {
   try {
     console.log("[AUTH] Login attempt - IP:", req.security?.ip);
     console.log("[AUTH] Login attempt - Device:", req.security?.deviceId?.substring(0, 16) + '...');
-    
+
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -132,7 +132,7 @@ export async function login(req: SecurityRequest, res: Response) {
     // Reset failed attempts and rate limits
     await resetFailedAttempts(email);
     await resetRateLimitsForEmail(email);
-    
+
     console.log("[AUTH] Login successful");
     if (req.security) {
       req.security.auditResult = 'success';
@@ -164,8 +164,8 @@ export async function login(req: SecurityRequest, res: Response) {
     console.error("❌ LOGIN ERROR:", error);
     if (req.security) {
       req.security.auditResult = 'fail';
-      req.security.auditMetadata = { 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      req.security.auditMetadata = {
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
     return res.status(500).json({
@@ -654,7 +654,7 @@ export async function resetPassword(req: Request, res: Response) {
 //       EMAIL_SECRET,
 //       { expiresIn: "24h" }
 //     );
-    
+
 //     await sendVerificationEmail(user.email, token);
 
 //     return res.json({
@@ -781,5 +781,54 @@ export async function resetPassword(req: Request, res: Response) {
 //       message: "Token inválido o expirado",
 //     });
 //   }
-// }
+
+/* =========================================================
+   GET PROFILE / REFRESH SESSION
+   ========================================================= */
+/**
+ * GET /api/auth/profile
+ * 
+ * Responsabilidad:
+ * - Retornar datos frescos del usuario desde DB
+ * - Emitir un nuevo token con roles/companyId actualizados
+ * - Usado para corregir "stale tokens" tras crear empresa
+ */
+export async function getProfile(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
+
+    const user = await UserModel.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // Generar un nuevo token con la info actualizada (rol, companyId)
+    const token = jwt.sign(
+      {
+        id: user._id.toString(),
+        role: user.role,
+        companyId: user.companyId?.toString(),
+      },
+      JWT_SECRET,
+      { expiresIn: "30d" } // Mantener sesión larga para mobile
+    );
+
+    return res.json({
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        companyId: user.companyId?.toString(),
+        verified: user.verified,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error("❌ GET PROFILE ERROR:", error);
+    return res.status(500).json({ message: "Error al obtener perfil" });
+  }
+}
 

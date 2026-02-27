@@ -41,7 +41,8 @@ export interface TicketApi {
   | "used"
   | "cancelled"
   | "expired"
-  | "pending_payment";
+  | "pending_payment"
+  | "reserved";
 
   qrCode?: string;
   purchaseDate: string;
@@ -220,6 +221,32 @@ export async function registerManualPassenger(data: {
   seatNumbers?: number[];
 }) {
   const response = await api.post("/tickets/manual", data);
+  return response.data;
+}
+
+/**
+ * reserveTicketOnBoarding
+ *
+ * Reserva un pasajero para pagar al abordar
+ */
+export async function reserveTicketOnBoarding(data: {
+  tripId: string;
+  passengerName: string;
+  passengerId: string;
+  seatNumber?: string;
+  seatNumbers?: number[];
+}) {
+  const response = await api.post("/tickets/reserve", data);
+  return response.data;
+}
+
+/**
+ * confirmAdminReservation
+ *
+ * Administrador confirma el pago en efectivo de una reserva
+ */
+export async function confirmAdminReservation(ticketId: string) {
+  const response = await api.post(`/tickets/${ticketId}/confirm-payment`);
   return response.data;
 }
 

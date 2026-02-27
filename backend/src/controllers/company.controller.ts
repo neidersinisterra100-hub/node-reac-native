@@ -92,22 +92,25 @@ export const createCompany: RequestHandler = async (req, res) => {
       return res.status(401).json({ message: "No autenticado" });
     }
 
-    // Solo owners pueden crear empresas
-    if (req.user.role !== "owner") {
-      return res.status(403).json({ message: "Solo owners" });
+    // Permitir que 'user' cree su primera empresa o que 'owner' cree más
+    if (req.user.role !== "user" && req.user.role !== "owner") {
+      return res.status(403).json({ message: "No tienes permisos para crear una empresa" });
     }
 
     // Crear la empresa
     const company = await CompanyModel.create({
       ...req.body,
       owner: new Types.ObjectId(req.user.id),
-      isActive: true,
+      isActive: true, // TODO: Quizás empezar como inactivo hasta validación legal?
       admins: [],
     });
 
-    // Vincular la empresa al usuario owner
+    // Vincular la empresa al usuario y promover a OWNER si era USER
     await UserModel.findByIdAndUpdate(req.user.id, {
-      $set: { companyId: company._id },
+      $set: {
+        companyId: company._id,
+        role: "owner"
+      },
     });
 
     // 🔍 Registrar en auditoría

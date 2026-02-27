@@ -45,6 +45,7 @@ export const CompanyDashboardScreen = () => {
         try {
             setLoading(true);
             const munId = selectedMunicipio?._id;
+            console.log("DEBUG: Dashboard Loading for Municipio:", selectedMunicipio?.name, "ID:", munId);
 
             const [routesData, tripsData, companies] = await Promise.all([
                 getAllRoutes(munId),
@@ -252,13 +253,15 @@ export const CompanyDashboardScreen = () => {
                 {activeFacet === 'fluvial' ? (
                     <>
                         {/* Location Indicator */}
-                        <StyledView className="flex-row items-center mb-4 bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10">
-                            <MapPin size={16} color="#10b981" />
-                            <StyledText className="ml-2 text-emerald-700 font-bold text-xs uppercase tracking-widest">
-                                Viendo Guía de: <StyledText className="font-black">{selectedCity?.name || selectedMunicipio?.name || "Timbiquí"}</StyledText>
-                                {selectedCity && selectedMunicipio ? ` (${selectedMunicipio.name})` : ''}
-                            </StyledText>
-                        </StyledView>
+                        <TouchableOpacity onPress={() => navigation.navigate('WeatherMarine')}>
+                            <StyledView className="flex-row items-center mb-4 bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10 active:bg-emerald-500/10">
+                                <MapPin size={16} color="#10b981" />
+                                <StyledText className="ml-2 text-emerald-700 font-bold text-xs uppercase tracking-widest">
+                                    Viendo Guía de: <StyledText className="font-black">{selectedCity?.name || selectedMunicipio?.name || "Timbiquí"}</StyledText>
+                                    {selectedCity && selectedMunicipio ? ` (${selectedMunicipio.name})` : ''}
+                                </StyledText>
+                            </StyledView>
+                        </TouchableOpacity>
 
                         {/* Shortcuts */}
                         <StyledView className="flex-row justify-between mb-4">
@@ -367,7 +370,7 @@ export const CompanyDashboardScreen = () => {
                                                             </StyledText>
                                                             <StyledView className="flex-row items-center bg-slate-100 dark:bg-dark-bg px-2 py-1 rounded-lg">
                                                                 <MapIcon size={12} color="#64748b" style={{ marginRight: 4 }} />
-                                                                <StyledText className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tighter">
+                                                                <StyledText className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight">
                                                                     {item.destination}
                                                                 </StyledText>
                                                             </StyledView>
@@ -442,7 +445,7 @@ export const CompanyDashboardScreen = () => {
                                                     </StyledText>
                                                     <StyledView className={`px-2.5 py-1 rounded-lg ${isActive ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-rose-100 dark:bg-rose-900/40'}`}>
                                                         <StyledText className={`text-[9px] font-black tracking-widest ${isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                                                            {isActive ? 'CONFIRMADO' : 'PENDIENTE'}
+                                                            {isActive ? 'ACTIVO' : 'PENDIENTE'}
                                                         </StyledText>
                                                     </StyledView>
                                                 </StyledView>

@@ -12,7 +12,7 @@ import { styled } from "nativewind";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { Ship, Users, Armchair, ChevronDown, Plus, Search, X } from "lucide-react-native";
+import { Ship, Users, Armchair, ChevronDown, Plus, Search, X, Unlock } from "lucide-react-native";
 
 import { ScreenContainer } from "../components/ui/ScreenContainer";
 import AppHeader from "../components/ui/AppHeader";
@@ -25,7 +25,9 @@ import {
   getPassengersByTrip,
   registerManualPassenger,
   getTripsForPassengerControl,
+  confirmAdminReservation,
 } from "../services/ticket.service";
+import { clearTripLocks } from "../services/seat.service";
 
 /* ================= TYPES ================= */
 
@@ -111,6 +113,59 @@ export default function PassengersScreen() {
     }
   };
 
+  const handleConfirmReservation = async (ticketId: string) => {
+    Alert.alert(
+      "Confirmar Pago",
+      "¿El pasajero ya pagó este boleto?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sí, Pagó",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await confirmAdminReservation(ticketId);
+              Alert.alert("Éxito", "El ticket ha sido confirmado y está activo.");
+              loadPassengers(selectedTrip!.id);
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "No se pudo confirmar el pago.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleClearLocks = async () => {
+    if (!selectedTrip) return;
+    Alert.alert(
+      "Liberar Asientos Bloqueados",
+      "¿Estás seguro de que deseas liberar todos los asientos que han quedado bloqueados temporalmente?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sí, Liberar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await clearTripLocks(selectedTrip.id);
+              Alert.alert("Éxito", "Los asientos bloqueados han sido liberados.");
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "No se pudieron liberar los asientos.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   useEffect(() => {
     loadTrips();
   }, []);
@@ -192,14 +247,24 @@ export default function PassengersScreen() {
               <StyledView className="h-1 w-6 bg-emerald-500 rounded-full mt-1" />
             </StyledView>
 
-            {selectedTrip && (
-              <TouchableOpacity
-                onPress={() => setModalVisible(true)}
-                className="bg-emerald-500 p-2.5 rounded-xl shadow-sm shadow-emerald-500/30 active:scale-95 transition-transform"
-              >
-                <Plus size={20} color="white" strokeWidth={3} />
-              </TouchableOpacity>
-            )}
+            <StyledView className="flex-row items-center space-x-2">
+              {selectedTrip && (
+                <TouchableOpacity
+                  onPress={handleClearLocks}
+                  className="bg-amber-500 p-2.5 rounded-xl shadow-sm shadow-amber-500/30 active:scale-95 transition-transform mr-2"
+                >
+                  <Unlock size={20} color="white" strokeWidth={3} />
+                </TouchableOpacity>
+              )}
+              {selectedTrip && (
+                <TouchableOpacity
+                  onPress={() => setModalVisible(true)}
+                  className="bg-emerald-500 p-2.5 rounded-xl shadow-sm shadow-emerald-500/30 active:scale-95 transition-transform"
+                >
+                  <Plus size={20} color="white" strokeWidth={3} />
+                </TouchableOpacity>
+              )}
+            </StyledView>
           </StyledView>
 
           {loading ? (
@@ -240,13 +305,37 @@ export default function PassengersScreen() {
                           <StyledText className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-dark-bg px-2 py-0.5 rounded-md mr-2">
                             Asiento #{item.seatNumber || "L"}
                           </StyledText>
-                          <StyledText className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
-                            Confirmado
-                          </StyledText>
+                          {item.status === "reserved" ? (
+                            <StyledText className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-tighter bg-yellow-100 dark:bg-yellow-900/30 px-2 rounded-sm">
+                              Pagar al Abordar
+                            </StyledText>
+                          ) : item.status === "active" ? (
+                            <StyledText className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+                              Confirmado
+                            </StyledText>
+                          ) : item.status === "used" ? (
+                            <StyledText className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-tighter">
+                              Abordó
+                            </StyledText>
+                          ) : (
+                            <StyledText className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tighter">
+                              {item.status}
+                            </StyledText>
+                          )}
                         </StyledView>
                       </StyledView>
                     </StyledView>
-                    <ChevronDown size={14} color="#cbd5e1" />
+
+                    {item.status === "reserved" ? (
+                      <TouchableOpacity
+                        onPress={() => handleConfirmReservation(item._id)}
+                        className="bg-emerald-500 px-3 py-2 rounded-xl active:opacity-80"
+                      >
+                        <StyledText className="text-white text-xs font-bold">Cobrar</StyledText>
+                      </TouchableOpacity>
+                    ) : (
+                      <ChevronDown size={14} color="#cbd5e1" />
+                    )}
                   </StyledView>
                 </PressableCard>
               )}

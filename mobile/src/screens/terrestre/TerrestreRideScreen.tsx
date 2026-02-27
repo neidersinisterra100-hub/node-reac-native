@@ -36,6 +36,10 @@ export default function TerrestreRideScreen() {
 
     const [location, setLocation] = useState<Location.LocationObject | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    // Ride Flow States
+    const [rideStatus, setRideStatus] = useState<'IDLE' | 'SEARCHING' | 'ACCEPTED'>('IDLE');
+    const [simulatedRoute, setSimulatedRoute] = useState<[number, number][]>([]);
     const [destination, setDestination] = useState<any>(null);
 
     const mapRef = useRef<any>(null);
@@ -75,6 +79,7 @@ export default function TerrestreRideScreen() {
                 style={styles.map}
                 isDark={isDark}
                 location={location}
+                routeCoordinates={simulatedRoute}
                 customMapStyle={isDark ? darkMapStyle : []}
                 initialRegion={{
                     latitude: 2.77194, // Timbiquí
@@ -109,34 +114,102 @@ export default function TerrestreRideScreen() {
                 {/* Handle */}
                 <StyledView className="w-10 h-1.5 bg-slate-200 dark:bg-dark-bg rounded-full self-center mb-6" />
 
-                <StyledText className="text-2xl font-black text-nautic-navy dark:text-white mb-6">
-                    ¿A dónde vamos?
-                </StyledText>
+                {rideStatus === 'IDLE' && (
+                    <>
+                        <StyledText className="text-2xl font-black text-nautic-navy dark:text-white mb-6">
+                            ¿A dónde vamos?
+                        </StyledText>
 
-                {/* Search Bar */}
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('LocationSelection')}
-                    className="flex-row items-center bg-slate-50 dark:bg-dark-bg p-4 rounded-3xl mb-8 border border-slate-100 dark:border-dark-border/50"
-                >
-                    <Search size={20} color="#94a3b8" style={{ marginRight: 12 }} />
-                    <StyledText className="text-slate-400 font-bold flex-1">Buscar destino...</StyledText>
-                    <StyledView className="h-6 w-[1px] bg-slate-200 dark:bg-dark-border mx-3" />
-                    <Clock size={20} color="#94a3b8" />
-                </TouchableOpacity>
+                        {/* Search Bar */}
+                        <TouchableOpacity
+                            onPress={() => setRideStatus('SEARCHING')}
+                            className="flex-row items-center bg-slate-50 dark:bg-dark-bg p-4 rounded-3xl mb-8 border border-slate-100 dark:border-dark-border/50"
+                        >
+                            <Search size={20} color="#94a3b8" style={{ marginRight: 12 }} />
+                            <StyledText className="text-slate-400 font-bold flex-1">Toca para probar (Buscar destino)...</StyledText>
+                        </TouchableOpacity>
 
-                {/* Vehicle Selection (Miniature) */}
-                <StyledView className="flex-row justify-between mb-4">
-                    <StyledView className="p-4 bg-blue-500 rounded-[32px] items-center flex-1 mr-2">
-                        <Car size={32} color="white" />
-                        <StyledText className="text-white font-black mt-2">NauticGo</StyledText>
-                        <StyledText className="text-white/70 text-[10px] uppercase font-bold">$12.500</StyledText>
+                        {/* Vehicle Selection (Miniature) */}
+                        <StyledView className="flex-row justify-between mb-4">
+                            <TouchableOpacity
+                                onPress={() => setRideStatus('SEARCHING')}
+                                className="p-4 bg-blue-500 rounded-[32px] items-center flex-1 mr-2"
+                            >
+                                <Car size={32} color="white" />
+                                <StyledText className="text-white font-black mt-2">NauticGo</StyledText>
+                                <StyledText className="text-white/70 text-[10px] uppercase font-bold">$12.500</StyledText>
+                            </TouchableOpacity>
+                            <StyledView className="p-4 bg-slate-50 dark:bg-dark-bg rounded-[32px] items-center flex-1 ml-2 border border-slate-100 dark:border-dark-border/50 opacity-50">
+                                <Car size={32} color="#94a3b8" />
+                                <StyledText className="text-slate-400 font-black mt-2">NauticXL</StyledText>
+                                <StyledText className="text-slate-400/70 text-[10px] uppercase font-bold">$18.900</StyledText>
+                            </StyledView>
+                        </StyledView>
+                    </>
+                )}
+
+                {rideStatus === 'SEARCHING' && (
+                    <StyledView className="items-center py-6">
+                        <StyledView className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full items-center justify-center mb-4 border border-blue-100 dark:border-blue-900/50">
+                            <Search size={28} color="#3b82f6" className="animate-pulse" />
+                        </StyledView>
+                        <StyledText className="text-xl font-black text-nautic-navy dark:text-white mb-2">
+                            Buscando conductor...
+                        </StyledText>
+                        <StyledText className="text-slate-400 text-sm font-medium text-center px-4 mb-6">
+                            Conectando con el compañero náutico más cercano a tu ubicación.
+                        </StyledText>
+
+                        <TouchableOpacity
+                            onPress={() => {
+                                setRideStatus('ACCEPTED');
+                                // Generate a dummy route slightly offset from current location
+                                if (location) {
+                                    const lat = location.coords.latitude;
+                                    const lon = location.coords.longitude;
+                                    setSimulatedRoute([
+                                        [lat - 0.002, lon - 0.002],
+                                        [lat - 0.001, lon - 0.001],
+                                        [lat, lon]
+                                    ]);
+                                }
+                            }}
+                            className="bg-emerald-500 w-full py-4 rounded-2xl items-center shadow-lg shadow-emerald-500/30"
+                        >
+                            <StyledText className="text-white font-black uppercase tracking-widest text-xs">Simular Aceptación</StyledText>
+                        </TouchableOpacity>
                     </StyledView>
-                    <StyledView className="p-4 bg-slate-50 dark:bg-dark-bg rounded-[32px] items-center flex-1 ml-2 border border-slate-100 dark:border-dark-border/50">
-                        <Car size={32} color="#94a3b8" />
-                        <StyledText className="text-slate-400 font-black mt-2">NauticXL</StyledText>
-                        <StyledText className="text-slate-400/70 text-[10px] uppercase font-bold">$18.900</StyledText>
+                )}
+
+                {rideStatus === 'ACCEPTED' && (
+                    <StyledView className="py-2">
+                        <StyledView className="flex-row items-center mb-6">
+                            <StyledView className="w-16 h-16 bg-slate-100 dark:bg-dark-bg rounded-2xl mr-4" />
+                            <StyledView className="flex-1">
+                                <StyledView className="flex-row justify-between items-center mb-1">
+                                    <StyledText className="text-xl font-black text-nautic-navy dark:text-white">Carlos M.</StyledText>
+                                    <StyledView className="bg-emerald-500/10 px-2 py-1 rounded-lg">
+                                        <StyledText className="text-emerald-500 font-bold text-[10px]">4.9 ★</StyledText>
+                                    </StyledView>
+                                </StyledView>
+                                <StyledText className="text-slate-400 font-bold mb-1">Toyota Hilux Blanca</StyledText>
+                                <StyledText className="text-blue-500 font-black text-xs">Llega en 3 min</StyledText>
+                            </StyledView>
+                        </StyledView>
+
+                        <StyledView className="flex-row gap-3">
+                            <TouchableOpacity
+                                onPress={() => { setRideStatus('IDLE'); setSimulatedRoute([]); }}
+                                className="flex-1 bg-rose-50 dark:bg-rose-900/10 py-4 rounded-2xl items-center border border-rose-100 dark:border-rose-900/30"
+                            >
+                                <StyledText className="text-rose-500 font-black uppercase tracking-widest text-[10px]">Cancelar</StyledText>
+                            </TouchableOpacity>
+                            <TouchableOpacity className="flex-1 bg-blue-500 py-4 rounded-2xl items-center shadow-lg shadow-blue-500/30">
+                                <StyledText className="text-white font-black uppercase tracking-widest text-[10px]">Contactar</StyledText>
+                            </TouchableOpacity>
+                        </StyledView>
                     </StyledView>
-                </StyledView>
+                )}
             </StyledView>
 
             {/* RE-CENTER BUTTON */}

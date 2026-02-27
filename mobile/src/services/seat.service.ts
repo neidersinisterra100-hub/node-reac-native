@@ -12,6 +12,9 @@ export interface Seat {
   seatNumber: number;
   available: boolean;
   isReservedByMe?: boolean; // 🚀 Nuevo campo
+  isSold?: boolean;         // 🚀 Nuevo campo
+  isLockedByOther?: boolean; // 🚀 Nuevo campo
+  isPayOnBoarding?: boolean; // 🚀 Asiento de reserva pagado al abordar
 }
 
 /* =========================================================
@@ -56,4 +59,14 @@ export async function releaseSeat(data: {
   seatNumbers?: number[];
 }) {
   return api.post("/seats/release", data);
+}
+
+/* =========================================================
+   CLEAR TRIP LOCKS (UNBLOCK ALL)
+   ---------------------------------------------------------
+   🔐 Requiere auth (Admin)
+   POST /api/seats/clear-trip-locks
+   ========================================================= */
+export async function clearTripLocks(tripId: string) {
+  return api.post("/seats/clear-trip-locks", { tripId });
 }

@@ -1,5 +1,5 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { View, Text } from "react-native";
+import { View, Text, useColorScheme } from "react-native";
 import {
   Home,
   FileText,
@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
 } from "lucide-react-native";
 import { styled } from "nativewind";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Import new screens
 import { CompanyDashboardScreen } from "../screens/company/CompanyDashboardScreen"; // Owner Home
@@ -25,23 +26,35 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export default function TabNavigator() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const isOwner = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'super_owner';
+  const isDark = useColorScheme() === "dark";
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopColor: "#F1F5F9",
+          backgroundColor: isDark ? "#0f172a" : "#FFFFFF", // dark-surface/slate-900 o similar
+          borderTopColor: isDark ? "#1e293b" : "#F1F5F9",
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 8,
+          elevation: 10,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: isDark ? 0.4 : 0.1,
+          shadowRadius: 4,
+        },
+        tabBarItemStyle: {
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
         },
         tabBarShowLabel: true,
-        tabBarActiveTintColor: "#0B4F9C",
-        tabBarInactiveTintColor: "#94A3B8",
+        tabBarActiveTintColor: isDark ? "#38bdf8" : "#0B4F9C",
+        tabBarInactiveTintColor: isDark ? "#64748b" : "#94A3B8",
         tabBarLabelStyle: {
           fontSize: 10,
           marginTop: 2,

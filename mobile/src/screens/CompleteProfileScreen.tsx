@@ -159,6 +159,7 @@ export default function CompleteProfileScreen() {
     const navigation = useNavigation<any>();
     const { user, updateUser } = useAuth();
     const isDark = useColorScheme() === "dark";
+    const canViewId = ["owner", "admin", "super_owner"].includes(user?.role || "");
 
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
@@ -231,13 +232,15 @@ export default function CompleteProfileScreen() {
             Alert.alert("Campos requeridos", "Nombre e identificación son obligatorios.");
             return;
         }
-        const phoneRegex = /^\d{10}$/;
-        if (formData.phone && !phoneRegex.test(formData.phone.replace(/\s/g, ""))) {
-            Alert.alert("Teléfono inválido", "El celular debe tener exactamente 10 dígitos.");
+        const phoneRegex = /^\+?\d{10,15}$/;
+        const cleanPhone = formData.phone ? formData.phone.replace(/\s/g, "") : "";
+        if (cleanPhone && !phoneRegex.test(cleanPhone)) {
+            Alert.alert("Teléfono inválido", "El celular debe contener entre 10 y 15 dígitos.");
             return;
         }
-        if (formData.emergencyContactPhone && !phoneRegex.test(formData.emergencyContactPhone.replace(/\s/g, ""))) {
-            Alert.alert("Teléfono inválido", "El teléfono de emergencia debe tener exactamente 10 dígitos.");
+        const cleanEmergencyPhone = formData.emergencyContactPhone ? formData.emergencyContactPhone.replace(/\s/g, "") : "";
+        if (cleanEmergencyPhone && !phoneRegex.test(cleanEmergencyPhone)) {
+            Alert.alert("Teléfono inválido", "El teléfono de emergencia debe contener entre 10 y 15 dígitos.");
             return;
         }
         setLoading(true);
@@ -279,7 +282,7 @@ export default function CompleteProfileScreen() {
 
     return (
         <AppContainer>
-            <AppHeader title="Completar Perfil" showBack />
+            <AppHeader title="Actualizar Perfil" showBack />
             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
                 <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
 
@@ -310,9 +313,11 @@ export default function CompleteProfileScreen() {
                             keyboardType="numeric"
                             icon={<CreditCard size={18} color="#94a3b8" />}
                             rightIcon={
-                                <TouchableOpacity onPress={toggleIdVisibility} className="p-2">
-                                    {isIdVisible ? <EyeOff size={18} color="#0B4F9C" /> : <Eye size={18} color="#94a3b8" />}
-                                </TouchableOpacity>
+                                canViewId ? (
+                                    <TouchableOpacity onPress={toggleIdVisibility} className="p-2">
+                                        {isIdVisible ? <EyeOff size={18} color="#0B4F9C" /> : <Eye size={18} color="#94a3b8" />}
+                                    </TouchableOpacity>
+                                ) : undefined
                             }
                         />
                         <Input label="Celular (WhatsApp) *" value={formData.phone}
@@ -370,7 +375,7 @@ export default function CompleteProfileScreen() {
 
                     <View style={{ marginBottom: 40 }}>
                         <PrimaryButton
-                            label={loading ? "Guardando..." : "Guardar Información"}
+                            label={loading ? "Actualizando..." : "Actualizar Información"}
                             onPress={handleUpdate}
                             disabled={loading}
                         />

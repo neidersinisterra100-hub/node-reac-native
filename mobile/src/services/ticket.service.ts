@@ -150,6 +150,8 @@ export async function buyTicket(data: {
   tripId: string;
   passengerName: string;
   passengerId: string;
+  passengerPhone?: string;
+  passengerEmail?: string;
   seatNumber?: string;
   seatNumbers?: number[];
 }): Promise<BuyTicketResponse> {
@@ -217,6 +219,8 @@ export async function registerManualPassenger(data: {
   tripId: string;
   passengerName: string;
   passengerId: string;
+  passengerPhone?: string;
+  passengerEmail?: string;
   seatNumber?: string;
   seatNumbers?: number[];
 }) {
@@ -233,6 +237,8 @@ export async function reserveTicketOnBoarding(data: {
   tripId: string;
   passengerName: string;
   passengerId: string;
+  passengerPhone?: string;
+  passengerEmail?: string;
   seatNumber?: string;
   seatNumbers?: number[];
 }) {
@@ -247,6 +253,11 @@ export async function reserveTicketOnBoarding(data: {
  */
 export async function confirmAdminReservation(ticketId: string) {
   const response = await api.post(`/tickets/${ticketId}/confirm-payment`);
+  return response.data;
+}
+
+export async function updatePassengerInfo(ticketId: string, data: { passengerPhone?: string; passengerEmail?: string }) {
+  const response = await api.patch(`/tickets/${ticketId}/passenger-info`, data);
   return response.data;
 }
 

@@ -9,8 +9,7 @@ import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { getAllRoutes } from '../../services/route.service';
 import { getTrips, tripService } from '../../services/trip.service';
-import { Map, MapIcon, Compass, Anchor, Ticket, Building2, Search, Menu, Calendar, Ship, MapPin } from 'lucide-react-native';
-import { WeatherWidget } from '../../components/dashboard/WeatherWidget';
+import { Map, MapIcon, Compass, Anchor, Ticket, Building2, Bell, Menu, Calendar, Ship, MapPin } from 'lucide-react-native';
 import { useLocation } from '../../context/LocationContext';
 import { getAllCompanies, getMyCompanies } from '../../services/company.service';
 import { getMyTickets } from '../../services/ticket.service';
@@ -209,9 +208,9 @@ export const CompanyDashboardScreen = () => {
                         </StyledView>
                     </StyledView>
                     <StyledView className="flex-row gap-2">
-                        <TouchableOpacity onPress={() => navigation.navigate('LocationSelection')}>
+                        <TouchableOpacity onPress={() => {/* Notificaciones próximamente */ }}>
                             <StyledView className="bg-white/10 p-2 rounded-lg">
-                                <Search size={18} color="white" />
+                                <Bell size={18} color="white" />
                             </StyledView>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => navigation.navigate('Menu')}>
@@ -326,9 +325,6 @@ export const CompanyDashboardScreen = () => {
                                 </>
                             )}
                         </StyledView>
-
-                        {/* Weather Widget */}
-                        <WeatherWidget />
 
                         {loading ? (
                             <DashboardSkeleton />

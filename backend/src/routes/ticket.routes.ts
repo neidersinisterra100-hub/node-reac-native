@@ -26,6 +26,8 @@ import {
    getTicketById,           // Obtener un ticket por ID
    reserveTicketOnBoarding, // Reservar (pago al abordar)
    confirmAdminReservation, // Confirmar pago de reserva (admin)
+   cancelTicketByAdmin,     // Cancelar ticket (admin/owner)
+   updatePassengerInfo,     // Modificar datos de pasajero faltantes
 } from "../controllers/ticket.controller.js";
 
 /* =========================================================
@@ -195,6 +197,36 @@ router.post(
    requireAuth,
    requireOwnerOrAdmin,
    confirmAdminReservation
+);
+
+/**
+ * PATCH /api/tickets/:id/cancel
+ *
+ * Acceso:
+ * - owner
+ * - admin
+ * - super_owner
+ */
+router.patch(
+   "/:id/cancel",
+   requireAuth,
+   requireOwnerOrAdmin,
+   cancelTicketByAdmin
+);
+
+/**
+ * PATCH /api/tickets/:id/passenger-info
+ *
+ * Acceso:
+ * - owner
+ * - admin
+ * - super_owner
+ */
+router.patch(
+   "/:id/passenger-info",
+   requireAuth,
+   requireOwnerOrAdmin,
+   updatePassengerInfo
 );
 
 /**

@@ -8,6 +8,7 @@ import { TicketModel } from "../models/ticket.model.js";
 import { TripModel } from "../models/trip.model.js";
 import { UserModel } from "../models/user.model.js";
 import { SeatReservationModel } from "../models/seatReservation.model.js";
+import { CompanyModel } from "../models/company.model.js";
 
 /* =========================================================
    SERVICIOS
@@ -45,7 +46,7 @@ export const buyTicket: RequestHandler = async (req, res) => {
       });
     }
 
-    const { tripId, passengerName, passengerId, seatNumber, seatNumbers } = req.body;
+    const { tripId, passengerName, passengerId, passengerPhone, passengerEmail, seatNumber, seatNumbers } = req.body;
 
     // Normalizar a array de asientos
     const finalSeats = Array.isArray(seatNumbers)
@@ -194,6 +195,8 @@ export const buyTicket: RequestHandler = async (req, res) => {
         passenger: userId,
         passengerName,
         passengerId,
+        passengerPhone,
+        passengerEmail,
         seatNumber: String(sn),
 
         departmentId: route.departmentId,
@@ -284,7 +287,7 @@ export const reserveTicketOnBoarding: RequestHandler = async (req, res) => {
 
     const userId = currentUser.id;
 
-    const { tripId, passengerName, passengerId, seatNumber, seatNumbers } = req.body;
+    const { tripId, passengerName, passengerId, passengerPhone, passengerEmail, seatNumber, seatNumbers } = req.body;
 
     // Normalizar a array de asientos
     const finalSeats = Array.isArray(seatNumbers)
@@ -339,6 +342,8 @@ export const reserveTicketOnBoarding: RequestHandler = async (req, res) => {
         passenger: userId,
         passengerName,
         passengerId,
+        passengerPhone,
+        passengerEmail,
         seatNumber: String(sn),
 
         departmentId: route.departmentId,
@@ -437,7 +442,7 @@ export const getPassengersByTrip: RequestHandler = async (req, res) => {
 
     const tickets = await TicketModel.find({
       trip: tripId,
-      status: { $in: ["active", "used"] },
+      status: { $in: ["active", "used", "reserved"] },
     }).lean();
 
     return res.json(tickets);
@@ -465,7 +470,7 @@ export const registerManualPassenger: RequestHandler = async (req, res) => {
 
     const userId = currentUser.id;
 
-    const { tripId, passengerName, passengerId, seatNumber, seatNumbers, price } = req.body;
+    const { tripId, passengerName, passengerId, passengerPhone, passengerEmail, seatNumber, seatNumbers, price } = req.body;
 
     // Normalizar a array de asientos, si es 0 también se permite
     const finalSeats = Array.isArray(seatNumbers)
@@ -561,7 +566,18 @@ export const registerManualPassenger: RequestHandler = async (req, res) => {
     const route: any = trip.routeId;
     const finalPrice = price ?? trip.price;
 
-    // Si finalSeats está vacío pero capacity lo permite, creamos ticket "General"
+    // Si finalSeats está vacío, encontrar el asiento más bajo libre
+    if (finalSeats.length === 0) {
+      for (let i = 1; i <= trip.capacity; i++) {
+        if (!occupiedSeats.has(i)) {
+          finalSeats.push(i);
+          occupiedSeats.add(i);
+          break;
+        }
+      }
+    }
+
+    // Ya sea que lo hayamos provisto o lo hayamos asignado nosotros
     const seatsToBook = finalSeats.length > 0 ? finalSeats : [undefined];
 
     const ticketPromises = seatsToBook.map(sn => {
@@ -570,7 +586,9 @@ export const registerManualPassenger: RequestHandler = async (req, res) => {
         passenger: userId,
         passengerName,
         passengerId,
-        seatNumber: String(sn),
+        passengerPhone,
+        passengerEmail,
+        seatNumber: sn !== undefined ? String(sn) : undefined,
 
         departmentId: route.departmentId,
         municipioId: route.municipioId,
@@ -611,6 +629,57 @@ export const registerManualPassenger: RequestHandler = async (req, res) => {
     return res.status(500).json({
       message: "Error al registrar pasajero manualmente",
     });
+  }
+};
+
+/* =========================================================
+   ACTUALIZAR INFORMACIÓN DEL PASAJERO
+   ========================================================= */
+export const updatePassengerInfo: RequestHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { passengerPhone, passengerEmail } = req.body;
+
+    const ticket = await TicketModel.findById(id);
+    if (!ticket) return res.status(404).json({ message: "Ticket no encontrado" });
+
+    if (passengerPhone !== undefined) ticket.passengerPhone = passengerPhone;
+    if (passengerEmail !== undefined) ticket.passengerEmail = passengerEmail;
+
+    await ticket.save();
+
+    // Sincronizar automáticamente con el perfil principal del usuario
+    if (ticket.passenger) {
+      const userBase = await UserModel.findById(ticket.passenger);
+      if (userBase) {
+        let userDirty = false;
+        if (passengerPhone && !userBase.phone) {
+          userBase.phone = passengerPhone;
+          userDirty = true;
+        }
+        if (passengerEmail && !userBase.email) {
+          userBase.email = passengerEmail;
+          userDirty = true;
+        }
+        if (userDirty) {
+          // Re-verificar la completitud
+          userBase.isProfileComplete = !!(
+            userBase.identificationNumber &&
+            userBase.phone &&
+            userBase.birthDate &&
+            userBase.address &&
+            userBase.emergencyContactName &&
+            userBase.emergencyContactPhone
+          );
+          await userBase.save();
+        }
+      }
+    }
+
+    return res.json({ message: "Información actualizada", ticket });
+  } catch (error) {
+    console.error("❌ Error updatePassengerInfo:", error);
+    return res.status(500).json({ message: "Error al actualizar información del pasajero" });
   }
 };
 
@@ -687,5 +756,65 @@ export const confirmAdminReservation: RequestHandler = async (req, res) => {
   } catch (error) {
     console.error("❌ Error confirmAdminReservation:", error);
     return res.status(500).json({ message: "Error al confirmar reserva" });
+  }
+};
+
+/* =========================================================
+   CANCELAR TICKET POR ADMIN/OWNER
+   ========================================================= */
+export const cancelTicketByAdmin: RequestHandler = async (req, res) => {
+  try {
+    const currentUser = req.user;
+    if (!currentUser) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID de ticket inválido" });
+    }
+
+    const ticket = await TicketModel.findById(id);
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket no encontrado" });
+    }
+
+    if (ticket.status === "cancelled") {
+      return res.json({ message: "Ticket ya estaba cancelado", ticket });
+    }
+
+    if (ticket.status === "used") {
+      return res.status(409).json({ message: "No se puede cancelar un ticket ya usado" });
+    }
+
+    const trip = await TripModel.findById(ticket.trip).select("companyId").lean<{ companyId: mongoose.Types.ObjectId }>();
+    if (!trip) {
+      return res.status(404).json({ message: "Viaje asociado no encontrado" });
+    }
+
+    if (currentUser.role === "admin") {
+      if (currentUser.companyId !== trip.companyId.toString()) {
+        return res.status(403).json({ message: "Sin permisos sobre este ticket" });
+      }
+    }
+
+    if (currentUser.role === "owner") {
+      const ownsCompany = await CompanyModel.exists({
+        _id: trip.companyId,
+        owner: currentUser.id,
+      });
+      if (!ownsCompany) {
+        return res.status(403).json({ message: "Sin permisos sobre este ticket" });
+      }
+    }
+
+    ticket.status = "cancelled";
+    ticket.payment.status = "VOIDED";
+    await ticket.save();
+
+    return res.json({ message: "Ticket cancelado exitosamente", ticket });
+  } catch (error) {
+    console.error("❌ Error cancelTicketByAdmin:", error);
+    return res.status(500).json({ message: "Error al cancelar ticket" });
   }
 };

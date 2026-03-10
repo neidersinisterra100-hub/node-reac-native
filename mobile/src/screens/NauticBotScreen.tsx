@@ -10,12 +10,14 @@ import {
     View, Text, TextInput, TouchableOpacity, FlatList,
     KeyboardAvoidingView, Platform, Animated, Easing,
     ActivityIndicator, Keyboard, StatusBar, Pressable,
+    useColorScheme
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Bot, Send, X, Mic, MicOff, Volume2, VolumeX } from "lucide-react-native";
 import { Audio } from "expo-av";
 import * as Speech from "expo-speech";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { tripService } from "../services/trip.service";
 import { getAllRoutes } from "../services/route.service";
@@ -79,9 +81,8 @@ const PHRASES = {
         "Solo dime **Confirmar** y enseguida lo reservamos.",
     ],
     bookingDone: [
-        "¡Listo! ✅ Tu reserva quedó hecha. ¡Buen viaje! 🌊",
-        "¡Reservado con éxito! 🎊 Espero que disfrutes el recorrido.",
-        "¡Todo quedó confirmado! Que tengas un viaje increíble. ⛵",
+        "¡Listo! ✅ Tu reserva quedó hecha. ⚠️ ATENCIÓN: Si no pagas el ticket de una vez corres el riesgo de perder tu cupo si se compran todos los puestos. Te recomiendo que te pongas en contacto con la empresa operadora a través de WhatsApp o del chat interno de NauticGo.",
+        "¡Reservado con éxito! 🎊 ⚠️ RECUERDA: Si no pagas el ticket pronto, podrías perder tu cupo si el viaje se llena. Te recomiendo contactar a la empresa operadora por WhatsApp o por nuestro chat interno.",
     ],
     bookingCancel: [
         "De acuerdo, cancelamos. Si cambias de opinión, aquí estaré. 😊",
@@ -327,6 +328,7 @@ async function generateResponse(
    TYPING INDICATOR
 ═══════════════════════════════════════════════════════════════ */
 function BotTyping() {
+    const isDark = useColorScheme() === "dark";
     const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
     useEffect(() => {
         const loop = Animated.loop(
@@ -342,13 +344,13 @@ function BotTyping() {
     }, []);
     return (
         <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 8 }}>
-            <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "#1e3a8a", justifyContent: "center", alignItems: "center", marginRight: 8 }}>
+            <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? "#0284c7" : "#1e3a8a", justifyContent: "center", alignItems: "center", marginRight: 8 }}>
                 <Bot size={17} color="white" />
             </View>
-            <View style={{ backgroundColor: "white", borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 6, elevation: 2 }}>
+            <View style={{ backgroundColor: isDark ? "#202c33" : "white", borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 6, elevation: 1 }}>
                 {dots.map((v, i) => (
                     <Animated.View key={i} style={{ transform: [{ translateY: v }] }}>
-                        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#94a3b8" }} />
+                        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: isDark ? "#8294a0" : "#94a3b8" }} />
                     </Animated.View>
                 ))}
             </View>
@@ -359,14 +361,14 @@ function BotTyping() {
 /* ═══════════════════════════════════════════════════════════════
    MARKDOWN-LITE
 ═══════════════════════════════════════════════════════════════ */
-function BotText({ text, white }: { text: string; white?: boolean }) {
-    const color = white ? "white" : "#1e293b";
+function BotText({ text, white, isDark }: { text: string; white?: boolean; isDark?: boolean }) {
+    const color = white ? "white" : (isDark ? "#e9edef" : "#111b21");
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
     return (
         <Text style={{ fontSize: 14.5, lineHeight: 22, color }}>
             {parts.map((p, i) =>
                 p.startsWith("**") && p.endsWith("**")
-                    ? <Text key={i} style={{ fontWeight: "700" }}>{p.slice(2, -2)}</Text>
+                    ? <Text key={i} style={{ fontWeight: "bold" }}>{p.slice(2, -2)}</Text>
                     : <Text key={i}>{p}</Text>
             )}
         </Text>
@@ -376,29 +378,37 @@ function BotText({ text, white }: { text: string; white?: boolean }) {
 /* ═══════════════════════════════════════════════════════════════
    TRIP BOOKING CARD
 ═══════════════════════════════════════════════════════════════ */
-function TripCard({ trip, onSelect }: { trip: TripOption; onSelect: (t: TripOption) => void }) {
+function TripCard({ trip, onSelect, isDark }: { trip: TripOption; onSelect: (t: TripOption) => void; isDark: boolean }) {
     const avail = trip.capacity - trip.soldSeats;
     const status = avail > 5 ? "#22c55e" : avail > 2 ? "#f59e0b" : "#ef4444";
+
+    // Colores dinámicos
+    const bgColor = isDark ? "#111b21" : "white";
+    const bgPressed = isDark ? "#202c33" : "#eff6ff";
+    const borderColor = isDark ? "#202c33" : "#dbeafe";
+    const titleColor = isDark ? "#38bdf8" : "#1e3a8a";
+    const textColor = isDark ? "#8696a0" : "#64748b";
+
     return (
         <Pressable
             onPress={() => onSelect(trip)}
             style={({ pressed }) => ({
-                backgroundColor: pressed ? "#eff6ff" : "white",
-                borderRadius: 16, borderWidth: 1.5, borderColor: "#dbeafe",
+                backgroundColor: pressed ? bgPressed : bgColor,
+                borderRadius: 16, borderWidth: 1.5, borderColor: borderColor,
                 padding: 12, marginBottom: 8, marginRight: 4,
-                shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
+                shadowColor: "#000", shadowOpacity: isDark ? 0.3 : 0.04, shadowRadius: 6, elevation: 1,
             })}
         >
-            <Text style={{ fontSize: 13, fontWeight: "800", color: "#1e3a8a" }}>{trip.origin} → {trip.destination}</Text>
+            <Text style={{ fontSize: 13, fontWeight: "800", color: titleColor }}>{trip.origin} → {trip.destination}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, gap: 12 }}>
-                <Text style={{ fontSize: 12, color: "#64748b" }}>🕐 {trip.time}</Text>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#1e3a8a" }}>💰 ${trip.price.toLocaleString()}</Text>
+                <Text style={{ fontSize: 12, color: textColor }}>🕐 {trip.time}</Text>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: titleColor }}>💰 ${trip.price.toLocaleString()}</Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                     <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: status }} />
                     <Text style={{ fontSize: 11, color: status, fontWeight: "700" }}>{avail} cupos</Text>
                 </View>
             </View>
-            <Text style={{ fontSize: 10, color: "#94a3b8", marginTop: 4 }}>{trip.company}</Text>
+            <Text style={{ fontSize: 10, color: textColor, marginTop: 4 }}>{trip.company}</Text>
         </Pressable>
     );
 }
@@ -411,12 +421,25 @@ function Bubble({ msg, onQuickReply, onTripSelect }: {
     onQuickReply: (t: string) => void;
     onTripSelect: (t: TripOption) => void;
 }) {
+    const isDark = useColorScheme() === "dark";
     const anim = useRef(new Animated.Value(0)).current;
+
     useEffect(() => {
         Animated.spring(anim, { toValue: 1, tension: 60, friction: 9, useNativeDriver: true }).start();
     }, []);
 
     const isBot = msg.role === "bot";
+
+    // Colores dinámicos
+    const botBubbleColor = isDark ? "#202c33" : "white";
+    const userBubbleColors: readonly [string, string, ...string[]] = isDark
+        ? (msg.isVoice ? ["#005c4b", "#005c4b"] : ["#005c4b", "#005c4b"])
+        : (msg.isVoice ? ["#7c3aed", "#4f46e5"] : ["#1e3a8a", "#2563eb"]);
+    const timeColor = isDark ? "#8696a0" : "#94a3b8";
+
+    const qrBgColor = isDark ? "#111b21" : "#eff6ff";
+    const qrBorderColor = isDark ? "#374151" : "#bfdbfe";
+    const qrTextColor = isDark ? "#38bdf8" : "#1d4ed8";
 
     return (
         <Animated.View style={{
@@ -427,20 +450,20 @@ function Bubble({ msg, onQuickReply, onTripSelect }: {
         }}>
             <View style={{ flexDirection: isBot ? "row" : "row-reverse", alignItems: "flex-end", maxWidth: "88%" }}>
                 {isBot && (
-                    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "#1e3a8a", justifyContent: "center", alignItems: "center", marginRight: 8, marginBottom: 2 }}>
+                    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? "#0284c7" : "#1e3a8a", justifyContent: "center", alignItems: "center", marginRight: 8, marginBottom: 2 }}>
                         <Bot size={17} color="white" />
                     </View>
                 )}
                 <View style={{ flex: 1 }}>
                     {isBot ? (
-                        <View style={{ backgroundColor: "white", borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
-                            <BotText text={msg.text} />
+                        <View style={{ backgroundColor: botBubbleColor, borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, shadowColor: "#000", shadowOpacity: isDark ? 0.3 : 0.05, shadowRadius: 3, elevation: 1 }}>
+                            <BotText text={msg.text} isDark={isDark} />
                         </View>
                     ) : (
                         <LinearGradient
-                            colors={msg.isVoice ? ["#7c3aed", "#4f46e5"] : ["#1e3a8a", "#2563eb"]}
+                            colors={userBubbleColors}
                             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                            style={{ borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10 }}
+                            style={{ borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10, shadowColor: "#000", shadowOpacity: isDark ? 0.3 : 0.1, shadowRadius: 3, elevation: 1 }}
                         >
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                                 {msg.isVoice && <Mic size={12} color="rgba(255,255,255,0.8)" />}
@@ -449,15 +472,16 @@ function Bubble({ msg, onQuickReply, onTripSelect }: {
                         </LinearGradient>
                     )}
 
-                    <Text style={{ fontSize: 10, color: "#94a3b8", marginTop: 4, textAlign: isBot ? "left" : "right", marginHorizontal: 2 }}>
+                    <Text style={{ fontSize: 10, color: timeColor, marginTop: 4, textAlign: isBot ? "left" : "right", marginHorizontal: 2 }}>
                         {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        {!isBot && isDark && " ✓✓"}
                     </Text>
 
                     {/* Trip booking cards */}
                     {isBot && msg.tripOptions && msg.tripOptions.length > 0 && (
                         <View style={{ marginTop: 8 }}>
                             {msg.tripOptions.map(t => (
-                                <TripCard key={t.id} trip={t} onSelect={onTripSelect} />
+                                <TripCard key={t.id} trip={t} onSelect={onTripSelect} isDark={isDark} />
                             ))}
                         </View>
                     )}
@@ -468,9 +492,9 @@ function Bubble({ msg, onQuickReply, onTripSelect }: {
                             {msg.quickReplies.map(q => (
                                 <TouchableOpacity
                                     key={q} onPress={() => onQuickReply(q)}
-                                    style={{ backgroundColor: "#eff6ff", borderWidth: 1, borderColor: "#bfdbfe", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 }}
+                                    style={{ backgroundColor: qrBgColor, borderWidth: 1, borderColor: qrBorderColor, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 }}
                                 >
-                                    <Text style={{ fontSize: 12, color: "#1d4ed8", fontWeight: "600" }}>{q}</Text>
+                                    <Text style={{ fontSize: 12, color: qrTextColor, fontWeight: "bold" }}>{q}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -561,7 +585,7 @@ export default function NauticBotScreen() {
     const [messages, setMessages] = useState<Message[]>([WELCOME]);
     const [input, setInput] = useState("");
     const [typing, setTyping] = useState(false);
-    const [ttsEnabled, setTtsEnabled] = useState(true);
+    const [ttsEnabled, setTtsEnabled] = useState(false);
 
     const botStateRef = useRef<BotState>({
         bookingStep: "idle",
@@ -673,42 +697,50 @@ export default function NauticBotScreen() {
     // Stop TTS on unmount
     useEffect(() => () => { Speech.stop(); }, []);
 
+    const isDark = useColorScheme() === "dark";
+
+    // Global colors
+    const bgContainer = isDark ? "#0b141a" : "#efeae2";
+    const headerGradient: readonly [string, string, ...string[]] = isDark ? ["#202c33", "#111b21", "#111b21"] : ["#0f172a", "#1e3a8a", "#1d4ed8"];
+    const inputBarBg = isDark ? "#202c33" : "#f0f2f5";
+    const inputAreaBg = isDark ? "#2a3942" : "white";
+    const inputTextColor = isDark ? "#d1d5db" : "#111827";
+    const outlineColor = isDark ? "transparent" : "#e2e8f0";
+
     return (
-        <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+        <View style={{ flex: 1, backgroundColor: bgContainer }}>
             <StatusBar barStyle="light-content" />
 
             {/* ── Header ── */}
             <LinearGradient
-                colors={["#0f172a", "#1e3a8a", "#1d4ed8"]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={{ paddingTop: Platform.OS === "ios" ? 56 : 48, paddingBottom: 18, paddingHorizontal: 20 }}
+                colors={headerGradient}
+                start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                style={{ paddingTop: Platform.OS === "ios" ? 56 : 48, paddingBottom: 16, paddingHorizontal: 16, elevation: 4 }}
             >
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4, alignSelf: "flex-start", marginBottom: 12 }}>
+                    <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
+                </TouchableOpacity>
+
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                         <View>
-                            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.15)", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: "rgba(255,255,255,0.3)" }}>
-                                <Bot size={26} color="white" />
+                            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: isDark ? "#0284c7" : "rgba(255,255,255,0.15)", justifyContent: "center", alignItems: "center" }}>
+                                <Bot size={24} color="white" />
                             </View>
-                            <View style={{ position: "absolute", bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: "#22c55e", borderWidth: 2, borderColor: "#1e3a8a" }} />
+                            <View style={{ position: "absolute", bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: "#22c55e", borderWidth: 2, borderColor: isDark ? "#202c33" : "#1e3a8a" }} />
                         </View>
                         <View>
-                            <Text style={{ color: "white", fontWeight: "800", fontSize: 17 }}>NauticBot</Text>
-                            <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>Asistente de viajes acuáticos · En línea</Text>
+                            <Text style={{ color: "white", fontWeight: "bold", fontSize: 18 }}>NauticBot</Text>
+                            <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 1 }}>Asistente virtual</Text>
                         </View>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8 }}>
                         {/* TTS toggle */}
                         <TouchableOpacity
                             onPress={() => { setTtsEnabled(p => !p); Speech.stop(); }}
-                            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", justifyContent: "center", alignItems: "center" }}
+                            style={{ width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center" }}
                         >
-                            {ttsEnabled ? <Volume2 size={16} color="white" /> : <VolumeX size={16} color="rgba(255,255,255,0.4)" />}
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => { Speech.stop(); navigation.goBack(); }}
-                            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", justifyContent: "center", alignItems: "center" }}
-                        >
-                            <X size={18} color="white" />
+                            {ttsEnabled ? <Volume2 size={22} color="white" /> : <VolumeX size={22} color="rgba(255,255,255,0.5)" />}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -723,51 +755,50 @@ export default function NauticBotScreen() {
                     renderItem={({ item }) => (
                         <Bubble msg={item} onQuickReply={send} onTripSelect={handleTripSelect} />
                     )}
-                    contentContainerStyle={{ paddingTop: 16, paddingBottom: 8 }}
+                    contentContainerStyle={{ paddingTop: 16, paddingBottom: 16 }}
                     showsVerticalScrollIndicator={false}
                     ListFooterComponent={typing ? <BotTyping /> : null}
+                    style={{ flex: 1 }}
                 />
 
                 {/* ── Input bar ── */}
                 <View style={{
                     flexDirection: "row", alignItems: "flex-end",
-                    paddingHorizontal: 12, paddingVertical: 10,
-                    backgroundColor: "white", borderTopWidth: 1, borderTopColor: "#e2e8f0", gap: 8,
+                    paddingHorizontal: 10, paddingVertical: 10,
+                    backgroundColor: inputBarBg, gap: 8,
                 }}>
-                    {/* Mic — press and hold */}
-                    <MicButton onVoiceMessage={handleVoiceMessage} />
-
                     <View style={{
-                        flex: 1, backgroundColor: "#f1f5f9", borderRadius: 24,
-                        borderWidth: 1, borderColor: "#e2e8f0",
-                        paddingHorizontal: 16, paddingVertical: 10, minHeight: 44,
+                        flex: 1, backgroundColor: inputAreaBg, borderRadius: 24,
+                        paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 12 : 8, minHeight: 48,
+                        flexDirection: "row", alignItems: "center",
+                        shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.05, shadowRadius: 4, elevation: 1
                     }}>
                         <TextInput
                             value={input}
                             onChangeText={setInput}
-                            placeholder="Escribe o mantén 🎙️ para hablar..."
-                            placeholderTextColor="#94a3b8"
-                            style={{ fontSize: 14, color: "#1e293b", maxHeight: 100 }}
+                            placeholder="Escribe un mensaje..."
+                            placeholderTextColor={isDark ? "#8696a0" : "#94a3b8"}
+                            style={{ fontSize: 15, color: inputTextColor, maxHeight: 120, flex: 1 }}
                             multiline
                             returnKeyType="send"
                             onSubmitEditing={() => { if (input.trim()) send(input); }}
-                            blurOnSubmit
+                            blurOnSubmit={false}
                         />
                     </View>
 
-                    {/* Send */}
-                    <TouchableOpacity
-                        onPress={() => { if (input.trim()) send(input); }}
-                        disabled={!input.trim() || typing}
-                        style={{ width: 44, height: 44, borderRadius: 22, overflow: "hidden", opacity: !input.trim() || typing ? 0.4 : 1 }}
-                    >
-                        <LinearGradient
-                            colors={["#1e3a8a", "#2563eb"]}
-                            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+                    {/* Botón enviar interactivo o Mic */}
+                    {input.trim() ? (
+                        <TouchableOpacity
+                            onPress={() => { if (input.trim()) send(input); }}
+                            style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: isDark ? "#00a884" : "#2563eb", justifyContent: "center", alignItems: "center", elevation: 2 }}
                         >
-                            <Send size={18} color="white" />
-                        </LinearGradient>
-                    </TouchableOpacity>
+                            <Send size={20} color="white" style={{ marginLeft: -2 }} />
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={{ transform: [{ scale: 1.05 }] }}>
+                            <MicButton onVoiceMessage={handleVoiceMessage} />
+                        </View>
+                    )}
                 </View>
             </KeyboardAvoidingView>
         </View>

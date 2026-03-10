@@ -10,8 +10,8 @@ export interface UserProfileUpdate {
     emergencyContactPhone?: string;
 }
 
-export const getProfile = async () => {
-    const { data } = await api.get("/users/profile");
+export const getProfile = async (unmask = false) => {
+    const { data } = await api.get(`/users/profile${unmask ? "?unmask=true" : ""}`);
     return data;
 };
 

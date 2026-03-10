@@ -5,6 +5,7 @@ import { Router } from "express";
    ========================================================= */
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { ownershipGuard } from "../middlewares/ownership.guard.js";
+import { requireOwnerOrAdmin } from "../middlewares/role.middleware.js";
 import { blockLegacyFields } from "../middlewares/blockLegacyFields.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 
@@ -47,19 +48,19 @@ const router = Router();
 router.get("/", getTrips);
 
 /* =========================================================
-   ASIENTOS POR VIAJE (PÚBLICO / OPCIONAL AUTH)
+   ASIENTOS POR VIAJE (PÚBLICO)
    =========================================================
    👉 Necesario para mostrar asientos disponibles
-   👉 Se usa requireAuth pero OPCIONAL para identificar usuario
+   antes de autenticación
    ========================================================= */
 
 /**
  * GET /api/trips/companies/:companyId/trips/:tripId/seats
  * ---------------------------------------------------------
  * ✔️ Devuelve mapa de asientos
- * ✔️ requireAuth añadido para identificar si el asiento es del propio usuario
+ * ✔️ PÚBLICO (no requiere auth)
  */
-router.get("/companies/:companyId/trips/:tripId/seats", requireAuth, getTripSeats);
+router.get("/companies/:companyId/trips/:tripId/seats", getTripSeats);
 
 /* =========================================================
    A PARTIR DE AQUÍ: RUTAS PRIVADAS
@@ -86,50 +87,91 @@ router.use(requireAuth);
  * 🔴 El frontend NO debe llamar esta ruta
  *    si el usuario es role=user
  */
-// Habilitamos la ruta corta para el frontend móvil (getTripsForPassengerControl)
 router.get(
-   "/manage",
+   "/companies/:companyId/trips/manage",
+   ownershipGuard,
    getManageTrips
 );
 
 router.get(
-   "/companies/:companyId/manage",
+   "/manage",
+   requireOwnerOrAdmin,
+   getManageTrips
+);
+
+/* =========================================================
+   DETALLE DE VIAJE
+   ========================================================= */
+
+/**
+ * GET /api/trips/companies/:companyId/trips/:tripId
+ * ---------------------------------------------------------
+ * ✔️ Detalle de un viaje
+ * ✔️ Accesible para usuarios autenticados
+ *
+ * ⚠️ Debe ir DESPUÉS de rutas más específicas
+ */
+router.get("/companies/:companyId/trips/:tripId", getTripById);
+
+/* =========================================================
+   VIAJES POR EMPRESA
+   ========================================================= */
+
+/**
+ * GET /api/trips/company/:companyId
+ * ---------------------------------------------------------
+ * ✔️ Protegido por ownership
+ * ✔️ Admin / Owner
+ */
+router.get(
+   "/company/:companyId",
    ownershipGuard,
    getCompanyTrips
 );
 
+/* =========================================================
+   CREACIÓN DE VIAJES
+   ========================================================= */
+
 /**
  * POST /api/trips
+ * ---------------------------------------------------------
+ * ✔️ Admin / owner
+ * ⚠️ Removido ownershipGuard: El controlador hace su propia validación
+ *    basada en routeId, para evitar fallos por JWT obsoletos (stale).
+ * ✔️ Valida esquema
  */
 router.post(
    "/",
-   ownershipGuard,
    blockLegacyFields,
    validateRequest(createTripSchema),
    createTrip
 );
 
+/* =========================================================
+   MUTACIONES
+   ========================================================= */
+
 /**
- * PATCH /api/trips/:id/toggle
+ * PATCH /api/trips/companies/:companyId/trips/:tripId
+ * ---------------------------------------------------------
+ * Activa / desactiva viaje
  */
 router.patch(
-   "/:id/toggle",
+   "/companies/:companyId/trips/:tripId",
    ownershipGuard,
    toggleTripActive
 );
 
 /**
- * DELETE /api/trips/:id
+ * DELETE /api/trips/companies/:companyId/trips/:tripId
+ * ---------------------------------------------------------
+ * Elimina viaje
  */
 router.delete(
-   "/:id",
+   "/companies/:companyId/trips/:tripId",
    ownershipGuard,
    deleteTrip
 );
-
-/**
- * GET /api/trips/:id
- */
-router.get("/:id", getTripById);
 
 export default router;

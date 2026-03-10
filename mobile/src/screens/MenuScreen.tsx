@@ -46,13 +46,6 @@ export default function MenuScreen() {
 
   const menuItems = [
     {
-      icon: "account-check-outline",
-      label: "Completar mi información",
-      onPress: () => navigation.navigate("CompleteProfile"),
-      show: true,
-      isPriority: true,
-    },
-    {
       icon: "account-circle-outline",
       label: "Mi Perfil",
       onPress: () => navigation.navigate("Profile"),
@@ -102,9 +95,16 @@ export default function MenuScreen() {
     },
     {
       icon: "clipboard-list-outline",
-      label: "Auditoría",
-      onPress: () => navigation.navigate("Audit"),
-      show: isOwner,
+      label: "Auditoría de Empresa",
+      onPress: () => {
+        if (user?.companyId) {
+          navigation.navigate("Audit", {
+            companyId: user.companyId,
+            companyName: "Mi Empresa",
+          });
+        }
+      },
+      show: isOwner && !!user?.companyId,
     },
     {
       icon: isDark ? "weather-sunny" : "weather-night",

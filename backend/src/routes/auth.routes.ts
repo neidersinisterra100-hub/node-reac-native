@@ -10,6 +10,7 @@ import {
   resendVerificationEmail,
   requestPasswordReset,
   resetPassword,
+  getProfile,
 } from "../controllers/auth.controller.js";
 
 // ===============================
@@ -20,6 +21,7 @@ import {
   basicSecurityChain,
   minimalSecurityChain,
 } from "../middlewares/security/index.js";
+import { requireAuth } from "../middlewares/requireAuth.js";
 
 const router = Router();
 
@@ -101,6 +103,16 @@ router.post("/request-password-reset",
 router.post("/reset-password",
   ...minimalSecurityChain,
   resetPassword
+);
+
+/**
+ * GET /api/auth/profile
+ * - Retorna perfil del usuario logueado
+ * - Permite refrescar token/roles
+ */
+router.get("/profile",
+  requireAuth,
+  getProfile
 );
 
 export default router;

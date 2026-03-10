@@ -11,6 +11,7 @@ import { Router } from "express";
  * - Inyecta req.user
  */
 import { requireAuth } from "../middlewares/requireAuth.js";
+import { requireOwnerOrAdmin } from "../middlewares/role.middleware.js";
 
 /**
  * blockRoles
@@ -34,9 +35,10 @@ import { blockRoles } from "../middlewares/blockRoles.js";
  * - release  → liberar asiento manualmente
  */
 import {
-  reserveSeatHandler,
-  confirmSeatHandler,
-  releaseSeatHandler,
+   reserveSeatHandler,
+   confirmSeatHandler,
+   releaseSeatHandler,
+   clearTripLocksHandler,
 } from "../controllers/seat.controller.js";
 
 /* =========================================================
@@ -58,10 +60,10 @@ const router = Router();
    - Si el asiento ya existe → 409
    ========================================================= */
 router.post(
-  "/reserve",
-  requireAuth,
-  blockRoles(["owner", "admin", "super_owner"]),
-  reserveSeatHandler
+   "/reserve",
+   requireAuth,
+   blockRoles(["owner", "admin", "super_owner"]),
+   reserveSeatHandler
 );
 
 /* =========================================================
@@ -74,9 +76,9 @@ router.post(
    - El Ticket pasa a ser la fuente de verdad
    ========================================================= */
 router.post(
-  "/confirm",
-  requireAuth,
-  confirmSeatHandler
+   "/confirm",
+   requireAuth,
+   confirmSeatHandler
 );
 
 /* =========================================================
@@ -92,9 +94,9 @@ router.post(
    - App se cierra (best effort)
    ========================================================= */
 router.post(
-  "/release",
-  requireAuth,
-  releaseSeatHandler
+   "/release",
+   requireAuth,
+   releaseSeatHandler
 );
 
 /* =========================================================
@@ -102,3 +104,15 @@ router.post(
    ========================================================= */
 
 export default router;
+
+/* =========================================================
+   POST /api/seats/clear-trip-locks
+   ---------------------------------------------------------
+   [ADMIN] Libera TODOS los asientos temporalmente bloqueados de un viaje.
+   ========================================================= */
+router.post(
+   "/clear-trip-locks",
+   requireAuth,
+   requireOwnerOrAdmin,
+   clearTripLocksHandler
+);

@@ -17,6 +17,7 @@ export type Ticket = {
   /* ===== OPCIONALES ===== */
   departureAt?: string;
   seatNumber?: string;
+  status?: string;
 
   user?: {
     name: string;

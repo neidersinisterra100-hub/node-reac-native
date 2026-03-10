@@ -24,6 +24,7 @@ export interface WeatherData {
         min: number;
         condition: string;
         icon: string;
+        rainProbability?: number;
     }>;
 }
 
@@ -52,7 +53,7 @@ export class MarineService {
     static async getCurrentWeather(lat: number = DEFAULT_LAT, lon: number = DEFAULT_LON): Promise<WeatherData> {
         try {
             const response = await axios.get(
-                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto`,
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max&timezone=auto`,
                 { timeout: 5000 }
             );
 
@@ -89,7 +90,8 @@ export class MarineService {
                     max: Math.round(daily.temperature_2m_max?.[index] ?? 30),
                     min: Math.round(daily.temperature_2m_min?.[index] ?? 24),
                     condition: info.label,
-                    icon: info.icon
+                    icon: info.icon,
+                    rainProbability: daily.precipitation_probability_max?.[index] ?? 0
                 };
             });
 
@@ -98,7 +100,7 @@ export class MarineService {
                     temp: Math.round(temperature_2m),
                     feelsLike: Math.round(apparent_temperature),
                     humidity: relative_humidity_2m,
-                    uvIndex: daily.uv_index_max?.[0] || 0,
+                    uvIndex: this.isDaylight() ? (daily.uv_index_max?.[0] || 0) : 0,
                     sunrise: daily.sunrise?.[0] ? dayjs(daily.sunrise[0]).format('HH:mm') : '06:00',
                     sunset: daily.sunset?.[0] ? dayjs(daily.sunset[0]).format('HH:mm') : '18:00',
                     condition: currentInfo.label,
@@ -120,14 +122,14 @@ export class MarineService {
             let response;
             try {
                 response = await axios.get(
-                    `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=sea_level_height`,
+                    `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height`,
                     { timeout: 5000 }
                 );
             } catch (error: any) {
                 // Coastal Fallback: If 400 (inland), shift West 0.15 degrees
                 if (error.response?.status === 400) {
                     response = await axios.get(
-                        `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon - 0.15}&hourly=sea_level_height`,
+                        `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon - 0.15}&hourly=wave_height`,
                         { timeout: 5000 }
                     );
                 } else {
@@ -139,21 +141,28 @@ export class MarineService {
             const now = new Date();
             const currentHourIndex = hourly.time.findIndex((t: string) => dayjs(t).hour() === dayjs(now).hour());
 
-            const currentHeight = hourly.sea_level_height[currentHourIndex] || 0;
-            const prevHeight = hourly.sea_level_height[currentHourIndex - 1] || currentHeight;
+            const currentHeight = hourly.wave_height[currentHourIndex] || 0;
+            const prevHeight = hourly.wave_height[currentHourIndex - 1] || currentHeight;
 
             let trend: 'Subiendo' | 'Bajando' | 'Estable' = 'Estable';
-            if (currentHeight > prevHeight + 0.05) trend = 'Subiendo';
-            else if (currentHeight < prevHeight - 0.05) trend = 'Bajando';
+            const diff = currentHeight - prevHeight;
+
+            if (Math.abs(diff) < 0.03) {
+                trend = 'Estable';
+            } else if (diff > 0) {
+                trend = 'Subiendo';
+            } else {
+                trend = 'Bajando';
+            }
 
             // Peak detection for High/Low tides
             const highTides: string[] = [];
             const lowTides: string[] = [];
 
             for (let i = 1; i < 24; i++) {
-                const prev = hourly.sea_level_height[i - 1];
-                const curr = hourly.sea_level_height[i];
-                const next = hourly.sea_level_height[i + 1];
+                const prev = hourly.wave_height[i - 1];
+                const curr = hourly.wave_height[i];
+                const next = hourly.wave_height[i + 1];
 
                 if (curr > prev && curr > next) {
                     highTides.push(dayjs(hourly.time[i]).format('HH:mm'));
@@ -216,6 +225,11 @@ export class MarineService {
             : 'Mareas débiles, el mar sube poco y con poca fuerza. Precaución en esteros bajos.';
 
         return { cycleName, cycleDay, moonLabel, description };
+    }
+
+    private static isDaylight(): boolean {
+        const hour = dayjs().hour();
+        return hour >= 6 && hour < 18;
     }
 
     private static getWeatherInfo(code: number) {

@@ -98,7 +98,7 @@ export const AvailableTripsScreen = () => {
           trip: item,
         })
       }
-      className="mt-4 p-5 shadow-sm border-0 bg-white"
+      className="mt-4 p-5 shadow-sm border-0 bg-white dark:bg-dark-surface"
       style={{ borderLeftWidth: 4, borderLeftColor: "#22c55e" }}
     >
       {/* HEADER: Transport & Price */}
@@ -178,7 +178,7 @@ export const AvailableTripsScreen = () => {
   return (
     <ScreenContainer withPadding={false}>
       {/* HEADER */}
-      <StyledView className="px-4 pt-4 pb-2 bg-white border-b border-gray-100 flex-row items-center justify-between">
+      <StyledView className="px-4 pt-4 pb-2 bg-white dark:bg-dark-surface border-b border-gray-100 dark:border-dark-border/50 flex-row items-center justify-between">
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <StyledText className="font-bold text-nautic-primary">
             Atrás
@@ -186,10 +186,10 @@ export const AvailableTripsScreen = () => {
         </TouchableOpacity>
 
         <StyledView className="items-center">
-          <StyledText className="text-xs text-nautic-lightText">
+          <StyledText className="text-xs text-nautic-lightText dark:text-slate-400">
             VIAJES DE
           </StyledText>
-          <StyledText className="text-lg font-bold text-nautic-primary">
+          <StyledText className="text-lg font-bold text-nautic-primary dark:text-white">
             {origin || "Todos"} → {destination || "Todos"}
           </StyledText>
         </StyledView>

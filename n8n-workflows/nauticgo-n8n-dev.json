@@ -1,0 +1,931 @@
+{
+    "name": "NauticBot — Gateway + Notificaciones",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "nauticbot",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "wh-001",
+            "name": "📥 Webhook NauticBot",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                180,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false
+                    },
+                    "conditions": [
+                        {
+                            "id": "cond-001",
+                            "leftValue": "={{ $json.body.type }}",
+                            "rightValue": "audio",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            },
+            "id": "if-001",
+            "name": "🎙️ ¿Es audio?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                400,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.groq.com/openai/v1/audio/transcriptions",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer={{ $credentials.httpHeaderAuth.value }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "contentType": "multipart-form-data",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "parameterType": "formBinaryData",
+                            "name": "file",
+                            "inputDataFieldName": "data"
+                        },
+                        {
+                            "name": "model",
+                            "value": "whisper-large-v3-turbo"
+                        },
+                        {
+                            "name": "language",
+                            "value": "es"
+                        },
+                        {
+                            "name": "response_format",
+                            "value": "json"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "whisper-001",
+            "name": "🧠 Groq Whisper — Transcribir",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                620,
+                160
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "GROQ_CRED_ID",
+                    "name": "Groq API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "set-001",
+                            "name": "transcript",
+                            "value": "={{ $json.body.content }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "set-002",
+                            "name": "userId",
+                            "value": "={{ $json.body.userId }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "set-003",
+                            "name": "municipioId",
+                            "value": "={{ $json.body.municipioId }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "set-004",
+                            "name": "jwt",
+                            "value": "={{ $json.body.jwt }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "set-005",
+                            "name": "tripId",
+                            "value": "={{ $json.body.tripId }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "set-001",
+            "name": "📝 Set Texto",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3,
+            "position": [
+                620,
+                440
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "chooseBranch",
+                "output": "both"
+            },
+            "id": "merge-001",
+            "name": "🔀 Merge",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3,
+            "position": [
+                840,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const systemPrompt = `Eres NauticBot, el asistente oficial de NauticGo para viajes acuáticos en Colombia.\n\nPERSONALIDAD:\n- Hablas en español colombiano natural y cálido, como un buen amigo\n- Usas emojis con moderación (1-2 por mensaje)\n- Eres conciso pero nunca frío: máximo 3 líneas de respuesta\n- Siempre terminas ofreciendo una acción siguiente al usuario\n\nCAPACIDADES:\n- Consultar viajes activos en tiempo real\n- Informar precios, horarios y disponibilidad de cupos\n- Iniciar y confirmar reservas de viajes\n- Mostrar historial de tickets del usuario\n\nRESTRICCIONES:\n- NUNCA inventes datos de viajes, precios o horarios\n- Si no tienes datos del API, dilo con honestidad\n- Nunca proceses pagos directamente\n\nFORMATO DE RESPUESTA — devuelve SIEMPRE JSON válido:\n{\n  \"intent\": \"trips|reserve|confirm|cancel|tickets|routes|chitchat|help\",\n  \"response\": \"Mensaje amigable al usuario (máximo 3 líneas)\",\n  \"quickReplies\": [\"opción A\", \"opción B\", \"opción C\"]\n}`;\n\nconst item = $input.first().json;\nconst userText = item.transcript || item.text || item.userText || '';\nconst userId = item.userId || '';\nconst municipioId = item.municipioId || '';\nconst jwt = item.jwt || '';\nconst tripId = item.tripId || '';\n\nreturn [{ json: { systemPrompt, userText, userId, municipioId, jwt, tripId } }];"
+            },
+            "id": "code-prompt",
+            "name": "📋 Construir Prompt",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1060,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer={{ $credentials.httpHeaderAuth.value }}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"temperature\": 0.7,\n  \"max_tokens\": 512,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    { \"role\": \"system\", \"content\": {{ JSON.stringify($json.systemPrompt) }} },\n    { \"role\": \"user\",   \"content\": {{ JSON.stringify($json.userText) }} }\n  ]\n}",
+                "options": {}
+            },
+            "id": "groq-llm",
+            "name": "🤖 Groq Llama 3.3 70B",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1280,
+                300
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "GROQ_CRED_ID",
+                    "name": "Groq API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const raw = $input.first().json.choices[0].message.content;\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch(e) {\n  parsed = { intent: 'chitchat', response: raw, quickReplies: ['🛥️ Viajes', '🎟️ Reservar', '💰 Precios'] };\n}\n\nconst ctx = $('📋 Construir Prompt').first().json;\nparsed.userId     = ctx.userId;\nparsed.municipioId = ctx.municipioId;\nparsed.jwt        = ctx.jwt;\nparsed.tripId     = ctx.tripId;\n\nreturn [{ json: parsed }];"
+            },
+            "id": "code-parse",
+            "name": "🔍 Parsear Respuesta IA",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1500,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": false
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.intent }}",
+                                        "rightValue": "trips",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": false
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": false
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.intent }}",
+                                        "rightValue": "reserve",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": false
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": false
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.intent }}",
+                                        "rightValue": "tickets",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": false
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": false
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.intent }}",
+                                        "rightValue": "routes",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": false
+                        }
+                    ]
+                },
+                "fallbackOutput": "extra"
+            },
+            "id": "switch-intent",
+            "name": "🔀 Switch Intent",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3,
+            "position": [
+                1720,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "=http://localhost:3000/api/trips?municipioId={{ $json.municipioId }}",
+                "options": {}
+            },
+            "id": "http-trips",
+            "name": "📋 GET /api/trips",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1940,
+                60
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const trips = $input.first().json;\nconst aiResponse = $('🔍 Parsear Respuesta IA').first().json;\n\nconst formatted = trips\n  .filter(t => t.isActive)\n  .slice(0, 5)\n  .map(t => ({\n    id: t._id,\n    origin:      t.route?.origin || 'Origen',\n    destination: t.route?.destination || 'Destino',\n    time:        t.departureTime || '--:--',\n    price:       t.price || 0,\n    available:   (t.capacity || 0) - (t.soldSeats || 0),\n    company:     typeof t.company === 'object' ? t.company?.name : 'Empresa'\n  }));\n\nconst lines = formatted.map(t =>\n  `• 🛥️ ${t.origin} → ${t.destination} | 🕐 ${t.time} | 💰 $${t.price.toLocaleString()} | 🪑 ${t.available} cupos`\n).join('\\n');\n\nreturn [{\n  json: {\n    message: formatted.length ? `Encontré ${formatted.length} viaje(s):\\n\\n${lines}` : aiResponse.response,\n    quickReplies: ['🎟️ Quiero reservar', '💰 Ver precios', '📅 Horarios'],\n    trips: formatted,\n    intent: 'trips'\n  }\n}];"
+            },
+            "id": "code-trips",
+            "name": "📊 Formatear Viajes",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2160,
+                60
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:3000/api/seats/reserve",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.jwt }}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"tripId\": \"{{ $json.tripId }}\",\n  \"seats\": 1\n}",
+                "options": {}
+            },
+            "id": "http-reserve",
+            "name": "🎟️ POST /api/seats/reserve",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1940,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false
+                    },
+                    "conditions": [
+                        {
+                            "id": "res-cond-001",
+                            "leftValue": "={{ $json.success }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "true"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            },
+            "id": "if-reserve",
+            "name": "✅ ¿Reserva Exitosa?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                2160,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "http://localhost:3000/api/users/profile",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $('🔍 Parsear Respuesta IA').first().json.jwt }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "http-profile",
+            "name": "👤 GET /api/users/profile",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                2380,
+                220
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const profile = $input.first().json;\nconst parsed   = $('🔍 Parsear Respuesta IA').first().json;\n\nconst userName  = profile.name || profile.firstName || 'pasajero';\nconst userPhone = profile.phone || null;\nconst userEmail = profile.email || null;\nconst telegramId = profile.telegramChatId || null;\nconst tripId    = parsed.tripId || 'N/A';\n\nconst msgWA = `🎉 *¡Reserva confirmada!*\\n\\nHola ${userName}, tu cupo en NauticGo quedó asegurado.\\n*Trip:* ${tripId}\\n\\nPuedes ver tus tickets en la app. ¡Buen viaje! ⛵`;\nconst msgTG = `✅ <b>Reserva confirmada</b>\\n\\nHola <b>${userName}</b>, tu cupo en NauticGo está listo.\\n📋 Trip ID: <code>${tripId}</code>\\n\\n¡Buen viaje! ⛵`;\nconst msgEmail = `Hola ${userName},\\n\\nTu reserva en NauticGo ha sido confirmada exitosamente.\\n\\n📋 Trip ID: ${tripId}\\n\\nGracias por confiar en NauticGo. ¡Que disfrutes el viaje!\\n\\nEquipo NauticGo 🌊`;\n\nreturn [{\n  json: {\n    userName,\n    userPhone,\n    userEmail,\n    telegramId,\n    tripId,\n    msgWA,\n    msgTG,\n    msgEmail\n  }\n}];"
+            },
+            "id": "code-notify",
+            "name": "📣 Construir Notificaciones",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2600,
+                220
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "send",
+                "from": "whatsapp:+14155238886",
+                "to": "=whatsapp:{{ $json.userPhone }}",
+                "message": "={{ $json.msgWA }}"
+            },
+            "id": "node-whatsapp",
+            "name": "📱 WhatsApp (Twilio)",
+            "type": "n8n-nodes-base.twilio",
+            "typeVersion": 1,
+            "position": [
+                2820,
+                60
+            ],
+            "credentials": {
+                "twilioApi": {
+                    "id": "TWILIO_CRED_ID",
+                    "name": "Twilio Account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "sendMessage",
+                "chatId": "={{ $json.telegramId }}",
+                "text": "={{ $json.msgTG }}",
+                "additionalFields": {
+                    "parse_mode": "HTML"
+                }
+            },
+            "id": "node-telegram",
+            "name": "✈️ Telegram",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1,
+            "position": [
+                2820,
+                220
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "TELEGRAM_CRED_ID",
+                    "name": "NauticBot Telegram"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "fromEmail": "noreply@nauticgo.co",
+                "toEmail": "={{ $json.userEmail }}",
+                "subject": "✅ Tu reserva en NauticGo está confirmada",
+                "text": "={{ $json.msgEmail }}",
+                "options": {}
+            },
+            "id": "node-email",
+            "name": "📧 Email (SMTP)",
+            "type": "n8n-nodes-base.emailSend",
+            "typeVersion": 2,
+            "position": [
+                2820,
+                380
+            ],
+            "credentials": {
+                "smtp": {
+                    "id": "SMTP_CRED_ID",
+                    "name": "NauticGo SMTP"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "mode": "waitForAll",
+                "output": "all"
+            },
+            "id": "merge-notify",
+            "name": "🔗 Merge Notificaciones",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3,
+            "position": [
+                3040,
+                220
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "return [{ json: {\n  message: '🎉 ¡Tu reserva quedó confirmada! En breve recibirás un mensaje por WhatsApp, Telegram y correo.',\n  intent: 'reserve_done',\n  quickReplies: ['🎟️ Ver mis tickets', '🏠 Ir al inicio', '🛥️ Ver más viajes'],\n  trips: []\n} }];"
+            },
+            "id": "code-reserve-resp",
+            "name": "💬 Respuesta Reserva OK",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                3260,
+                220
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "http://localhost:3000/api/routes",
+                "options": {}
+            },
+            "id": "http-routes",
+            "name": "🗺️ GET /api/routes",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1940,
+                520
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const data = $input.first().json;\nreturn [{ json: {\n  message: data.response || '¿En qué más te puedo ayudar?',\n  quickReplies: data.quickReplies || [],\n  trips: [],\n  intent: data.intent\n} }];"
+            },
+            "id": "code-fallback",
+            "name": "💬 Respuesta Directa",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1940,
+                700
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "return [{ json: {\n  message: '😔 Hubo un problema al procesar tu reserva. Por favor intenta de nuevo o contacta soporte.',\n  quickReplies: ['🔄 Intentar de nuevo', '🛥️ Ver viajes', '🆘 Soporte'],\n  trips: [],\n  intent: 'reserve_error'\n} }];"
+            },
+            "id": "code-reserve-err",
+            "name": "❌ Respuesta Error Reserva",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2380,
+                460
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\n  \"message\": {{ JSON.stringify($json.message) }},\n  \"intent\":  {{ JSON.stringify($json.intent || 'chitchat') }},\n  \"quickReplies\": {{ JSON.stringify($json.quickReplies || []) }},\n  \"trips\": {{ JSON.stringify($json.trips || []) }}\n}",
+                "options": {
+                    "responseHeaders": {
+                        "entries": [
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "name": "Access-Control-Allow-Origin",
+                                "value": "*"
+                            }
+                        ]
+                    }
+                }
+            },
+            "id": "respond-001",
+            "name": "📤 Responder al Mobile",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                3480,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "📥 Webhook NauticBot": {
+            "main": [
+                [
+                    {
+                        "node": "🎙️ ¿Es audio?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🎙️ ¿Es audio?": {
+            "main": [
+                [
+                    {
+                        "node": "🧠 Groq Whisper — Transcribir",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "📝 Set Texto",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🧠 Groq Whisper — Transcribir": {
+            "main": [
+                [
+                    {
+                        "node": "🔀 Merge",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "📝 Set Texto": {
+            "main": [
+                [
+                    {
+                        "node": "🔀 Merge",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "🔀 Merge": {
+            "main": [
+                [
+                    {
+                        "node": "📋 Construir Prompt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "📋 Construir Prompt": {
+            "main": [
+                [
+                    {
+                        "node": "🤖 Groq Llama 3.3 70B",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🤖 Groq Llama 3.3 70B": {
+            "main": [
+                [
+                    {
+                        "node": "🔍 Parsear Respuesta IA",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🔍 Parsear Respuesta IA": {
+            "main": [
+                [
+                    {
+                        "node": "🔀 Switch Intent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🔀 Switch Intent": {
+            "main": [
+                [
+                    {
+                        "node": "📋 GET /api/trips",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "🎟️ POST /api/seats/reserve",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "💬 Respuesta Directa",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "🗺️ GET /api/routes",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "💬 Respuesta Directa",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "📋 GET /api/trips": {
+            "main": [
+                [
+                    {
+                        "node": "📊 Formatear Viajes",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "📊 Formatear Viajes": {
+            "main": [
+                [
+                    {
+                        "node": "📤 Responder al Mobile",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🎟️ POST /api/seats/reserve": {
+            "main": [
+                [
+                    {
+                        "node": "✅ ¿Reserva Exitosa?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "✅ ¿Reserva Exitosa?": {
+            "main": [
+                [
+                    {
+                        "node": "👤 GET /api/users/profile",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "❌ Respuesta Error Reserva",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "👤 GET /api/users/profile": {
+            "main": [
+                [
+                    {
+                        "node": "📣 Construir Notificaciones",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "📣 Construir Notificaciones": {
+            "main": [
+                [
+                    {
+                        "node": "📱 WhatsApp (Twilio)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "✈️ Telegram",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "📧 Email (SMTP)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "📱 WhatsApp (Twilio)": {
+            "main": [
+                [
+                    {
+                        "node": "🔗 Merge Notificaciones",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "✈️ Telegram": {
+            "main": [
+                [
+                    {
+                        "node": "🔗 Merge Notificaciones",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "📧 Email (SMTP)": {
+            "main": [
+                [
+                    {
+                        "node": "🔗 Merge Notificaciones",
+                        "type": "main",
+                        "index": 2
+                    }
+                ]
+            ]
+        },
+        "🔗 Merge Notificaciones": {
+            "main": [
+                [
+                    {
+                        "node": "💬 Respuesta Reserva OK",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "💬 Respuesta Reserva OK": {
+            "main": [
+                [
+                    {
+                        "node": "📤 Responder al Mobile",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "❌ Respuesta Error Reserva": {
+            "main": [
+                [
+                    {
+                        "node": "📤 Responder al Mobile",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🗺️ GET /api/routes": {
+            "main": [
+                [
+                    {
+                        "node": "💬 Respuesta Directa",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "💬 Respuesta Directa": {
+            "main": [
+                [
+                    {
+                        "node": "📤 Responder al Mobile",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner"
+    },
+    "meta": {
+        "templateCredsSetupCompleted": false
+    }
+}

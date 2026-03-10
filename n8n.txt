@@ -1,0 +1,268 @@
+🤖 NauticBot × n8n — Workflow Architecture
+Visión General
+NauticBot opera en dos capas:
+
+Capa	Responsabilidad
+Mobile (React Native)	UI del chat, grabación de voz, TTS, quick-replies, booking cards
+n8n (orquestador)	Transcripción, NLP/Intent, llamadas al backend, lógica de negocio
+🛠️ NauticGo Backend (Express)
+⚙️ n8n Orquestador
+📱 NauticBot Mobile
+Sub-workflows
+Audio (base64)
+JSON {text, userId, token}
+🎙️ Voz (expo-av)
+⌨️ Texto
+🔊 expo-speech
+💬 Chat UI
+Webhook Receptor
+Intent Router\n(Switch Node)
+🧠 OpenAI Whisper\n(Audio → Text)
+🤖 OpenAI GPT-4o\n(NLP + Respuesta)
+📋 Trips Query
+🎟️ Seat Reserve
+✅ Ticket Buy
+🗺️ Routes Query
+👤 User Profile
+📊 Availability
+GET /api/trips\nGET /api/trips/:id
+GET /api/routes
+POST /api/seats/reserve\nPOST /api/seats/confirm\nPOST /api/seats/release
+POST /api/tickets/buy\nGET /api/tickets/my
+GET /api/users/profile
+Workflows Detallados
+🔷 Workflow 1 — nauticbot-gateway (Entrada Principal)
+Propósito: Recibe todo del mobile, decide si es audio o texto, orquesta el flujo completo.
+
+┌─────────────────────────────────────────────────────────────────┐
+│  WEBHOOK  POST /webhook/nauticbot                               │
+│  Headers: Authorization: Bearer {jwt}                           │
+│  Body: { type: "text"|"audio", content, userId, municipioId }  │
+└────────────────────┬────────────────────────────────────────────┘
+                     │
+              ┌──────▼──────┐
+              │  IF Node    │  type === "audio"?
+              └──┬───────┬──┘
+                 │ YES   │ NO
+    ┌────────────▼──┐  ┌─▼──────────────────┐
+    │ OpenAI Whisper│  │  Set Node           │
+    │ (Transcribe)  │  │  text = content     │
+    └───────┬───────┘  └─────────┬──────────┘
+            └──────────┬─────────┘
+                  ┌────▼─────────────────┐
+                  │  OpenAI GPT-4o Node  │
+                  │  System Prompt:      │
+                  │  NauticBot Persona   │
+                  │  + Context inyectado │
+                  └────┬─────────────────┘
+                       │
+              ┌────────▼──────────┐
+              │  Code Node        │
+              │  Parse AI JSON    │
+              │  { intent,        │
+              │    entities,      │
+              │    response }     │
+              └────────┬──────────┘
+                       │
+              ┌────────▼──────────┐
+              │  Switch Node      │◄─ intent
+              │  ┌──────────────┐ │
+              │  │ trips        │ │
+              │  │ reserve      │ │
+              │  │ confirm      │ │
+              │  │ tickets      │ │
+              │  │ routes       │ │
+              │  │ profile      │ │
+              │  │ chitchat     │ │
+              └──┴──────────────┴─┘
+🔷 Workflow 2 — nauticbot-trips (Consulta de Viajes)
+┌──────────────────────────────────────┐
+│  Input: { municipioId, date? }       │
+└──────────────┬───────────────────────┘
+               │
+    ┌──────────▼──────────┐
+    │  HTTP Request Node  │
+    │  GET /api/trips     │
+    │  ?municipioId=X     │
+    │  ?date=Y (opcional) │
+    └──────────┬──────────┘
+               │
+    ┌──────────▼───────────────────────────┐
+    │  Code Node — format_trips            │
+    │  ─────────────────────────────────── │
+    │  Filtra: isActive=true               │
+    │  Mapea: { id, route, time, price,    │
+    │           available, company }       │
+    │  Ordena: por hora ASC                │
+    └──────────┬───────────────────────────┘
+               │
+    ┌──────────▼───────────────────────────┐
+    │  OpenAI Node — humanize_response     │
+    │  Prompt: "Dado este JSON de viajes   │
+    │  activos, responde naturalmente en   │
+    │  español colombiano como NauticBot"  │
+    └──────────┬───────────────────────────┘
+               │
+    ┌──────────▼──────────┐
+    │  Respond to Webhook │
+    │  { message, trips,  │
+    │    quickReplies }   │
+    └─────────────────────┘
+🔷 Workflow 3 — nauticbot-reserve (Reserva Completa)
+Flujo de 3 pasos: Reserve → Confirm → Ticket
+
+INPUT: { tripId, userId, jwt }
+         │
+         ▼
+┌─────────────────────────┐
+│  HTTP: POST /seats/     │  Reserve seat (TTL 10 min)
+│  reserve                │  Body: { tripId, seats: 1 }
+│  Auth: Bearer {jwt}     │
+└───────────┬─────────────┘
+            │
+     ┌──────▼──────┐
+     │  IF: success │
+     └──┬────────┬──┘
+        │OK      │ERROR
+        │        │
+        │   ┌────▼───────────────────┐
+        │   │ Respond: error message  │
+        │   │ "Sin cupos / ya existe" │
+        │   └────────────────────────┘
+        │
+┌───────▼──────────────────────────────────────┐
+│  Wait Node (esperando confirmación del user) │
+│  TTL: 8 minutos (2 min antes del TTL de Mongo│
+└───────┬──────────────────────────────────────┘
+        │  usuario confirma con "Confirmar"
+        ▼
+┌───────────────────────────┐
+│  HTTP: POST /tickets/buy  │  Compra el tiquete
+│  Body: { tripId,          │
+│          seatNumber,      │
+│          paymentMethod }  │
+└───────────┬───────────────┘
+            │
+┌───────────▼──────────────────────────────┐
+│  HTTP: POST /seats/confirm               │
+│  (Confirma y elimina la reserva temporal)│
+└───────────┬──────────────────────────────┘
+            │
+┌───────────▼──────────────────────────────┐
+│  Respond: "¡Reserva confirmada! 🎉"      │
+│  { ticketId, tripDetails, timestamp }    │
+└──────────────────────────────────────────┘
+🔷 Workflow 4 — nauticbot-whisper (Voz a Texto)
+INPUT: { audioBase64, userId, mimeType }
+         │
+         ▼
+┌─────────────────────────────────┐
+│  Code Node — decode_audio       │
+│  Buffer.from(base64, 'base64')  │
+│  Write to /tmp/audio.m4a        │
+└───────────┬─────────────────────┘
+            │
+┌───────────▼──────────────────────────────┐
+│  HTTP Request → OpenAI Whisper           │
+│  POST https://api.openai.com/v1/audio/   │
+│       transcriptions                     │
+│  model: whisper-1                        │
+│  language: es                            │
+│  File: binary audio                      │
+└───────────┬──────────────────────────────┘
+            │
+┌───────────▼──────────────────────────┐
+│  Output: { transcript: "quiero      │
+│            reservar un viaje         │
+│            para mañana..." }         │
+│                                      │
+│  ➜ Pasa al nauticbot-gateway         │
+│    como si fuera texto               │
+└──────────────────────────────────────┘
+🔷 Workflow 5 — nauticbot-profile (Contexto Personalizado)
+INPUT: { jwt }
+         │
+         ▼
+┌────────────────────────────────────┐
+│  HTTP: GET /api/users/profile      │
+│  Auth: Bearer {jwt}                │
+└───────────┬────────────────────────┘
+            │
+┌───────────▼────────────────────────────────────┐
+│  Code Node — build_context                     │
+│  "El usuario se llama {name}, viaja desde      │
+│   {municipio}, tiene tickets activos: {count}" │
+│                                                │
+│  Este contexto se inyecta en el System Prompt  │
+│  de GPT-4o para personalizar las respuestas   │
+└────────────────────────────────────────────────┘
+🤖 System Prompt Maestro (GPT-4o)
+Eres NauticBot, el asistente oficial de NauticGo para viajes acuáticos en Colombia.
+PERSONALIDAD:
+- Hablas en español colombiano natural y cálido
+- Usas emojis pero sin exceso (1-2 por mensaje)
+- Eres conciso: máximo 3 líneas por respuesta
+- Siempre ofreces la siguiente acción (quick-reply)
+CONTEXTO DEL USUARIO:
+{user_context}
+MUNICIPIO ACTIVO: {municipio_name}
+CAPACIDADES:
+1. Consultar viajes activos (tienes acceso al API)
+2. Explicar precios y disponibilidad
+3. Iniciar reservas de viajes
+4. Mostrar historial de tickets
+5. Responder preguntas sobre NauticGo
+RESTRICCIONES:
+- NUNCA inventes información de viajes o precios
+- NUNCA proceses pagos directamente
+- Si no tienes datos del API, dilo honestamente
+- Si el usuario pide algo fuera de tu alcance, sugiere contactar soporte
+FORMATO DE RESPUESTA (JSON estricto):
+{
+  "intent": "trips|reserve|tickets|routes|chitchat|profile",
+  "response": "Mensaje al usuario",
+  "data": { ... },  // opcional: datos estructurados
+  "quickReplies": ["opción 1", "opción 2"]  // siempre 2-4 opciones
+}
+📡 Contrato Mobile → n8n
+Request del mobile al webhook:
+typescript
+// En MicButton.stopRecording():
+const uri = await rec.getURI();
+const base64 = await FileSystem.readAsStringAsync(uri, {
+  encoding: FileSystem.EncodingType.Base64
+});
+await api.post('/webhook/nauticbot', {
+  type: 'audio',           // "text" | "audio"
+  content: base64,         // transcript o audio base64
+  userId: user.id,
+  municipioId: selectedMunicipio?._id,
+  jwt: token,              // para que n8n llame al backend autenticado
+  conversationId: chatId,  // para mantener contexto de sesión
+});
+Response de n8n al mobile:
+typescript
+interface NauticBotResponse {
+  message: string;           // texto del bot
+  quickReplies?: string[];   // chips de respuesta rápida
+  trips?: TripOption[];      // tarjetas de viajes (si aplica)
+  ticket?: { id: string };   // confirmación de reserva
+  intent: string;            // para debug / analytics
+}
+🔐 Seguridad
+Medida	Implementación
+Auth en n8n	El JWT del mobile se reenvía al backend en cada llamada
+Webhook secret	Header X-NauticBot-Secret: {secret} validado en n8n
+Rate limiting	Máx 20 req/min por userId (n8n Rate Limit node)
+Roles	n8n valida que /seats/reserve solo se llame con role=user
+TTL de sesión	Conversationid expira en Redis/n8n tras 30 min de inactividad
+🗺️ Roadmap de Integración
+Fase 1 (actual)  → Bot local con intents hardcoded
+Fase 2           → Webhook n8n recibe texto → GPT-4o → respuesta
+Fase 3           → Whisper conectado (voz real)
+Fase 4           → Flujo de reserva completo a través de n8n
+Fase 5           → Memoria de sesión (Redis / n8n store)
+Fase 6           → Notificaciones push cuando el viaje sale
+
+Comment
+Ctrl+Alt+M

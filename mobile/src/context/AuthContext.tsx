@@ -17,6 +17,7 @@ import {
   RegisterPayload,
   loginRequest,
   LoginPayload,
+  getProfileRequest,
 } from "../services/auth.service";
 
 /* =========================================================
@@ -32,6 +33,7 @@ type AuthContextType = {
   register: (payload: RegisterPayload) => Promise<boolean>;
   logout: () => Promise<void>;
   updateUser: (user: Partial<User>) => void;
+  refreshSession: () => Promise<void>;
 };
 
 const AuthContext =
@@ -189,6 +191,21 @@ export function AuthProvider({
     setUser(prev => prev ? { ...prev, ...partial } : prev);
   };
 
+  const refreshSession = async () => {
+    try {
+      console.log("👤 [Auth] Refreshing session...");
+      const { user: refreshedUser, token } = await getProfileRequest();
+
+      if (refreshedUser && token) {
+        await saveSession(refreshedUser, token);
+        setUser(refreshedUser);
+        console.log("👤 [Auth] Session refreshed successfully:", refreshedUser.role);
+      }
+    } catch (err) {
+      console.error("❌ [Auth] Error refreshing session:", err);
+    }
+  };
+
   /* =====================================================
      PROVIDER
      ===================================================== */
@@ -203,6 +220,7 @@ export function AuthProvider({
         register,
         logout,
         updateUser,
+        refreshSession,
       }}
     >
       {children}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, Alert } from 'react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { styled } from 'nativewind';
 import { ScreenContainer } from '../../components/ui/ScreenContainer';
 import { Input } from '../../components/ui/Input';
@@ -17,6 +18,7 @@ export const LoginScreen = () => {
     const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async () => {
@@ -61,10 +63,15 @@ export const LoginScreen = () => {
                     />
                     <Input
                         label="Contraseña"
-                        placeholder="••••••••"
+                        placeholder=""
                         value={password}
                         onChangeText={setPassword}
-                        secureTextEntry
+                        secureTextEntry={!showPassword}
+                        rightIcon={
+                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff size={20} color="#94A3B8" /> : <Eye size={20} color="#94A3B8" />}
+                            </TouchableOpacity>
+                        }
                     />
 
                     <TouchableOpacity className="self-end mb-6">

@@ -92,22 +92,25 @@ export const createCompany: RequestHandler = async (req, res) => {
       return res.status(401).json({ message: "No autenticado" });
     }
 
-    // Solo owners pueden crear empresas
-    if (req.user.role !== "owner") {
-      return res.status(403).json({ message: "Solo owners" });
+    // Permitir que 'user' cree su primera empresa o que 'owner' cree más
+    if (req.user.role !== "user" && req.user.role !== "owner") {
+      return res.status(403).json({ message: "No tienes permisos para crear una empresa" });
     }
 
     // Crear la empresa
     const company = await CompanyModel.create({
       ...req.body,
       owner: new Types.ObjectId(req.user.id),
-      isActive: true,
+      isActive: true, // TODO: Quizás empezar como inactivo hasta validación legal?
       admins: [],
     });
 
-    // Vincular la empresa al usuario owner
+    // Vincular la empresa al usuario y promover a OWNER si era USER
     await UserModel.findByIdAndUpdate(req.user.id, {
-      $set: { companyId: company._id },
+      $set: {
+        companyId: company._id,
+        role: "owner"
+      },
     });
 
     // 🔍 Registrar en auditoría
@@ -217,6 +220,11 @@ export const toggleCompanyActive: RequestHandler = async (req, res) => {
   session.startTransaction();
 
   try {
+    if (!req.user) {
+      await session.abortTransaction();
+      return res.status(401).json({ message: "No autenticado" });
+    }
+
     if (!req.company) {
       await session.abortTransaction();
       return res.status(500).json({
@@ -247,6 +255,16 @@ export const toggleCompanyActive: RequestHandler = async (req, res) => {
       );
     }
 
+    const action = company.isActive ? "company.activate" : "company.deactivate";
+    await AuditLogModel.create({
+      action,
+      entity: "company",
+      entityId: company._id,
+      performedBy: req.user.id,
+      source: "manual",
+      metadata: { companyId: company._id.toString(), companyName: company.name },
+    }).catch(() => { });
+
     await session.commitTransaction();
     res.json(toCompanyDTO(company));
   } catch (error) {
@@ -267,11 +285,24 @@ export const toggleCompanyActive: RequestHandler = async (req, res) => {
    ========================================================= */
 
 export const deleteCompany: RequestHandler = async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "No autenticado" });
+  }
+
   if (!req.company) {
     return res.status(500).json({
       message: "Empresa no inyectada (ownershipGuard faltante)",
     });
   }
+
+  await AuditLogModel.create({
+    action: "company.delete",
+    entity: "company",
+    entityId: req.company._id,
+    performedBy: req.user.id,
+    source: "manual",
+    metadata: { companyId: req.company._id.toString(), companyName: req.company.name },
+  }).catch(() => { });
 
   await CompanyDomainService.deactivateCompany(
     req.company._id.toString()

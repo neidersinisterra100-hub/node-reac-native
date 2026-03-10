@@ -86,24 +86,24 @@ export const CompanyAdminsScreen = () => {
     };
 
     const renderItem = ({ item }: { item: CompanyAdmin }) => (
-        <StyledView className="flex-row items-center justify-between bg-white p-4 rounded-xl mb-3 shadow-sm border border-gray-100">
+        <StyledView className="flex-row items-center justify-between bg-white dark:bg-dark-surface p-4 rounded-xl mb-3 shadow-sm border border-gray-100 dark:border-dark-border/50">
             <StyledView className="flex-row items-center gap-3">
-                <StyledView className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center">
-                    <User size={20} color="#0B4F9C" />
+                <StyledView className="w-10 h-10 bg-blue-50 dark:bg-blue-900/40 rounded-full items-center justify-center">
+                    <User size={20} color="#3b82f6" />
                 </StyledView>
                 <StyledView>
-                    <StyledText className="font-bold text-gray-800">{item.name}</StyledText>
-                    <StyledText className="text-xs text-gray-500">{item.email}</StyledText>
+                    <StyledText className="font-bold text-gray-800 dark:text-white">{item.name}</StyledText>
+                    <StyledText className="text-xs text-gray-500 dark:text-slate-400">{item.email}</StyledText>
                 </StyledView>
             </StyledView>
-            <StyledTouchableOpacity onPress={() => handleRemove(item._id || item.id)} className="p-2 bg-red-50 rounded-lg">
+            <StyledTouchableOpacity onPress={() => handleRemove(item._id || item.id)} className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
                 <Trash2 size={20} color="#ef4444" />
             </StyledTouchableOpacity>
         </StyledView>
     );
 
     return (
-        <StyledView className="flex-1 bg-gray-50">
+        <StyledView className="flex-1 bg-gray-50 dark:bg-dark-bg">
             {/* Header */}
             <StyledView className="bg-nautic-primary pt-12 pb-6 px-6 rounded-b-[32px] shadow-sm mb-4">
                 <StyledView className="flex-row items-center mb-2">
@@ -125,43 +125,45 @@ export const CompanyAdminsScreen = () => {
                 ListHeaderComponent={
                     <StyledView className="mb-6 space-y-6">
                         {/* Invite Section */}
-                        <StyledView className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4">
+                        <StyledView className="bg-white dark:bg-dark-surface p-4 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border/50 mb-4">
                             <StyledView className="flex-row items-center gap-2 mb-3">
-                                <Mail size={20} color="#0B4F9C" />
-                                <StyledText className="font-bold text-gray-800">Invitar por Email</StyledText>
+                                <Mail size={20} color="#3b82f6" />
+                                <StyledText className="font-bold text-gray-800 dark:text-white">Invitar por Email</StyledText>
                             </StyledView>
                             <StyledTextInput
-                                className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3 text-gray-800"
+                                className="bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border/50 rounded-lg p-3 mb-3 text-gray-800 dark:text-white"
                                 placeholder="ejemplo@email.com"
+                                placeholderTextColor="#94a3b8"
                                 value={inviteEmail}
                                 onChangeText={setInviteEmail}
                                 autoCapitalize="none"
                                 keyboardType="email-address"
                             />
-                            <StyledTouchableOpacity onPress={handleInvite} className="bg-blue-600 p-3 rounded-lg items-center">
+                            <StyledTouchableOpacity onPress={handleInvite} className="bg-blue-600 dark:bg-blue-500 p-3 rounded-lg items-center">
                                 <StyledText className="text-white font-bold">Enviar Invitación</StyledText>
                             </StyledTouchableOpacity>
                         </StyledView>
 
                         {/* Add ID Section */}
-                        <StyledView className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <StyledView className="bg-white dark:bg-dark-surface p-4 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border/50">
                             <StyledView className="flex-row items-center gap-2 mb-3">
-                                <UserPlus size={20} color="#0B4F9C" />
-                                <StyledText className="font-bold text-gray-800">Agregar por ID</StyledText>
+                                <UserPlus size={20} color="#3b82f6" />
+                                <StyledText className="font-bold text-gray-800 dark:text-white">Agregar por ID</StyledText>
                             </StyledView>
                             <StyledTextInput
-                                className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3 text-gray-800"
+                                className="bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border/50 rounded-lg p-3 mb-3 text-gray-800 dark:text-white"
                                 placeholder="ID de usuario..."
+                                placeholderTextColor="#94a3b8"
                                 value={addUserId}
                                 onChangeText={setAddUserId}
                                 autoCapitalize="none"
                             />
-                            <StyledTouchableOpacity onPress={handleAddById} className="bg-gray-600 p-3 rounded-lg items-center">
+                            <StyledTouchableOpacity onPress={handleAddById} className="bg-gray-600 dark:bg-gray-500 p-3 rounded-lg items-center">
                                 <StyledText className="text-white font-bold">Agregar Directamente</StyledText>
                             </StyledTouchableOpacity>
                         </StyledView>
 
-                        <StyledText className="text-lg font-bold text-gray-800 mt-4 mb-2">Administradores</StyledText>
+                        <StyledText className="text-lg font-bold text-gray-800 dark:text-white mt-4 mb-2">Administradores</StyledText>
                     </StyledView>
                 }
                 ListEmptyComponent={

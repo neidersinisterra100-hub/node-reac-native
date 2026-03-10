@@ -29,6 +29,8 @@ export interface TicketDocument extends Document {
      ========================= */
   passengerName: string;
   passengerId: string;
+  passengerPhone?: string;
+  passengerEmail?: string;
   seatNumber?: string;
 
   /* =========================
@@ -136,6 +138,14 @@ const TicketSchema = new Schema<TicketDocument>(
       type: String,
       required: true,
       index: true,
+    },
+
+    passengerPhone: {
+      type: String,
+    },
+
+    passengerEmail: {
+      type: String,
     },
 
     seatNumber: {

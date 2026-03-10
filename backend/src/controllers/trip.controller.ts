@@ -396,6 +396,7 @@ export const toggleTripActive: RequestHandler = async (req, res) => {
         companyId: company._id.toString(),
         companyName: company.name,
         tripDate: trip.date,
+        routeName: `${route.origin} - ${route.destination}`,
       },
     }).catch(() => { });
 
@@ -438,12 +439,27 @@ export const deleteTrip: RequestHandler = async (req, res) => {
     const company = await CompanyModel.findById(trip.companyId).session(
       session
     );
+    const route = await RouteModel.findById(trip.routeId).session(session);
     if (!company || company.owner.toString() !== req.user.id) {
       await session.abortTransaction();
       return res.status(403).json({
         message: "No autorizado",
       });
     }
+
+    await AuditLogModel.create({
+      action: "trip.delete",
+      entity: "trip",
+      entityId: trip._id,
+      performedBy: req.user.id,
+      source: "manual",
+      metadata: {
+        companyId: company._id.toString(),
+        companyName: company.name,
+        tripDate: trip.date,
+        routeName: route ? `${route.origin} - ${route.destination}` : "",
+      },
+    }).catch(() => { });
 
     await TripModel.findByIdAndDelete(trip._id, { session });
 

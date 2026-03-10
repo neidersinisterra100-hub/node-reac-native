@@ -219,6 +219,10 @@ export const SeatSelectionScreen = () => {
       if (confirm) {
         try {
           setLoading(true);
+          await reserveSeat({
+            tripId,
+            seatNumbers: selectedSeats,
+          });
           await reserveTicketOnBoarding({
             tripId,
             passengerName: "Reservado",
@@ -250,13 +254,17 @@ export const SeatSelectionScreen = () => {
           onPress: async () => {
             try {
               setLoading(true);
+              await reserveSeat({
+                tripId,
+                seatNumbers: selectedSeats,
+              });
               await reserveTicketOnBoarding({
                 tripId,
                 passengerName: "Reservado", // Podrías pedir el nombre del usuario real
                 passengerId: "000000",
                 seatNumbers: selectedSeats
               });
-              Alert.alert("Éxito", "Tus asientos han sido reservados.");
+              Alert.alert("Éxito", "Tus asientos han sido reservados. Puedes revisar tus reservas pendientes en la pestaña 'Mis Tickets' (Sección Inicio o Tabs).");
               navigation.navigate("Tabs");
             } catch (error: any) {
               console.log(error);

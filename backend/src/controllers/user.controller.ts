@@ -60,12 +60,12 @@ export const updateProfile: RequestHandler = async (req, res) => {
         } = req.body;
 
         const updateData: any = {};
-        if (name) updateData.name = name;
-        if (phone) updateData.phone = phone;
-        if (birthDate) updateData.birthDate = new Date(birthDate);
-        if (address) updateData.address = address;
-        if (emergencyContactName) updateData.emergencyContactName = emergencyContactName;
-        if (emergencyContactPhone) updateData.emergencyContactPhone = emergencyContactPhone;
+        if (name !== undefined) updateData.name = name;
+        if (phone !== undefined) updateData.phone = phone;
+        if (birthDate !== undefined) updateData.birthDate = new Date(birthDate);
+        if (address !== undefined) updateData.address = address;
+        if (emergencyContactName !== undefined) updateData.emergencyContactName = emergencyContactName;
+        if (emergencyContactPhone !== undefined) updateData.emergencyContactPhone = emergencyContactPhone;
 
         // Encrypt ID number if provided
         if (identificationNumber) {

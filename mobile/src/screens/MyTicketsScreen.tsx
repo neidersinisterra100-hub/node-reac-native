@@ -80,7 +80,7 @@ export default function MyTicketsScreen() {
           </View>
 
           <MaterialCommunityIcons
-            name="ticket-confirmation-outline"
+            name={item.status === "reserved" ? "clock-alert-outline" : "ticket-confirmation-outline"}
             size={32}
             color="white"
           />
@@ -143,15 +143,30 @@ export default function MyTicketsScreen() {
         </View>
 
         {/* ================= FOOTER ================= */}
-        <View style={styles.ticketFooter}>
-          <MaterialCommunityIcons
-            name="qrcode"
-            size={40}
-            color={colors.primary}
-          />
-          <Text style={styles.footerText}>
-            Muestra este código al abordar
-          </Text>
+        <View style={[styles.ticketFooter, item.status === 'reserved' && { backgroundColor: '#fef3c7', borderTopColor: '#fde68a' }]}>
+          {item.status === 'reserved' ? (
+            <>
+              <MaterialCommunityIcons
+                name="alert-circle-outline"
+                size={34}
+                color="#d97706"
+              />
+              <Text style={[styles.footerText, { color: '#d97706', fontWeight: 'bold' }]}>
+                Reserva sujeta a pago al abordar
+              </Text>
+            </>
+          ) : (
+            <>
+              <MaterialCommunityIcons
+                name="qrcode"
+                size={40}
+                color={colors.primary}
+              />
+              <Text style={styles.footerText}>
+                Muestra este código al abordar
+              </Text>
+            </>
+          )}
         </View>
       </View>
     );

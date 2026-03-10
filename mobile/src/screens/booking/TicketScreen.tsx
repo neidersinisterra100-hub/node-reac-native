@@ -113,8 +113,15 @@ export const TicketScreen = () => {
                                 </div>
                             </div>
                             <div class="qr">
+                                ${ticket?.status === 'reserved' ? `
+                                <div style="color: #d97706; font-weight: bold; padding: 20px; border: 2px dashed #fde68a; background: #fffbeb; border-radius: 10px;">
+                                    Pago Pendiente al Abordar<br/>
+                                    <span style="font-size: 12px; font-weight: normal;">Preséntese temprano para asegurar su cupo</span>
+                                </div>
+                                ` : `
                                 <img src="${qrUrl}" width="150" height="150" style="border: 2px solid #0B4F9C; padding: 5px; border-radius: 10px;" />
-                                <div style="margin-top: 10px; font-size: 12px; color: #64748b;">${ticket.code || transactionId}</div>
+                                `}
+                                <div style="margin-top: 10px; font-size: 12px; color: #64748b;">${ticket?.code || transactionId}</div>
                             </div>
                         </div>
                     </div>
@@ -280,15 +287,26 @@ export const TicketScreen = () => {
                                     </StyledView>
                                 </StyledView>
 
-                                <StyledView className="items-center">
-                                    <StyledView className="border-2 border-nautic-primary p-2 rounded-xl">
-                                        <Image
-                                            source={{ uri: qrUrl }}
-                                            style={{ width: 150, height: 150 }}
-                                        />
+                                {ticket?.status === 'reserved' ? (
+                                    <StyledView className="items-center bg-amber-50 p-4 rounded-xl border border-amber-200 mt-4">
+                                        <StyledText className="text-amber-600 font-bold text-center text-lg mb-1">
+                                            ¡Pago Pendiente!
+                                        </StyledText>
+                                        <StyledText className="text-amber-800 text-center text-sm">
+                                            Debes pagar al abordar para obtener tu código QR. Si los asientos se llenan, podrías perder tu reserva.
+                                        </StyledText>
                                     </StyledView>
-                                    <StyledText className="text-xs text-gray-400 mt-2">{ticket?.code || transactionId}</StyledText>
-                                </StyledView>
+                                ) : (
+                                    <StyledView className="items-center mt-4">
+                                        <StyledView className="border-2 border-nautic-primary p-2 rounded-xl">
+                                            <Image
+                                                source={{ uri: qrUrl }}
+                                                style={{ width: 150, height: 150 }}
+                                            />
+                                        </StyledView>
+                                        <StyledText className="text-xs text-gray-400 mt-2">{ticket?.code || transactionId}</StyledText>
+                                    </StyledView>
+                                )}
                             </StyledView>
                         </Card>
 

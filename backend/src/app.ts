@@ -17,9 +17,13 @@ import municipioRoutes from "./routes/municipio.routes.js";
 import departmentRoutes from "./routes/department.routes.js";
 import auditRoutes from "./routes/audit.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
-import rideRoutes from "./routes/ride.routes.js";
-import marineRoutes from "./routes/marine.routes.js";
+
+// Additional routes restored
 import userRoutes from "./routes/user.routes.js";
+import marineRoutes from "./routes/marine.routes.js";
+import { router as itemsRoutes } from "./routes/items.routes.js";
+import rideRoutes from "./routes/ride.routes.js";
+import newsRoutes from "./routes/news.routes.js";
 
 /* ===============================
    MIDDLEWARES
@@ -69,11 +73,14 @@ app.use("/api/seats", seatRoutes);
 app.use("/api/cities", cityRoutes);
 app.use("/api/municipios", municipioRoutes);
 app.use("/api/departments", departmentRoutes);
+// Restored routes
+app.use("/api/users", userRoutes);
+app.use("/api/marine", marineRoutes);
+app.use("/api/items", itemsRoutes);
+app.use("/api/news", newsRoutes);
+app.use("/api/rides", rideRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/webhooks", webhookRoutes);
-app.use("/api/rides", rideRoutes);
-app.use("/api/marine", marineRoutes);
-app.use("/api/users", userRoutes);
 
 /* =========================================================
    404

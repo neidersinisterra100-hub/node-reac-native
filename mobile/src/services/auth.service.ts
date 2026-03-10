@@ -50,3 +50,9 @@ export async function resetPassword(
     password,
   });
 }
+
+export async function getProfileRequest() {
+  console.log("👤 [AUTH] Get profile request");
+  const { data } = await api.get("/auth/profile");
+  return data;
+}

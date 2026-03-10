@@ -16,8 +16,6 @@ import { AuditLogModel } from "../models/auditLog.model.js";
 // CONSTANTES / SERVICIOS
 // ===============================
 import { TRANSPORT_TYPES } from "../constants/enums.js";
-import { getPublicTripsService } from "../services/trip.service.js";
-import { TripWithSoldSeats } from "../types/trip.taypes.js";
 
 /* =========================================================
    DTO (Data Transfer Object)
@@ -39,6 +37,12 @@ interface TripDTO {
   municipioId?: string;
   cityId?: string;
   createdAt: Date;
+}
+
+interface TripWithSoldSeats {
+  _id: Types.ObjectId;
+  soldSeats: number;
+  [key: string]: any;
 }
 
 /**
@@ -116,15 +120,10 @@ export const getTrips: RequestHandler = async (req, res) => {
       filter.municipioId = new Types.ObjectId(municipioId as string);
     }
 
+    // 🚀 FIX: Removed specific select to ensure full population
     const trips = await TripModel.find(filter)
-      .populate({
-        path: "routeId",
-        select: "origin destination isActive",
-      })
-      .populate({
-        path: "companyId",
-        select: "name",
-      })
+      .populate("routeId")
+      .populate("companyId")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -147,9 +146,6 @@ export const getTrips: RequestHandler = async (req, res) => {
    - requireAuth + ownershipGuard ya corrieron
    - Usa empresa del JWT o del ownership
    ========================================================= */
-/* =========================================================
-GET TRIPS (MANAGE)
-========================================================= */
 
 export const getManageTrips: RequestHandler = async (req, res) => {
   try {
@@ -165,7 +161,6 @@ export const getManageTrips: RequestHandler = async (req, res) => {
     } else {
       // Prioridad 2: Buscar empresas según rol del usuario (ruta /manage sin params)
       const { role, companyId, id: userId } = req.user;
-      const companyFilter: Record<string, unknown> = {};
 
       if (role === "admin" && companyId) {
         companyIds = [new Types.ObjectId(companyId as string)];
@@ -188,9 +183,10 @@ export const getManageTrips: RequestHandler = async (req, res) => {
       filter.municipioId = new Types.ObjectId(municipioId as string);
     }
 
+    // 🚀 FIX: Removed specific select to ensure full population
     const trips = await TripModel.find(filter)
-      .populate("routeId", "origin destination isActive")
-      .populate("companyId", "name")
+      .populate("routeId")
+      .populate("companyId")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -207,64 +203,6 @@ export const getManageTrips: RequestHandler = async (req, res) => {
     return res.status(500).json({ message: "Error al obtener viajes de gestión" });
   }
 };
-
-// export const getManageTrips: RequestHandler = async (req, res) => {
-//   try {
-//     if (!req.user) {
-//       return res.status(401).json({ message: "No autenticado" });
-//     }
-
-//     const { role, companyId, id: userId } = req.user;
-
-//     const companyFilter: Record<string, unknown> = {};
-
-//     if (role === "admin") {
-//       companyFilter._id = companyId;
-//     }
-
-//     if (role === "owner") {
-//       companyFilter.owner = userId;
-//     }
-
-//     const companies = await CompanyModel.find(companyFilter)
-//       .select("_id")
-//       .lean();
-
-//     if (!companies.length) {
-//       return res.json([]);
-//     }
-
-//     const trips = await TripModel.find({
-//       companyId: { $in: companies.map(c => c._id) },
-//     })
-//       .populate("routeId", "origin destination isActive")
-//       .populate("companyId", "name")
-//       .sort({ createdAt: -1 })
-//       .lean();
-
-//     let enrichedTrips;
-
-//     try {
-//       enrichedTrips = await attachSoldSeats(trips);
-//     } catch (err) {
-//       console.error("[attachSoldSeats]", err);
-//       enrichedTrips = trips.map(t => ({
-//         ...t,
-//         soldSeats: 0,
-//       }));
-//     }
-
-//     return res.json(
-//       enrichedTrips.map(t => ({
-//         ...toTripDTO(t),
-//         soldSeats: t.soldSeats,
-//       }))
-//     );
-//   } catch (error) {
-//     console.error("[getManageTrips]", error);
-//     return res.status(500).json({ message: "Error al obtener viajes" });
-//   }
-// };
 
 /* =========================================================
    CREAR VIAJE
@@ -284,12 +222,6 @@ export const createTrip: RequestHandler = async (req, res) => {
       return res.status(401).json({ message: "No autenticado" });
     }
 
-    if (req.user.role !== "owner") {
-      await session.abortTransaction();
-      return res.status(403).json({
-        message: "Solo owners pueden crear viajes",
-      });
-    }
 
     const parsed = createTripSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -327,10 +259,16 @@ export const createTrip: RequestHandler = async (req, res) => {
       });
     }
 
-    if (company.owner.toString() !== req.user.id) {
+    // Verificar permisos: Símismo owner O es admin asignado
+    const isOwner = company.owner.toString() === req.user.id;
+    const isAdmin =
+      req.user.role === "admin" &&
+      req.user.companyId === company._id.toString();
+
+    if (!isOwner && !isAdmin) {
       await session.abortTransaction();
       return res.status(403).json({
-        message: "No eres owner de esta empresa",
+        message: "No tienes permisos para crear viajes en esta empresa",
       });
     }
 
@@ -458,6 +396,7 @@ export const toggleTripActive: RequestHandler = async (req, res) => {
         companyId: company._id.toString(),
         companyName: company.name,
         tripDate: trip.date,
+        routeName: `${route.origin} - ${route.destination}`,
       },
     }).catch(() => { });
 
@@ -500,12 +439,27 @@ export const deleteTrip: RequestHandler = async (req, res) => {
     const company = await CompanyModel.findById(trip.companyId).session(
       session
     );
+    const route = await RouteModel.findById(trip.routeId).session(session);
     if (!company || company.owner.toString() !== req.user.id) {
       await session.abortTransaction();
       return res.status(403).json({
         message: "No autorizado",
       });
     }
+
+    await AuditLogModel.create({
+      action: "trip.delete",
+      entity: "trip",
+      entityId: trip._id,
+      performedBy: req.user.id,
+      source: "manual",
+      metadata: {
+        companyId: company._id.toString(),
+        companyName: company.name,
+        tripDate: trip.date,
+        routeName: route ? `${route.origin} - ${route.destination}` : "",
+      },
+    }).catch(() => { });
 
     await TripModel.findByIdAndDelete(trip._id, { session });
 

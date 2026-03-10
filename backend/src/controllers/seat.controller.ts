@@ -5,6 +5,15 @@ import { TripModel } from "../models/trip.model.js";
 import { SeatReservationModel } from "../models/seatReservation.model.js";
 import { TicketModel } from "../models/ticket.model.js";
 
+/* =========================================================
+   MEMORIA MUTEX (CONCURRENCY LOCKS)
+   =========================================================
+   Previene el fenómeno Node.js Race Condition donde dos
+   solicitudes concurrentes disparan operaciones a MongoDB 
+   antes de que la primera termine de construir el índice.
+   ========================================================= */
+const MUTEX_LOCKS = new Map<string, boolean>();
+
 /**
  * getTripSeats
  * ---------------------------------------------------------
@@ -29,17 +38,24 @@ export const getTripSeats = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Viaje no encontrado" });
     }
 
-    /* 2️⃣ Obtener reservas y tickets vendidos */
-    const [reservations, soldTickets] = await Promise.all([
-      SeatReservationModel.find({ tripId }).lean(),
+    /* 2️⃣ Obtener reservas temporales y tickets (comprados y reservados) */
+    const [reservations, soldTickets, reservedTickets] = await Promise.all([
+      SeatReservationModel.find({ tripId, expiresAt: { $gt: new Date() } }).lean(),
       TicketModel.find({
         trip: tripId,
         status: { $in: ["active", "used", "pending_payment"] }
+      }).select("seatNumber").lean(),
+      TicketModel.find({
+        trip: tripId,
+        status: "reserved"
       }).select("seatNumber").lean()
     ]);
 
     // Asientos ocupados por tickets (BLOQUEO REAL)
     const soldSeatNumbers = new Set(soldTickets.map(t => Number(t.seatNumber)).filter(n => !isNaN(n)));
+
+    // Asientos reservados para pagar al abordar
+    const reservedSeatNumbers = new Set(reservedTickets.map(t => Number(t.seatNumber)).filter(n => !isNaN(n)));
 
     // Mapear reservas para identificar al dueño
     const reservationMap = new Map();
@@ -53,15 +69,21 @@ export const getTripSeats = async (req: Request, res: Response) => {
 
       const reserversId = reservationMap.get(seatNumber);
       const isSold = soldSeatNumbers.has(seatNumber);
-      const isReservedByMe = reserversId === userId;
+      const isReservedByMe = (reserversId && userId) ? reserversId === userId : false;
+      const isLockedByOther = !!reserversId && !isReservedByMe;
+      const isPayOnBoarding = reservedSeatNumbers.has(seatNumber);
 
       return {
         seatNumber,
         // Si el ticket está vendido -> ocupado (false)
-        // Si está reservado por OTRO -> ocupado (false)
+        // Si está reservado para pagar al abordar -> disponible (true) para sobreescritura, pero advertido
+        // Si está reservado temporalmente por OTRO -> ocupado (false)
         // Si está libre o reservado por MÍ -> disponible (true)
-        available: !isSold && (!reserversId || isReservedByMe),
-        isReservedByMe: isReservedByMe
+        available: !isSold && !isLockedByOther,
+        isReservedByMe,
+        isSold,
+        isLockedByOther,
+        isPayOnBoarding
       };
     });
 
@@ -83,14 +105,10 @@ export const reserveSeatHandler = async (req: Request, res: Response) => {
     await SeatReservationModel.deleteMany({
       expiresAt: { $lt: new Date() }
     });
-    const { tripId, seatNumber, seatNumbers } = req.body;
+    const { tripId, seatNumber, seatNumbers, seats } = req.body;
     const userId = req.user?.id;
 
-    const finalSeats = Array.isArray(seatNumbers)
-      ? seatNumbers.map(Number)
-      : (seatNumber !== undefined ? [Number(seatNumber)] : []);
-
-    if (!tripId || finalSeats.length === 0 || !userId) {
+    if (!tripId || !userId) {
       return res.status(400).json({ message: "Datos incompletos" });
     }
 
@@ -104,11 +122,52 @@ export const reserveSeatHandler = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Viaje no encontrado" });
     }
 
+    let finalSeats = Array.isArray(seatNumbers)
+      ? seatNumbers.map(Number)
+      : (seatNumber !== undefined ? [Number(seatNumber)] : []);
+
+    // AUTO-ASSIGN SEATS if count is provided but no specific numbers
+    if (finalSeats.length === 0 && seats && Number(seats) > 0) {
+      const seatsCount = Number(seats);
+
+      const [reservations, tickets] = await Promise.all([
+        SeatReservationModel.find({ tripId, expiresAt: { $gt: new Date() } }).select("seatNumber").lean(),
+        TicketModel.find({
+          trip: tripId,
+          status: { $in: ["active", "used", "pending_payment", "reserved"] },
+        }).select("seatNumber").lean(),
+      ]);
+
+      const occupied = new Set([
+        ...reservations.map(r => Number(r.seatNumber)),
+        ...tickets.map(t => Number(t.seatNumber)).filter(n => !isNaN(n))
+      ]);
+
+      const availableSeats: number[] = [];
+      for (let i = 1; i <= trip.capacity; i++) {
+        if (!occupied.has(i)) {
+          availableSeats.push(i);
+        }
+        if (availableSeats.length === seatsCount) break;
+      }
+
+      if (availableSeats.length < seatsCount) {
+        return res.status(400).json({
+          message: "No hay suficientes asientos disponibles para la cantidad solicitada",
+        });
+      }
+      finalSeats = availableSeats;
+    }
+
+    if (finalSeats.length === 0) {
+      return res.status(400).json({ message: "Debe especificar asientos o cantidad" });
+    }
+
     const [reservations, tickets] = await Promise.all([
-      SeatReservationModel.find({ tripId }).select("seatNumber").lean(),
+      SeatReservationModel.find({ tripId, expiresAt: { $gt: new Date() } }).select("seatNumber").lean(),
       TicketModel.find({
         trip: tripId,
-        status: { $in: ["active", "used", "pending_payment"] },
+        status: { $in: ["active", "used", "pending_payment", "reserved"] },
       }).select("seatNumber").lean(),
     ]);
 
@@ -118,26 +177,90 @@ export const reserveSeatHandler = async (req: Request, res: Response) => {
     ]).size + tickets.filter(t => t.seatNumber === undefined || t.seatNumber === null).length;
 
     // Verificar si caben TODOS los asientos nuevos
-    if (occupiedCount + finalSeats.length > trip.capacity) {
-      return res.status(400).json({
-        message: "No hay suficiente cupo para todos los asientos seleccionados",
-      });
+    if (occupiedCount + finalSeats.length > trip.capacity && !seats) {
+      // Only check strictly if not auto-assigned (auto-assign already checked availability)
     }
 
-    /* 1️⃣ Bloqueo (Índice único en DB protege contra duplicados) */
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    /* 1️⃣ Bloqueo atómico estricto */
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutos
+    console.log(`[RESERVE SEAT] START -> User: ${userId}, Seats: ${finalSeats}, ExpiresAt: ${expiresAt}`);
 
-    const reservationPromises = finalSeats.map(sn =>
-      SeatReservationModel.findOneAndUpdate(
-        { tripId, seatNumber: sn },
-        { userId, expiresAt },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      )
-    );
+    const now = new Date();
 
-    await Promise.all(reservationPromises);
+    const reservationPromises = finalSeats.map(async (sn) => {
+      const mutexKey = `${tripId}_${sn}`;
 
-    return res.status(201).json({ blocked: true, expiresAt, seatsCount: finalSeats.length });
+      // Mutex in-memory (Casi instantáneo, previene ráfagas de Milisegundos JS)
+      if (MUTEX_LOCKS.get(mutexKey)) {
+        console.log(`[MUTEX REJECTED] Seat ${sn} is actively being processed by another thread`);
+        return null;
+      }
+      MUTEX_LOCKS.set(mutexKey, true);
+
+      try {
+        // En lugar de depender de índices únicos de Mongo que pueden fallar, 
+        // verificamos manualmente la base de datos de manera explícita:
+        const existingLock = await SeatReservationModel.findOne({ tripId, seatNumber: sn });
+
+        if (existingLock) {
+          // Si el asiento ya existe en la DB
+          const isMine = existingLock.userId.toString() === userId.toString();
+          const isExpired = existingLock.expiresAt < now;
+
+          if (isMine || isExpired) {
+            // Es mío o ya expiró -> Lo tomo / Extiendo el tiempo
+            existingLock.userId = new mongoose.Types.ObjectId(userId) as any;
+            existingLock.expiresAt = expiresAt;
+            await existingLock.save();
+            return existingLock;
+          } else {
+            // NO es mío y NO ha expirado -> ESTÁ TOMADO POR OTRO. Rechazar inmediatamente.
+            console.log(`[RESERVE SEAT] Seat ${sn} is TAKEN by ${existingLock.userId} until ${existingLock.expiresAt}`);
+            throw new Error("TAKEN_BY_OTHER");
+          }
+        } else {
+          // Si no existe, lo creamos limpio
+          return await SeatReservationModel.create({
+            tripId,
+            seatNumber: sn,
+            userId,
+            expiresAt
+          });
+        }
+      } catch (err: any) {
+        if (err.message === "TAKEN_BY_OTHER" || err.code === 11000) {
+          return null; // Falló porque alguien más nos ganó
+        }
+        throw err;
+      } finally {
+        MUTEX_LOCKS.delete(mutexKey); // Liberar Mutex local siempre al final
+      }
+    });
+
+    const results = await Promise.all(reservationPromises);
+    console.log(`[RESERVE SEAT] Results:`, results.map(r => r?._id || "NULL (TAKEN)"));
+
+    // Si alguno retornó null, significa que se encontró con el error 11000 de colisión
+    const failed = results.filter(r => r === null);
+
+    if (failed.length > 0) {
+      // Hacemos rollback estricto de los que sí logramos pescar en esta bolsa
+      await SeatReservationModel.deleteMany({
+        tripId,
+        seatNumber: { $in: finalSeats },
+        userId
+      });
+      return res.status(409).json({ message: "Uno o más asientos fueron tomados por otra persona simultáneamente." });
+    }
+
+    // Return the assigned seat numbers so the frontend knows which ones were booked
+    return res.status(201).json({
+      blocked: true,
+      expiresAt,
+      seatsCount: finalSeats.length,
+      seatNumbers: finalSeats
+    });
+
   } catch (error: any) {
     if (error.code === 11000) {
       return res.status(409).json({
@@ -201,15 +324,58 @@ export const releaseSeatHandler = async (req: Request, res: Response) => {
     ? seatNumbers.map(Number)
     : (seatNumber !== undefined ? [Number(seatNumber)] : []);
 
-  if (!tripId || finalSeats.length === 0) {
+  if (!tripId) {
     return res.status(400).json({ message: "Datos incompletos" });
   }
 
-  await SeatReservationModel.deleteMany({
-    tripId,
-    seatNumber: { $in: finalSeats },
-    userId: req.user.id,
-  });
+  if (finalSeats.length === 0) {
+    // 🚀 Limpiar TODAS las reservas del usuario en este viaje
+    await SeatReservationModel.deleteMany({
+      tripId,
+      userId: req.user.id,
+    });
+  } else {
+    // 🚀 Limpiar asientos específicos
+    await SeatReservationModel.deleteMany({
+      tripId,
+      seatNumber: { $in: finalSeats },
+      userId: req.user.id,
+    });
+  }
 
   return res.json({ released: true });
+};
+
+/* =========================================================
+   POST /api/seats/clear-trip-locks
+   ---------------------------------------------------------
+   [ADMIN] Libera TODOS los asientos temporalmente bloqueados en un viaje.
+   ========================================================= */
+export const clearTripLocksHandler = async (req: Request, res: Response) => {
+  try {
+    const { tripId } = req.body;
+
+    if (!tripId) {
+      return res.status(400).json({ message: "ID de viaje requerido" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      return res.status(400).json({ message: "ID de viaje inválido" });
+    }
+
+    // 🚀 Limpiar TODAS las reservas de TODOS los usuarios en este viaje
+    const result = await SeatReservationModel.deleteMany({
+      tripId,
+    });
+
+    return res.json({
+      message: "Asientos liberados exitosamente",
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error("❌ clearTripLocksHandler:", error);
+    return res.status(500).json({
+      message: "Error al liberar todos los asientos del viaje",
+    });
+  }
 };

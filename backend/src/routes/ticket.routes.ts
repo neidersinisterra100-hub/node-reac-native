@@ -24,6 +24,10 @@ import {
    getPassengersByTrip,     // Pasajeros por viaje
    registerManualPassenger, // Registro manual (muelle)
    getTicketById,           // Obtener un ticket por ID
+   reserveTicketOnBoarding, // Reservar (pago al abordar)
+   confirmAdminReservation, // Confirmar pago de reserva (admin)
+   cancelTicketByAdmin,     // Cancelar ticket (admin/owner)
+   updatePassengerInfo,     // Modificar datos de pasajero faltantes
 } from "../controllers/ticket.controller.js";
 
 /* =========================================================
@@ -160,6 +164,69 @@ router.post(
    requireAuth,
    // requireOwnerOrAdmin, // Comentado temporalmente para permitir simulación local
    registerManualPassenger
+);
+
+/* =========================================================
+   RESERVAR DE TICKET (PAGO AL ABORDAR)
+   ========================================================= */
+/**
+ * POST /api/tickets/reserve
+ *
+ * Acceso:
+ * - Todos los roles autenticados
+ */
+router.post(
+   "/reserve",
+   requireAuth,
+   reserveTicketOnBoarding
+);
+
+/* =========================================================
+   CONFIRMAR RESERVA (ADMIN)
+   ========================================================= */
+/**
+ * POST /api/tickets/:id/confirm-payment
+ *
+ * Acceso:
+ * - owner
+ * - admin
+ * - super_owner
+ */
+router.post(
+   "/:id/confirm-payment",
+   requireAuth,
+   requireOwnerOrAdmin,
+   confirmAdminReservation
+);
+
+/**
+ * PATCH /api/tickets/:id/cancel
+ *
+ * Acceso:
+ * - owner
+ * - admin
+ * - super_owner
+ */
+router.patch(
+   "/:id/cancel",
+   requireAuth,
+   requireOwnerOrAdmin,
+   cancelTicketByAdmin
+);
+
+/**
+ * PATCH /api/tickets/:id/passenger-info
+ *
+ * Acceso:
+ * - owner
+ * - admin
+ * - super_owner
+ */
+router.patch(
+   "/:id/passenger-info",
+   requireAuth,
+   requireOwnerOrAdmin,
+   updatePassengerInfo
 );
 
 /**

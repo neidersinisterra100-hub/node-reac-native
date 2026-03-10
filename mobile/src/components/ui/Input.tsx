@@ -10,12 +10,14 @@ interface InputProps extends TextInputProps {
     label?: string;
     error?: string;
     icon?: React.ReactNode;
+    rightIcon?: React.ReactNode;
 }
 
 export const Input: React.FC<InputProps> = ({
     label,
     error,
     icon,
+    rightIcon,
     className,
     ...props
 }) => {
@@ -33,6 +35,7 @@ export const Input: React.FC<InputProps> = ({
                     placeholderTextColor="#94A3B8"
                     {...props}
                 />
+                {rightIcon && <StyledView className="ml-2">{rightIcon}</StyledView>}
             </StyledView>
             {error && (
                 <StyledText className="text-red-500 text-xs mt-1 ml-1">

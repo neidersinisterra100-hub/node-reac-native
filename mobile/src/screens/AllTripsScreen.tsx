@@ -104,23 +104,23 @@ export default function AllTripsScreen() {
 
           <StyledView className="flex-1">
             <StyledView className="flex-row flex-wrap items-center">
-              <Text className="font-extrabold text-indigo-700 dark:text-indigo-400 text-lg leading-tight mr-2">
+              <StyledText className="font-extrabold text-indigo-700 dark:text-indigo-400 text-lg leading-tight mr-2">
                 {item.route && typeof item.route === "object" ? item.route.origin : "Origen"}
-              </Text>
+              </StyledText>
 
               <StyledView className="flex-row items-center">
                 <Ship size={12} color="#64748b" style={{ marginRight: 4 }} />
-                <Text className="text-sm text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider">
+                <StyledText className="text-sm text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider">
                   {item.route && typeof item.route === "object" ? item.route.destination : "Destino"}
-                </Text>
+                </StyledText>
               </StyledView>
             </StyledView>
 
             <StyledView className="flex-row items-center mt-2">
               <StyledView className="bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-100 dark:border-slate-700">
-                <Text className="text-[10px] text-nautic-primary font-black uppercase">
+                <StyledText className="text-[10px] text-nautic-primary dark:text-blue-300 font-black uppercase">
                   {item.company && typeof item.company === "object" ? item.company.name : "Empresa"}
-                </Text>
+                </StyledText>
               </StyledView>
             </StyledView>
           </StyledView>
@@ -135,22 +135,22 @@ export default function AllTripsScreen() {
         {/* ===== DETAILS ===== */}
         <StyledView className="flex-row justify-between border-t border-gray-100 dark:border-dark-border pt-3">
           <StyledView className="flex-row items-center space-x-1">
-            <Calendar size={14} className="text-slate-500 dark:text-dark-textMuted" />
-            <StyledText className="text-xs text-slate-600 dark:text-dark-textMuted">
+            <Calendar size={14} className="text-slate-500 dark:text-dark-text-muted" />
+            <StyledText className="text-xs text-slate-600 dark:text-dark-text-muted">
               {format(new Date(item.date), "dd MMM", { locale: es })}
             </StyledText>
           </StyledView>
 
           <StyledView className="flex-row items-center space-x-1">
-            <Clock size={14} className="text-slate-500 dark:text-dark-textMuted" />
-            <StyledText className="text-xs text-slate-600 dark:text-dark-textMuted">
+            <Clock size={14} className="text-slate-500 dark:text-dark-text-muted" />
+            <StyledText className="text-xs text-slate-600 dark:text-dark-text-muted">
               {formatTimeAmPm(item.departureTime)}
             </StyledText>
           </StyledView>
 
           <StyledView className="flex-row items-center space-x-1">
-            <Ship size={14} className="text-slate-500 dark:text-dark-textMuted" />
-            <StyledText className="text-xs text-slate-600 dark:text-dark-textMuted">
+            <Ship size={14} className="text-slate-500 dark:text-dark-text-muted" />
+            <StyledText className="text-xs text-slate-600 dark:text-dark-text-muted">
               {item.transportType}
             </StyledText>
           </StyledView>
@@ -185,7 +185,7 @@ export default function AllTripsScreen() {
               <StyledView className="w-16 h-16 bg-gray-100 dark:bg-dark-surface rounded-full items-center justify-center mb-4">
                 <Ship size={32} className="text-slate-400" />
               </StyledView>
-              <StyledText className="text-slate-500 dark:text-dark-textMuted">
+              <StyledText className="text-slate-500 dark:text-dark-text-muted">
                 No hay viajes programados.
               </StyledText>
             </StyledView>

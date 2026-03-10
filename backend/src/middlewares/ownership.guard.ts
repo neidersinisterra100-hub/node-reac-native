@@ -87,23 +87,19 @@ export const ownershipGuard = async (
     const companyId =
       req.params.companyId ?? req.user.companyId;
 
-    console.log("🔍 ownershipGuard - companyId:", companyId, "params:", req.params);
-
     if (!companyId) {
-      return res.status(400).json({
-        message: "Empresa no definida para esta operación",
+      console.error("❌ [ownershipGuard] Error: No se pudo determinar el companyId del request.", {
+        params: req.params,
+        body: req.body,
+        userCompany: req.user?.companyId
       });
+      return res.status(400).json({ message: "ID de empresa no proporcionado" });
     }
 
-    /* =========================
-       5. BUSCAR EMPRESA
-       ========================= */
     const company = await CompanyModel.findById(companyId);
-
     if (!company) {
-      return res.status(404).json({
-        message: "Empresa no encontrada",
-      });
+      console.error(`❌ [ownershipGuard] Empresa no encontrada: ${companyId}`);
+      return res.status(404).json({ message: "Empresa no encontrada" });
     }
 
     /* =========================

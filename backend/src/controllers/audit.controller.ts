@@ -1,6 +1,8 @@
 import { RequestHandler } from "express";
 import { AuditLogModel } from "../models/auditLog.model.js";
 import { CompanyModel } from "../models/company.model.js";
+import { RouteModel } from "../models/route.model.js";
+import { TripModel } from "../models/trip.model.js";
 import { Types } from "mongoose";
 
 /* =========================================================
@@ -8,12 +10,17 @@ import { Types } from "mongoose";
    ========================================================= */
 const ACTION_LABELS: Record<string, string> = {
     "company.create": "Empresa creada",
+    "company.activate": "Empresa activada",
+    "company.deactivate": "Empresa desactivada",
+    "company.delete": "Empresa eliminada",
     "route.create": "Ruta creada",
     "route.activate": "Ruta activada",
     "route.deactivate": "Ruta desactivada",
+    "route.delete": "Ruta eliminada",
     "trip.create": "Viaje creado",
     "trip.activate": "Viaje activado",
     "trip.deactivate": "Viaje desactivado",
+    "trip.delete": "Viaje eliminado",
     "ticket.manual_purchase": "Ticket registrado manualmente",
     "schedule.activate": "Horario activado",
     "schedule.deactivate": "Horario desactivado",
@@ -59,46 +66,74 @@ export const getCompanyAudit: RequestHandler = async (req, res) => {
 
         const skip = (page - 1) * limit;
 
+        const query = {
+            $or: [
+                { "metadata.companyId": companyId },
+                { entityId: new Types.ObjectId(companyId) },
+            ],
+        };
+
         const [logs, total] = await Promise.all([
-            AuditLogModel.find({ metadata: { $elemMatch: { companyId } } })
+            AuditLogModel.find(query)
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
                 .populate("performedBy", "name email role")
-                .lean()
-                .catch(() =>
-                    // Fallback: buscar sin metadata (ya que companyId puede estar en raíz del metadata)
-                    AuditLogModel.find({
-                        $or: [
-                            { "metadata.companyId": companyId },
-                            { entityId: new Types.ObjectId(companyId) },
-                        ],
-                    })
-                        .sort({ createdAt: -1 })
-                        .skip(skip)
-                        .limit(limit)
-                        .populate("performedBy", "name email role")
-                        .lean()
-                ),
-            AuditLogModel.countDocuments({
-                $or: [
-                    { "metadata.companyId": companyId },
-                    { entityId: new Types.ObjectId(companyId) },
-                ],
-            }),
+                .lean(),
+            AuditLogModel.countDocuments(query),
         ]);
 
-        const enriched = logs.map(log => ({
-            id: log._id,
-            action: log.action,
-            actionLabel: ACTION_LABELS[log.action] ?? log.action,
-            entity: log.entity,
-            entityId: log.entityId,
-            performedBy: log.performedBy,
-            source: log.source,
-            metadata: log.metadata,
-            createdAt: log.createdAt,
-        }));
+        const enriched = await Promise.all(
+            logs.map(async (log) => {
+                const metadata = (log.metadata ?? {}) as Record<string, unknown>;
+                let entityName = "";
+                let entitySubtitle = "";
+
+                if (log.entity === "company") {
+                    entityName = "Company";
+                    entitySubtitle = String(metadata.companyName ?? "");
+                    if (!entitySubtitle && Types.ObjectId.isValid(String(log.entityId))) {
+                        const company = await CompanyModel.findById(log.entityId).select("name").lean();
+                        entitySubtitle = company?.name ?? "";
+                    }
+                } else if (log.entity === "route") {
+                    entityName = "Route";
+                    entitySubtitle = String(metadata.routeName ?? "");
+                    if (!entitySubtitle && Types.ObjectId.isValid(String(log.entityId))) {
+                        const route = await RouteModel.findById(log.entityId).select("origin destination").lean();
+                        if (route) {
+                            entitySubtitle = `${route.origin} - ${route.destination}`;
+                        }
+                    }
+                } else if (log.entity === "trip") {
+                    entityName = "Trip";
+                    entitySubtitle = String(metadata.routeName ?? "");
+                    if (!entitySubtitle && Types.ObjectId.isValid(String(log.entityId))) {
+                        const trip = await TripModel.findById(log.entityId).populate("routeId", "origin destination").lean();
+                        const route = trip?.routeId as { origin?: string; destination?: string } | undefined;
+                        if (route?.origin && route?.destination) {
+                            entitySubtitle = `${route.origin} - ${route.destination}`;
+                        }
+                    }
+                } else {
+                    entityName = log.entity;
+                }
+
+                return {
+                    id: log._id,
+                    action: log.action,
+                    actionLabel: ACTION_LABELS[log.action] ?? log.action,
+                    entity: log.entity,
+                    entityName,
+                    entitySubtitle,
+                    entityId: log.entityId,
+                    performedBy: log.performedBy,
+                    source: log.source,
+                    metadata: log.metadata,
+                    createdAt: log.createdAt,
+                };
+            })
+        );
 
         return res.json({
             data: enriched,

@@ -9,8 +9,7 @@ import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { getAllRoutes } from '../../services/route.service';
 import { getTrips, tripService } from '../../services/trip.service';
-import { Map, MapIcon, Compass, Anchor, Ticket, Building2, Search, Menu, Calendar, Ship, MapPin } from 'lucide-react-native';
-import { WeatherWidget } from '../../components/dashboard/WeatherWidget';
+import { Map, MapIcon, Compass, Anchor, Ticket, Building2, Bell, Menu, Calendar, Ship, MapPin } from 'lucide-react-native';
 import { useLocation } from '../../context/LocationContext';
 import { getAllCompanies, getMyCompanies } from '../../services/company.service';
 import { getMyTickets } from '../../services/ticket.service';
@@ -45,6 +44,7 @@ export const CompanyDashboardScreen = () => {
         try {
             setLoading(true);
             const munId = selectedMunicipio?._id;
+            console.log("DEBUG: Dashboard Loading for Municipio:", selectedMunicipio?.name, "ID:", munId);
 
             const [routesData, tripsData, companies] = await Promise.all([
                 getAllRoutes(munId),
@@ -208,9 +208,9 @@ export const CompanyDashboardScreen = () => {
                         </StyledView>
                     </StyledView>
                     <StyledView className="flex-row gap-2">
-                        <TouchableOpacity onPress={() => navigation.navigate('LocationSelection')}>
+                        <TouchableOpacity onPress={() => {/* Notificaciones próximamente */ }}>
                             <StyledView className="bg-white/10 p-2 rounded-lg">
-                                <Search size={18} color="white" />
+                                <Bell size={18} color="white" />
                             </StyledView>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => navigation.navigate('Menu')}>
@@ -252,13 +252,15 @@ export const CompanyDashboardScreen = () => {
                 {activeFacet === 'fluvial' ? (
                     <>
                         {/* Location Indicator */}
-                        <StyledView className="flex-row items-center mb-4 bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10">
-                            <MapPin size={16} color="#10b981" />
-                            <StyledText className="ml-2 text-emerald-700 font-bold text-xs uppercase tracking-widest">
-                                Viendo Guía de: <StyledText className="font-black">{selectedCity?.name || selectedMunicipio?.name || "Timbiquí"}</StyledText>
-                                {selectedCity && selectedMunicipio ? ` (${selectedMunicipio.name})` : ''}
-                            </StyledText>
-                        </StyledView>
+                        <TouchableOpacity onPress={() => navigation.navigate('WeatherMarine')}>
+                            <StyledView className="flex-row items-center mb-4 bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10 active:bg-emerald-500/10">
+                                <MapPin size={16} color="#10b981" />
+                                <StyledText className="ml-2 text-emerald-700 font-bold text-xs uppercase tracking-widest">
+                                    Viendo Guía de: <StyledText className="font-black">{selectedCity?.name || selectedMunicipio?.name || "Timbiquí"}</StyledText>
+                                    {selectedCity && selectedMunicipio ? ` (${selectedMunicipio.name})` : ''}
+                                </StyledText>
+                            </StyledView>
+                        </TouchableOpacity>
 
                         {/* Shortcuts */}
                         <StyledView className="flex-row justify-between mb-4">
@@ -324,9 +326,6 @@ export const CompanyDashboardScreen = () => {
                             )}
                         </StyledView>
 
-                        {/* Weather Widget */}
-                        <WeatherWidget />
-
                         {loading ? (
                             <DashboardSkeleton />
                         ) : (
@@ -367,7 +366,7 @@ export const CompanyDashboardScreen = () => {
                                                             </StyledText>
                                                             <StyledView className="flex-row items-center bg-slate-100 dark:bg-dark-bg px-2 py-1 rounded-lg">
                                                                 <MapIcon size={12} color="#64748b" style={{ marginRight: 4 }} />
-                                                                <StyledText className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tighter">
+                                                                <StyledText className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight">
                                                                     {item.destination}
                                                                 </StyledText>
                                                             </StyledView>
@@ -442,7 +441,7 @@ export const CompanyDashboardScreen = () => {
                                                     </StyledText>
                                                     <StyledView className={`px-2.5 py-1 rounded-lg ${isActive ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-rose-100 dark:bg-rose-900/40'}`}>
                                                         <StyledText className={`text-[9px] font-black tracking-widest ${isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                                                            {isActive ? 'CONFIRMADO' : 'PENDIENTE'}
+                                                            {isActive ? 'ACTIVO' : 'PENDIENTE'}
                                                         </StyledText>
                                                     </StyledView>
                                                 </StyledView>

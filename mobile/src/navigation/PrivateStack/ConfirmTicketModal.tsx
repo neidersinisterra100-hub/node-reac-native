@@ -154,7 +154,11 @@ export default function ConfirmTicketModal() {
       const response = await registerManualPassenger({
         tripId,
         passengerName: user?.name || "Pasajero",
-        passengerId: "000000",
+        // En una app real de producción idealmente des-enmascaramos el identificador si viene con asteriscos,
+        // pero por ahora tomamos el tal cual de contexto
+        passengerId: user?.identificationNumber || "000000",
+        passengerPhone: user?.phone || "",
+        passengerEmail: user?.email || "",
         seatNumbers: finalSeats,
       });
 

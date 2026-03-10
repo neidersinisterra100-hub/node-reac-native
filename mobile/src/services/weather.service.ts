@@ -7,6 +7,7 @@ export interface DayForecast {
     condition: string;
     icon: string;
     day: string; // "Hoy", "Mañana"
+    rainProbability?: number;
 }
 
 export interface WeatherData {

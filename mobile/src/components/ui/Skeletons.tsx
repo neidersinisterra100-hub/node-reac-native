@@ -110,3 +110,28 @@ export function PassengersSkeleton({ count = 6 }: { count?: number }) {
         </StyledView>
     );
 }
+
+/* --- Weather Marine Skeleton --- */
+export function WeatherMarineSkeleton() {
+    return (
+        <StyledView className="flex-1 px-4 pt-10 space-y-6">
+            <Bone className="h-40 w-full rounded-[32px] mb-2" />
+            <StyledView className="flex-row gap-3">
+                <Bone className="flex-1 h-32 rounded-[32px]" />
+                <Bone className="flex-1 h-32 rounded-[32px]" />
+            </StyledView>
+            <StyledView className="bg-white dark:bg-dark-surface rounded-[32px] p-6 space-y-4 shadow-sm mt-4">
+                <Bone className="h-6 w-3/4 rounded mb-2" />
+                {[1, 2, 3, 4].map(i => (
+                    <StyledView key={i} className="flex-row items-center justify-between py-2 border-b border-slate-50 dark:border-dark-border/20">
+                        <StyledView className="flex-row items-center">
+                            <Bone className="w-8 h-8 rounded-lg mr-3" />
+                            <Bone className="w-24 h-4 rounded" />
+                        </StyledView>
+                        <Bone className="h-6 w-12 rounded" />
+                    </StyledView>
+                ))}
+            </StyledView>
+        </StyledView>
+    );
+}

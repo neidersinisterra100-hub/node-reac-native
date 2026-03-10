@@ -12,7 +12,7 @@ import { styled } from "nativewind";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { Ship, Users, Armchair, ChevronDown, Plus, Search, X } from "lucide-react-native";
+import { Ship, Users, Armchair, ChevronDown, Plus, Search, X, Unlock } from "lucide-react-native";
 
 import { ScreenContainer } from "../components/ui/ScreenContainer";
 import AppHeader from "../components/ui/AppHeader";
@@ -25,7 +25,10 @@ import {
   getPassengersByTrip,
   registerManualPassenger,
   getTripsForPassengerControl,
+  confirmAdminReservation,
+  updatePassengerInfo,
 } from "../services/ticket.service";
+import { clearTripLocks } from "../services/seat.service";
 
 /* ================= TYPES ================= */
 
@@ -44,6 +47,9 @@ type Passenger = {
   seatNumber: number;
   status: string;
   passengerName?: string;
+  passengerId?: string;
+  passengerPhone?: string;
+  passengerEmail?: string;
 };
 
 const StyledView = styled(View);
@@ -61,6 +67,15 @@ export default function PassengersScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [manualName, setManualName] = useState("");
+  const [manualId, setManualId] = useState("");
+  const [manualPhone, setManualPhone] = useState("");
+  const [manualEmail, setManualEmail] = useState("");
+  const [expandedPassengerId, setExpandedPassengerId] = useState<string | null>(null);
+
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingTicketId, setEditingTicketId] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
 
   const loadTrips = async () => {
     try {
@@ -93,22 +108,107 @@ export default function PassengersScreen() {
   };
 
   const handleRegisterManualPassenger = async () => {
-    if (!selectedTrip || !manualName.trim()) return;
+    if (!selectedTrip || !manualName.trim() || !manualId.trim()) {
+      Alert.alert("Atención", "El nombre y el documento son obligatorios.");
+      return;
+    }
 
     try {
       await registerManualPassenger({
         tripId: selectedTrip.id,
         passengerName: manualName.trim(),
-        passengerId: "MANUAL-" + Date.now(),
+        passengerId: manualId.trim(),
+        passengerPhone: manualPhone.trim() || undefined,
+        passengerEmail: manualEmail.trim() || undefined,
       });
 
       setManualName("");
+      setManualId("");
+      setManualPhone("");
+      setManualEmail("");
       setModalVisible(false);
       loadPassengers(selectedTrip.id);
     } catch (error) {
       console.error("❌ Error registering passenger", error);
       Alert.alert("Error", "No se pudo registrar el pasajero");
     }
+  };
+
+  const handleUpdatePassengerInfo = async () => {
+    if (!editPhone.trim() && !editEmail.trim()) {
+      Alert.alert("Atención", "Proporciona al menos un teléfono o correo.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await updatePassengerInfo(editingTicketId, {
+        passengerPhone: editPhone.trim() || undefined,
+        passengerEmail: editEmail.trim() || undefined,
+      });
+
+      Alert.alert("Éxito", "Información del pasajero actualizada.");
+      setEditModalVisible(false);
+      if (selectedTrip) loadPassengers(selectedTrip.id);
+    } catch (error) {
+      console.error("❌ Error updating passenger info", error);
+      Alert.alert("Error", "No se pudo actualizar la información.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmReservation = async (ticketId: string) => {
+    Alert.alert(
+      "Confirmar Pago",
+      "¿El pasajero ya pagó este boleto?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sí, Pagó",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await confirmAdminReservation(ticketId);
+              Alert.alert("Éxito", "El ticket ha sido confirmado y está activo.");
+              loadPassengers(selectedTrip!.id);
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "No se pudo confirmar el pago.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleClearLocks = async () => {
+    if (!selectedTrip) return;
+    Alert.alert(
+      "Liberar Asientos Bloqueados",
+      "¿Estás seguro de que deseas liberar todos los asientos que han quedado bloqueados temporalmente?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sí, Liberar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await clearTripLocks(selectedTrip.id);
+              Alert.alert("Éxito", "Los asientos bloqueados han sido liberados.");
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "No se pudieron liberar los asientos.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   useEffect(() => {
@@ -192,14 +292,24 @@ export default function PassengersScreen() {
               <StyledView className="h-1 w-6 bg-emerald-500 rounded-full mt-1" />
             </StyledView>
 
-            {selectedTrip && (
-              <TouchableOpacity
-                onPress={() => setModalVisible(true)}
-                className="bg-emerald-500 p-2.5 rounded-xl shadow-sm shadow-emerald-500/30 active:scale-95 transition-transform"
-              >
-                <Plus size={20} color="white" strokeWidth={3} />
-              </TouchableOpacity>
-            )}
+            <StyledView className="flex-row items-center space-x-2">
+              {selectedTrip && (
+                <TouchableOpacity
+                  onPress={handleClearLocks}
+                  className="bg-amber-500 p-2.5 rounded-xl shadow-sm shadow-amber-500/30 active:scale-95 transition-transform mr-2"
+                >
+                  <Unlock size={20} color="white" strokeWidth={3} />
+                </TouchableOpacity>
+              )}
+              {selectedTrip && (
+                <TouchableOpacity
+                  onPress={() => setModalVisible(true)}
+                  className="bg-emerald-500 p-2.5 rounded-xl shadow-sm shadow-emerald-500/30 active:scale-95 transition-transform"
+                >
+                  <Plus size={20} color="white" strokeWidth={3} />
+                </TouchableOpacity>
+              )}
+            </StyledView>
           </StyledView>
 
           {loading ? (
@@ -221,35 +331,129 @@ export default function PassengersScreen() {
                   </StyledText>
                 </StyledView>
               }
-              renderItem={({ item }) => (
-                <PressableCard
-                  onPress={() => { }}
-                  className="bg-white dark:bg-dark-surface border-slate-100 dark:border-dark-border/50 p-4 mb-3 rounded-3xl"
-                  style={{ borderLeftWidth: 6, borderLeftColor: "#10b981" }}
-                >
-                  <StyledView className="flex-row items-center justify-between">
-                    <StyledView className="flex-row items-center flex-1">
-                      <StyledView className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-2xl mr-4">
-                        <Armchair size={24} color="#10b981" strokeWidth={2.5} />
-                      </StyledView>
-                      <StyledView className="flex-1">
-                        <StyledText className="text-lg font-black text-nautic-navy dark:text-white leading-tight">
-                          {item.passengerName || "Pasajero Manual"}
-                        </StyledText>
-                        <StyledView className="flex-row items-center mt-1">
-                          <StyledText className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-dark-bg px-2 py-0.5 rounded-md mr-2">
-                            Asiento #{item.seatNumber || "L"}
-                          </StyledText>
-                          <StyledText className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
-                            Confirmado
-                          </StyledText>
+              renderItem={({ item }) => {
+                const isExpanded = expandedPassengerId === item._id;
+                const isIncomplete = !item.passengerPhone || !item.passengerEmail;
+
+                return (
+                  <PressableCard
+                    onPress={() => setExpandedPassengerId(isExpanded ? null : item._id)}
+                    className={`bg-white dark:bg-dark-surface border p-4 mb-3 rounded-3xl ${isIncomplete ? "border-amber-200 dark:border-amber-900/50" : "border-slate-100 dark:border-dark-border/50"}`}
+                    style={{ borderLeftWidth: 6, borderLeftColor: isIncomplete ? "#f59e0b" : "#10b981" }}
+                  >
+                    <StyledView className="flex-row items-center justify-between">
+                      <StyledView className="flex-row items-center flex-1">
+                        <StyledView className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-2xl mr-4">
+                          <Armchair size={24} color="#10b981" strokeWidth={2.5} />
+                        </StyledView>
+                        <StyledView className="flex-1">
+                          <StyledView className="flex-row items-center">
+                            <StyledText className="text-lg font-black text-nautic-navy dark:text-white leading-tight mr-2">
+                              {item.passengerName || "Pasajero Manual"}
+                            </StyledText>
+                            {isIncomplete && (
+                              <StyledView className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                                <StyledText className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                  Incompleto
+                                </StyledText>
+                              </StyledView>
+                            )}
+                          </StyledView>
+                          <StyledView className="flex-row items-center mt-1">
+                            <StyledText className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-dark-bg px-2 py-0.5 rounded-md mr-2">
+                              Asiento #{item.seatNumber || "L"}
+                            </StyledText>
+                            {item.status === "reserved" ? (
+                              <StyledText className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-tighter bg-yellow-100 dark:bg-yellow-900/30 px-2 rounded-sm">
+                                Pagar al Abordar
+                              </StyledText>
+                            ) : item.status === "active" ? (
+                              <StyledText className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+                                Confirmado
+                              </StyledText>
+                            ) : item.status === "used" ? (
+                              <StyledText className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-tighter">
+                                Abordó
+                              </StyledText>
+                            ) : (
+                              <StyledText className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tighter">
+                                {item.status}
+                              </StyledText>
+                            )}
+                          </StyledView>
                         </StyledView>
                       </StyledView>
+
+                      <StyledView className="flex-row items-center">
+                        {item.status === "reserved" ? (
+                          <TouchableOpacity
+                            onPress={() => handleConfirmReservation(item._id)}
+                            className="bg-emerald-500 px-3 py-2 rounded-xl active:opacity-80 mr-2"
+                          >
+                            <StyledText className="text-white text-xs font-bold">Cobrar</StyledText>
+                          </TouchableOpacity>
+                        ) : null}
+                        <ChevronDown
+                          size={20}
+                          color="#cbd5e1"
+                          style={{ transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }}
+                        />
+                      </StyledView>
                     </StyledView>
-                    <ChevronDown size={14} color="#cbd5e1" />
-                  </StyledView>
-                </PressableCard>
-              )}
+
+                    {isExpanded && (
+                      <StyledView className="mt-4 pt-4 border-t border-slate-100 dark:border-dark-border/50">
+                        <StyledView className="flex-row justify-between mb-2">
+                          <StyledText className="text-sm text-slate-500 dark:text-slate-400 font-medium">Nombre Completo</StyledText>
+                          <StyledText className="text-sm font-bold text-nautic-navy dark:text-white">
+                            {item.passengerName || "No registrado"}
+                          </StyledText>
+                        </StyledView>
+                        <StyledView className="flex-row justify-between mb-2">
+                          <StyledText className="text-sm text-slate-500 dark:text-slate-400 font-medium">Documento</StyledText>
+                          <StyledText className="text-sm font-bold text-nautic-navy dark:text-white">
+                            {item.passengerId || "No registrado"}
+                          </StyledText>
+                        </StyledView>
+                        <StyledView className="flex-row justify-between mb-2">
+                          <StyledText className="text-sm text-slate-500 dark:text-slate-400 font-medium">Teléfono</StyledText>
+                          <StyledText className="text-sm font-bold text-nautic-navy dark:text-white">
+                            {item.passengerPhone || "No registrado"}
+                          </StyledText>
+                        </StyledView>
+                        <StyledView className="flex-row justify-between mb-2">
+                          <StyledText className="text-sm text-slate-500 dark:text-slate-400 font-medium">Email / Contacto Emergencia</StyledText>
+                          <StyledText className="text-sm font-bold text-nautic-navy dark:text-white">
+                            {item.passengerEmail || "No registrado"}
+                          </StyledText>
+                        </StyledView>
+                        <StyledView className="flex-row justify-between">
+                          <StyledText className="text-sm text-slate-500 dark:text-slate-400 font-medium">Estado del Asiento</StyledText>
+                          <StyledText className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                            {item.status === 'active' ? 'Pagado y Confirmado' : item.status === 'reserved' ? 'Pendiente de Pago' : item.status}
+                          </StyledText>
+                        </StyledView>
+
+                        {isIncomplete && (
+                          <StyledView className="mt-4 pt-4 border-t border-slate-100 dark:border-dark-border/50 items-end">
+                            <StyledView className="w-36">
+                              <PrimaryButton
+                                label="Completar Datos"
+                                onPress={() => {
+                                  setEditingTicketId(item._id);
+                                  setEditPhone(item.passengerPhone || "");
+                                  setEditEmail(item.passengerEmail || "");
+                                  setEditModalVisible(true);
+                                }}
+                              />
+                            </StyledView>
+                          </StyledView>
+                        )}
+                      </StyledView>
+                    )}
+                  </PressableCard>
+                );
+              }}
             />
           )}
         </StyledView>
@@ -293,18 +497,69 @@ export default function PassengersScreen() {
               style={{
                 backgroundColor: '#f8fafc',
                 borderRadius: 16,
+                marginBottom: 12,
+                fontSize: 16,
+                height: 56
+              }}
+              textColor="#0f172a"
+              theme={{ roundness: 16, colors: { primary: '#10b981', onSurfaceVariant: '#94a3b8' } }}
+            />
+
+            <TextInput
+              label="Documento de Identidad"
+              value={manualId}
+              onChangeText={setManualId}
+              mode="outlined"
+              outlineColor="transparent"
+              activeOutlineColor="#10b981"
+              style={{
+                backgroundColor: '#f8fafc',
+                borderRadius: 16,
+                marginBottom: 12,
+                fontSize: 16,
+                height: 56
+              }}
+              textColor="#0f172a"
+              theme={{ roundness: 16, colors: { primary: '#10b981', onSurfaceVariant: '#94a3b8' } }}
+            />
+
+            <TextInput
+              label="Teléfono (Opcional)"
+              value={manualPhone}
+              onChangeText={setManualPhone}
+              mode="outlined"
+              outlineColor="transparent"
+              activeOutlineColor="#10b981"
+              keyboardType="phone-pad"
+              style={{
+                backgroundColor: '#f8fafc',
+                borderRadius: 16,
+                marginBottom: 12,
+                fontSize: 16,
+                height: 56
+              }}
+              textColor="#0f172a"
+              theme={{ roundness: 16, colors: { primary: '#10b981', onSurfaceVariant: '#94a3b8' } }}
+            />
+
+            <TextInput
+              label="Correo Electrónico (Opcional)"
+              value={manualEmail}
+              onChangeText={setManualEmail}
+              mode="outlined"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              outlineColor="transparent"
+              activeOutlineColor="#10b981"
+              style={{
+                backgroundColor: '#f8fafc',
+                borderRadius: 16,
                 marginBottom: 24,
                 fontSize: 16,
                 height: 56
               }}
               textColor="#0f172a"
-              theme={{
-                roundness: 16,
-                colors: {
-                  primary: '#10b981',
-                  onSurfaceVariant: '#94a3b8'
-                }
-              }}
+              theme={{ roundness: 16, colors: { primary: '#10b981', onSurfaceVariant: '#94a3b8' } }}
             />
 
             <PrimaryButton
@@ -314,6 +569,83 @@ export default function PassengersScreen() {
             />
           </Card>
         </Modal>
+
+        {/* ================= EDIT PASSENGER INFO MODAL ================= */}
+        <Modal
+          visible={editModalVisible}
+          onDismiss={() => setEditModalVisible(false)}
+          contentContainerStyle={{
+            backgroundColor: "transparent",
+            padding: 20,
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+        >
+          <Card className="w-full max-w-[340px] bg-white dark:bg-dark-bg p-6 rounded-[32px] border-0 shadow-2xl">
+            <StyledView className="flex-row justify-between items-center mb-6">
+              <StyledView>
+                <StyledText className="text-2xl font-black text-nautic-navy dark:text-white">
+                  Completar
+                </StyledText>
+                <StyledText className="text-sm font-bold text-slate-400">Datos del Pasajero</StyledText>
+              </StyledView>
+              <TouchableOpacity
+                onPress={() => setEditModalVisible(false)}
+                className="bg-slate-100 dark:bg-dark-surface p-2 rounded-full"
+              >
+                <X size={20} color="#64748b" />
+              </TouchableOpacity>
+            </StyledView>
+
+            <TextInput
+              label="Teléfono"
+              value={editPhone}
+              onChangeText={setEditPhone}
+              mode="outlined"
+              outlineColor="transparent"
+              activeOutlineColor="#f59e0b"
+              keyboardType="phone-pad"
+              style={{
+                backgroundColor: '#f8fafc',
+                borderRadius: 16,
+                marginBottom: 12,
+                fontSize: 16,
+                height: 56
+              }}
+              textColor="#0f172a"
+              theme={{ roundness: 16, colors: { primary: '#f59e0b', onSurfaceVariant: '#94a3b8' } }}
+            />
+
+            <TextInput
+              label="Correo Electrónico"
+              value={editEmail}
+              onChangeText={setEditEmail}
+              mode="outlined"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              outlineColor="transparent"
+              activeOutlineColor="#f59e0b"
+              style={{
+                backgroundColor: '#f8fafc',
+                borderRadius: 16,
+                marginBottom: 24,
+                fontSize: 16,
+                height: 56
+              }}
+              textColor="#0f172a"
+              theme={{ roundness: 16, colors: { primary: '#f59e0b', onSurfaceVariant: '#94a3b8' } }}
+            />
+
+            <StyledView className="bg-amber-500 rounded-xl overflow-hidden shadow-sm shadow-amber-500/30">
+              <PrimaryButton
+                label={loading ? "Actualizando..." : "Actualizar"}
+                onPress={handleUpdatePassengerInfo}
+                disabled={loading}
+              />
+            </StyledView>
+          </Card>
+        </Modal>
+
       </Portal>
     </ScreenContainer>
   );

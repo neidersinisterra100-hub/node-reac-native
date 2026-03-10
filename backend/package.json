@@ -10,7 +10,8 @@
     "setup-driver": "node --import tsx scripts/setup-driver.ts",
     "tunnel": "cloudflared tunnel --url http://localhost:3000",
     "tunnel-expo": "cloudflared tunnel --url http://localhost:8081",
-    "tunnel-ngrok": "ngrok http 3000 --url=gramophonical-silvana-unmurmuringly.ngrok-free.dev"
+    "tunnel-ngrok": "ngrok http 3000 --url=gramophonical-silvana-unmurmuringly.ngrok-free.dev",
+    "fix-linkage": "node --import tsx scripts/fix-linkage.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
@@ -28,18 +29,21 @@
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
+    "leaflet": "^1.9.4",
     "mercadopago": "^2.7.0",
     "mongoose": "^7.5.0",
     "mongoose-unique-validator": "^4.0.1",
     "pino": "^10.2.0",
     "pino-pretty": "^13.1.3",
     "prisma": "^6.19.2",
+    "react-leaflet": "^5.0.0",
     "redis": "^5.10.0",
     "resend": "^6.7.0",
     "uuid": "^13.0.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.21",
     "@types/uuid": "^10.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.3.1"

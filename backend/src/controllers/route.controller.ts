@@ -5,6 +5,7 @@ import { z } from "zod";
 import { RouteModel } from "../models/route.model.js";
 import { TripModel } from "../models/trip.model.js";
 import { CompanyModel } from "../models/company.model.js";
+import { AuditLogModel } from "../models/auditLog.model.js";
 import { AuthRequest } from "../middlewares/requireAuth.js";
 import type { RouteDocument } from "../models/route.model.js";
 
@@ -96,6 +97,19 @@ export const createRoute: RequestHandler = async (req, res) => {
       isActive: true, // ✅ CORRECTO
     });
 
+    await AuditLogModel.create({
+      action: "route.create",
+      entity: "route",
+      entityId: route._id,
+      performedBy: authReq.user.id,
+      source: "manual",
+      metadata: {
+        companyId: company._id.toString(),
+        companyName: company.name,
+        routeName: `${route.origin} → ${route.destination}`,
+      },
+    }).catch(() => { });
+
     return res.status(201).json(toRouteDTO(route));
   } catch (error) {
     console.error("❌ [createRoute] Error:", error);
@@ -179,6 +193,20 @@ export const toggleRouteActive: RequestHandler = async (req, res) => {
       );
     }
 
+    const action = newStatus ? "route.activate" : "route.deactivate";
+    await AuditLogModel.create({
+      action,
+      entity: "route",
+      entityId: route._id,
+      performedBy: authReq.user.id,
+      source: "manual",
+      metadata: {
+        companyId: company._id.toString(),
+        companyName: company.name,
+        routeName: `${route.origin} → ${route.destination}`,
+      },
+    }).catch(() => { });
+
     await session.commitTransaction();
     return res.json(toRouteDTO(route));
   } catch (error) {
@@ -221,6 +249,19 @@ export const deleteRoute: RequestHandler = async (req, res) => {
 
     // Eliminar viajes asociados
     await TripModel.deleteMany({ routeId: route._id }, { session }); // ✅ FK Correcta
+
+    await AuditLogModel.create({
+      action: "route.delete",
+      entity: "route",
+      entityId: route._id,
+      performedBy: authReq.user.id,
+      source: "manual",
+      metadata: {
+        companyId: company._id.toString(),
+        companyName: company.name,
+        routeName: `${route.origin} → ${route.destination}`,
+      },
+    }).catch(() => { });
 
     await RouteModel.findByIdAndDelete(routeId, { session });
 

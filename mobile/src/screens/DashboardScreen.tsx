@@ -49,11 +49,11 @@ export default function DashboardScreen() {
             const isPlaceholder = munId?.startsWith('default_');
 
             const filteredRoutes = munId && !isPlaceholder
-                ? routesData.filter((r: any) => r.municipioId === munId)
+                ? routesData.filter((r: any) => r.municipioId === munId || r.cityId === munId)
                 : routesData;
 
             const filteredTrips = munId && !isPlaceholder
-                ? tripsData.filter((t: any) => t.municipioId === munId)
+                ? tripsData.filter((t: any) => t.municipioId === munId || t.route?.municipioId === munId)
                 : tripsData;
 
             setRoutes(filteredRoutes.slice(0, 2));

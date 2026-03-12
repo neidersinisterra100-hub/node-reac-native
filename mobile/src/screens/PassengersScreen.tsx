@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, FlatList, Alert, ActivityIndicator, TouchableOpacity, ScrollView } from "react-native";
+import { View, FlatList, Alert, ActivityIndicator, TouchableOpacity, ScrollView, Platform } from "react-native";
 import {
   Text,
   Menu,
@@ -7,6 +7,7 @@ import {
   TextInput,
   Modal,
   Portal,
+  Snackbar,
 } from "react-native-paper";
 import { styled } from "nativewind";
 import { useNavigation } from "@react-navigation/native";
@@ -26,6 +27,7 @@ import {
   registerManualPassenger,
   getTripsForPassengerControl,
   confirmAdminReservation,
+  cancelTicket,
   updatePassengerInfo,
 } from "../services/ticket.service";
 import { clearTripLocks } from "../services/seat.service";
@@ -76,6 +78,28 @@ export default function PassengersScreen() {
   const [editingTicketId, setEditingTicketId] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [processingTicketId, setProcessingTicketId] = useState<string | null>(null);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarError, setSnackbarError] = useState(false);
+
+  const showInfo = (title: string, message: string) => {
+    setSnackbarMessage(`${title}: ${message}`);
+    setSnackbarError(title.toLowerCase().includes("error"));
+    setSnackbarVisible(true);
+  };
+
+  const showConfirm = async (title: string, message: string): Promise<boolean> => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      return window.confirm(`${title}\n\n${message}`);
+    }
+    return new Promise((resolve) => {
+      Alert.alert(title, message, [
+        { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
+        { text: "Confirmar", style: "destructive", onPress: () => resolve(true) },
+      ]);
+    });
+  };
 
   const loadTrips = async () => {
     try {
@@ -101,7 +125,7 @@ export default function PassengersScreen() {
       setPassengers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("❌ Error loading passengers", error);
-      Alert.alert("Error", "No se pudieron cargar los pasajeros");
+      showInfo("Error", "No se pudieron cargar los pasajeros");
     } finally {
       setLoading(false);
     }
@@ -109,7 +133,7 @@ export default function PassengersScreen() {
 
   const handleRegisterManualPassenger = async () => {
     if (!selectedTrip || !manualName.trim() || !manualId.trim()) {
-      Alert.alert("Atención", "El nombre y el documento son obligatorios.");
+      showInfo("Atención", "El nombre y el documento son obligatorios.");
       return;
     }
 
@@ -128,15 +152,16 @@ export default function PassengersScreen() {
       setManualEmail("");
       setModalVisible(false);
       loadPassengers(selectedTrip.id);
+      showInfo("Éxito", "Pasajero registrado correctamente.");
     } catch (error) {
       console.error("❌ Error registering passenger", error);
-      Alert.alert("Error", "No se pudo registrar el pasajero");
+      showInfo("Error", "No se pudo registrar el pasajero");
     }
   };
 
   const handleUpdatePassengerInfo = async () => {
     if (!editPhone.trim() && !editEmail.trim()) {
-      Alert.alert("Atención", "Proporciona al menos un teléfono o correo.");
+      showInfo("Atención", "Proporciona al menos un teléfono o correo.");
       return;
     }
 
@@ -147,68 +172,73 @@ export default function PassengersScreen() {
         passengerEmail: editEmail.trim() || undefined,
       });
 
-      Alert.alert("Éxito", "Información del pasajero actualizada.");
+      showInfo("Éxito", "Información del pasajero actualizada.");
       setEditModalVisible(false);
       if (selectedTrip) loadPassengers(selectedTrip.id);
     } catch (error) {
       console.error("❌ Error updating passenger info", error);
-      Alert.alert("Error", "No se pudo actualizar la información.");
+      showInfo("Error", "No se pudo actualizar la información.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleConfirmReservation = async (ticketId: string) => {
-    Alert.alert(
-      "Confirmar Pago",
-      "¿El pasajero ya pagó este boleto?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Sí, Pagó",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await confirmAdminReservation(ticketId);
-              Alert.alert("Éxito", "El ticket ha sido confirmado y está activo.");
-              loadPassengers(selectedTrip!.id);
-            } catch (error) {
-              console.error(error);
-              Alert.alert("Error", "No se pudo confirmar el pago.");
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
+    const confirmed = await showConfirm("Confirmar Pago", "¿El pasajero ya pagó este boleto?");
+    if (!confirmed) return;
+    try {
+      setProcessingTicketId(ticketId);
+      await confirmAdminReservation(ticketId);
+      showInfo("Éxito", "El ticket ha sido confirmado y está activo.");
+      if (selectedTrip) {
+        await loadPassengers(selectedTrip.id);
+      }
+    } catch (error) {
+      console.error(error);
+      showInfo("Error", "No se pudo confirmar el pago.");
+    } finally {
+      setProcessingTicketId(null);
+    }
+  };
+
+  const handleCancelPassenger = async (ticketId: string) => {
+    const confirmed = await showConfirm(
+      "Eliminar Pasajero",
+      "¿Seguro que quieres eliminar este pasajero?"
     );
+    if (!confirmed) return;
+    try {
+      setProcessingTicketId(ticketId);
+      await cancelTicket(ticketId);
+      showInfo("Éxito", "Pasajero eliminado correctamente.");
+      if (selectedTrip) {
+        await loadPassengers(selectedTrip.id);
+      }
+    } catch (error) {
+      console.error("❌ Error canceling ticket", error);
+      showInfo("Error", "No se pudo eliminar el pasajero.");
+    } finally {
+      setProcessingTicketId(null);
+    }
   };
 
   const handleClearLocks = async () => {
     if (!selectedTrip) return;
-    Alert.alert(
+    const confirmed = await showConfirm(
       "Liberar Asientos Bloqueados",
-      "¿Estás seguro de que deseas liberar todos los asientos que han quedado bloqueados temporalmente?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Sí, Liberar",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await clearTripLocks(selectedTrip.id);
-              Alert.alert("Éxito", "Los asientos bloqueados han sido liberados.");
-            } catch (error) {
-              console.error(error);
-              Alert.alert("Error", "No se pudieron liberar los asientos.");
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
+      "¿Estás seguro de que deseas liberar todos los asientos que han quedado bloqueados temporalmente?"
     );
+    if (!confirmed) return;
+    try {
+      setLoading(true);
+      await clearTripLocks(selectedTrip.id);
+      showInfo("Éxito", "Los asientos bloqueados han sido liberados.");
+    } catch (error) {
+      console.error(error);
+      showInfo("Error", "No se pudieron liberar los asientos.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -386,11 +416,35 @@ export default function PassengersScreen() {
 
                       <StyledView className="flex-row items-center">
                         {item.status === "reserved" ? (
+                          <>
+                            <TouchableOpacity
+                              onPress={() => handleConfirmReservation(item._id)}
+                              disabled={processingTicketId === item._id}
+                              className="bg-emerald-500 px-3 py-2 rounded-xl active:opacity-80 mr-2"
+                            >
+                              <StyledText className="text-white text-xs font-bold">
+                                {processingTicketId === item._id ? "..." : "Cobrar"}
+                              </StyledText>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => handleCancelPassenger(item._id)}
+                              disabled={processingTicketId === item._id}
+                              className="bg-red-500 px-3 py-2 rounded-xl active:opacity-80 mr-2"
+                            >
+                              <StyledText className="text-white text-xs font-bold">
+                                {processingTicketId === item._id ? "..." : "Cancelar"}
+                              </StyledText>
+                            </TouchableOpacity>
+                          </>
+                        ) : item.status === "active" || item.status === "pending_payment" ? (
                           <TouchableOpacity
-                            onPress={() => handleConfirmReservation(item._id)}
-                            className="bg-emerald-500 px-3 py-2 rounded-xl active:opacity-80 mr-2"
+                            onPress={() => handleCancelPassenger(item._id)}
+                            disabled={processingTicketId === item._id}
+                            className="bg-red-500 px-3 py-2 rounded-xl active:opacity-80 mr-2"
                           >
-                            <StyledText className="text-white text-xs font-bold">Cobrar</StyledText>
+                            <StyledText className="text-white text-xs font-bold">
+                              {processingTicketId === item._id ? "..." : "Cancelar"}
+                            </StyledText>
                           </TouchableOpacity>
                         ) : null}
                         <ChevronDown
@@ -645,6 +699,20 @@ export default function PassengersScreen() {
             </StyledView>
           </Card>
         </Modal>
+
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={2500}
+          style={{
+            marginBottom: 18,
+            backgroundColor: snackbarError ? "#dc2626" : "#0B4F9C",
+            borderRadius: 12,
+          }}
+          theme={{ colors: { inverseSurface: "#fff" } }}
+        >
+          {snackbarMessage}
+        </Snackbar>
 
       </Portal>
     </ScreenContainer>

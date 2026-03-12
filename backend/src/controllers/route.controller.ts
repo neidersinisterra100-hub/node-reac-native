@@ -284,7 +284,11 @@ export const getRoutesByRole: RequestHandler = async (req, res) => {
     const filter: any = {};
 
     if (municipioId && mongoose.Types.ObjectId.isValid(municipioId as string)) {
-      filter.municipioId = new Types.ObjectId(municipioId as string);
+      const objId = new Types.ObjectId(municipioId as string);
+      filter.$or = [
+        { municipioId: objId },
+        { cityId: objId }
+      ];
     }
 
     if (authReq.user?.role === "admin" && authReq.user.companyId) {

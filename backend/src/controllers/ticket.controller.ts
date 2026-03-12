@@ -204,7 +204,7 @@ export const buyTicket: RequestHandler = async (req, res) => {
         cityId: route.cityId,
 
         status: "pending_payment",
-        financials: { ...unitSplit },
+        financials: { price: unitPrice, ...unitSplit },
         payment: {
           status: "PENDING",
           reference,
@@ -351,7 +351,7 @@ export const reserveTicketOnBoarding: RequestHandler = async (req, res) => {
         cityId: route.cityId,
 
         status: "reserved",
-        financials: { ...unitSplit },
+        financials: { price: unitPrice, ...unitSplit },
         payment: {
           status: "PENDING",
           paymentMethod: "CASH",
@@ -815,6 +815,46 @@ export const cancelTicketByAdmin: RequestHandler = async (req, res) => {
     return res.json({ message: "Ticket cancelado exitosamente", ticket });
   } catch (error) {
     console.error("❌ Error cancelTicketByAdmin:", error);
+    return res.status(500).json({ message: "Error al cancelar ticket" });
+  }
+};
+
+export const cancelMyTicket: RequestHandler = async (req, res) => {
+  try {
+    const currentUser = req.user;
+    if (!currentUser) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID de ticket inválido" });
+    }
+
+    const ticket = await TicketModel.findById(id);
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket no encontrado" });
+    }
+
+    if (ticket.passenger.toString() !== currentUser.id) {
+      return res.status(403).json({ message: "No tienes permisos sobre este ticket" });
+    }
+
+    if (ticket.status === "cancelled") {
+      return res.json({ message: "Ticket ya estaba cancelado", ticket });
+    }
+
+    if (ticket.status === "used") {
+      return res.status(409).json({ message: "No se puede cancelar un ticket ya usado" });
+    }
+
+    ticket.status = "cancelled";
+    ticket.payment.status = "VOIDED";
+    await ticket.save();
+
+    return res.json({ message: "Ticket cancelado exitosamente", ticket });
+  } catch (error) {
+    console.error("❌ Error cancelMyTicket:", error);
     return res.status(500).json({ message: "Error al cancelar ticket" });
   }
 };

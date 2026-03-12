@@ -10,7 +10,7 @@ import {
     View, Text, TextInput, TouchableOpacity, FlatList,
     KeyboardAvoidingView, Platform, Animated, Easing,
     ActivityIndicator, Keyboard, StatusBar, Pressable,
-    useColorScheme
+    useColorScheme, ImageBackground, StyleSheet
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -129,7 +129,8 @@ function detectIntent(text: string, bookingStep: BookingStep): string {
     // while in booking flow
     if (bookingStep === "select_trip") return "booking_select";
     if (bookingStep === "confirm") {
-        if (KW.confirm.some(k => t.includes(k))) return "booking_confirmed";
+        if (t.includes("pagar al abordar") || t.includes("efectivo") || t.includes("luego")) return "booking_pay_on_board";
+        if (t.includes("comprar") || t.includes("wompi") || t.includes("tarjeta") || t.includes("pagar ahora")) return "booking_buy_now";
         if (KW.cancel.some(k => t.includes(k))) return "booking_cancelled";
         return "booking_confirm_prompt";
     }
@@ -163,13 +164,39 @@ async function fetchActiveTrips(): Promise<TripOption[]> {
 /* ═══════════════════════════════════════════════════════════════
    BOOKING SERVICE (conecta con la API real de reservas)
 ═══════════════════════════════════════════════════════════════ */
-async function createReservation(tripId: string, userId: string): Promise<boolean> {
+async function createPayOnBoardTicket(tripId: string, user: any): Promise<boolean> {
     try {
         const { api } = await import("../services/api");
-        await api.post("/seats/reserve", { tripId, seats: 1 });
+        // 1. Auto-assign and lock 1 seat
+        const lockRes = await api.post("/seats/reserve", { tripId, seats: 1 });
+        const seatNumbers = lockRes.data?.seatNumbers || [];
+        if (!seatNumbers.length) return false;
+
+        // 2. Create the ticket
+        await api.post("/tickets/reserve", {
+            tripId,
+            passengerName: user.name || "Usuario App",
+            passengerId: user.identificationNumber || "00000000",
+            passengerPhone: user.phone || "0000000000",
+            passengerEmail: user.email || "correo@ejemplo.com",
+            seatNumbers
+        });
         return true;
-    } catch {
+    } catch (e) {
+        console.log("Error creating POB ticket:", e);
         return false;
+    }
+}
+
+async function reserveSeatForBuyNow(tripId: string): Promise<number | null> {
+    try {
+        const { api } = await import("../services/api");
+        // Auto-assign and lock 1 seat for 5 mins
+        const lockRes = await api.post("/seats/reserve", { tripId, seats: 1 });
+        const seatNumbers = lockRes.data?.seatNumbers || [];
+        return seatNumbers.length ? seatNumbers[0] : null;
+    } catch {
+        return null;
     }
 }
 
@@ -185,7 +212,7 @@ interface BotState {
 async function generateResponse(
     intent: string,
     state: BotState,
-    userId: string,
+    user: any,
 ): Promise<{
     text: string;
     quickReplies?: string[];
@@ -286,15 +313,34 @@ async function generateResponse(
             case "booking_confirm_prompt":
                 return {
                     text: pick(PHRASES.bookingConfirm),
-                    quickReplies: ["✅ Confirmar", "❌ Cancelar"],
+                    quickReplies: ["💵 Pagar al abordar", "💳 Comprar tiquete", "❌ Cancelar"],
                 };
 
-            case "booking_confirmed": {
+            case "booking_pay_on_board": {
                 if (!state.selectedTrip) return { text: "No había ningún viaje seleccionado. ¿Quieres empezar de nuevo?" };
-                const ok = await createReservation(state.selectedTrip.id, userId);
+                const ok = await createPayOnBoardTicket(state.selectedTrip.id, user);
                 return {
                     text: ok ? pick(PHRASES.bookingDone) : "Hubo un problema procesando tu reserva 😔. Intenta de nuevo o contáctanos directamente.",
                     quickReplies: ok ? ["🏠 Ir al inicio", "🛥️ Ver más viajes"] : ["🔄 Intentar de nuevo"],
+                    newState: { bookingStep: "done", selectedTrip: null },
+                };
+            }
+
+            case "booking_buy_now": {
+                if (!state.selectedTrip) return { text: "No había ningún viaje seleccionado. ¿Quieres empezar de nuevo?" };
+                const seatNumber = await reserveSeatForBuyNow(state.selectedTrip.id);
+                if (!seatNumber) {
+                     return {
+                        text: "Lo siento, no pude reservar el asiento para tu compra 😔. Puede que el viaje esté lleno. Intenta de nuevo.",
+                        quickReplies: ["🔄 Intentar de nuevo", "🛥️ Ver viajes"],
+                        newState: { bookingStep: "done", selectedTrip: null },
+                    };
+                }
+                
+                // When this intent fires, the component will intercept the text response and trigger navigation
+                return {
+                    text: `¡Listo! He apartado el asiento #${seatNumber} por 5 minutos ⏳.\n\nTe llevaré a la pantalla de pago para que finalices la compra y el tiquete sea tuyo. 💳`,
+                    quickReplies: ["✅ Entendido"],
                     newState: { bookingStep: "done", selectedTrip: null },
                 };
             }
@@ -365,13 +411,18 @@ function BotText({ text, white, isDark }: { text: string; white?: boolean; isDar
     const color = white ? "white" : (isDark ? "#e9edef" : "#111b21");
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
     return (
-        <Text style={{ fontSize: 14.5, lineHeight: 22, color }}>
-            {parts.map((p, i) =>
-                p.startsWith("**") && p.endsWith("**")
-                    ? <Text key={i} style={{ fontWeight: "bold" }}>{p.slice(2, -2)}</Text>
-                    : <Text key={i}>{p}</Text>
-            )}
-        </Text>
+        <View style={{ flexShrink: 1, width: "100%" }}>
+            <Text style={{ 
+                fontSize: 14.5, lineHeight: 22, color, flexShrink: 1, flexWrap: "wrap",
+                ...(Platform.OS === 'web' ? { wordBreak: 'break-word' } : {}) as any 
+            }}>
+                {parts.map((p, i) =>
+                    p.startsWith("**") && p.endsWith("**")
+                        ? <Text key={i} style={{ fontWeight: "bold" }}>{p.slice(2, -2)}</Text>
+                        : <Text key={i}>{p}</Text>
+                )}
+            </Text>
+        </View>
     );
 }
 
@@ -456,16 +507,16 @@ function Bubble({ msg, onQuickReply, onTripSelect }: {
                 )}
                 <View style={{ flex: 1 }}>
                     {isBot ? (
-                        <View style={{ backgroundColor: botBubbleColor, borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, shadowColor: "#000", shadowOpacity: isDark ? 0.3 : 0.05, shadowRadius: 3, elevation: 1 }}>
+                        <View style={{ backgroundColor: botBubbleColor, borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, shadowColor: "#000", shadowOpacity: isDark ? 0.3 : 0.05, shadowRadius: 3, elevation: 1, flexShrink: 1 }}>
                             <BotText text={msg.text} isDark={isDark} />
                         </View>
                     ) : (
                         <LinearGradient
                             colors={userBubbleColors}
                             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                            style={{ borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10, shadowColor: "#000", shadowOpacity: isDark ? 0.3 : 0.1, shadowRadius: 3, elevation: 1 }}
+                            style={{ borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10, shadowColor: "#000", shadowOpacity: isDark ? 0.3 : 0.1, shadowRadius: 3, elevation: 1, flexShrink: 1 }}
                         >
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 }}>
                                 {msg.isVoice && <Mic size={12} color="rgba(255,255,255,0.8)" />}
                                 <BotText text={msg.text} white />
                             </View>
@@ -637,7 +688,7 @@ export default function NauticBotScreen() {
         const { text: botText, quickReplies, tripOptions, newState } = await generateResponse(
             intent,
             botStateRef.current,
-            (user as any)?._id || (user as any)?.id || "",
+            user || {}, // Passing the full user object to the bot instead of just userId
         );
 
         if (newState) {
@@ -646,6 +697,13 @@ export default function NauticBotScreen() {
 
         addBotMessage({ text: botText, quickReplies, tripOptions });
         setTyping(false);
+
+        // Si eligió comprar ahora, después del mensaje lo mandamos a SeatSelection
+        if (intent === "booking_buy_now" && botText.includes("pantalla de pago")) {
+            setTimeout(() => {
+                navigation.navigate("SeatSelection", { tripId: botStateRef.current.selectedTrip?.id || "" });
+            }, 2500);
+        }
     }, [typing, ttsEnabled]);
 
     // When user taps a trip card → auto-select it
@@ -663,8 +721,8 @@ export default function NauticBotScreen() {
             setTyping(true);
             await new Promise(r => setTimeout(r, 700));
             addBotMessage({
-                text: `Perfecto ✨\n\n🛥️ **${trip.origin} → ${trip.destination}**\n🕐 Salida: ${trip.time}\n💰 Precio: $${trip.price.toLocaleString()}\n🪑 Cupos disponibles: ${trip.capacity - trip.soldSeats}\n🏢 Empresa: ${trip.company}\n\n${pick(PHRASES.bookingConfirm)}`,
-                quickReplies: ["✅ Confirmar reserva", "❌ Cancelar"],
+                text: `Perfecto ✨\n\n🛥️ **${trip.origin} → ${trip.destination}**\n🕐 Salida: ${trip.time}\n💰 Precio: $${trip.price.toLocaleString()}\n🪑 Cupos disponibles: ${trip.capacity - trip.soldSeats}\n🏢 Empresa: ${trip.company}\n\nSelecciona cómo deseas proceder:`,
+                quickReplies: ["💵 Pagar al abordar", "💳 Comprar tiquete", "❌ Cancelar"],
             });
             setTyping(false);
         }, 200);
@@ -708,7 +766,14 @@ export default function NauticBotScreen() {
     const outlineColor = isDark ? "transparent" : "#e2e8f0";
 
     return (
-        <View style={{ flex: 1, backgroundColor: bgContainer }}>
+        <ImageBackground
+            source={require("../assets/bot_bg.png")}
+            style={{ flex: 1, overflow: 'hidden' }}
+            resizeMode="cover"
+        >
+            {/* Overlay de color sobre el fondo */}
+            <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: isDark ? "rgba(11,20,26,0.88)" : "rgba(239,234,226,0.88)" }} />
+
             <StatusBar barStyle="light-content" />
 
             {/* ── Header ── */}
@@ -778,7 +843,12 @@ export default function NauticBotScreen() {
                             onChangeText={setInput}
                             placeholder="Escribe un mensaje..."
                             placeholderTextColor={isDark ? "#8696a0" : "#94a3b8"}
-                            style={{ fontSize: 15, color: inputTextColor, maxHeight: 120, flex: 1 }}
+                            style={[
+                                { fontSize: 15, color: inputTextColor, maxHeight: 120, flex: 1 },
+                                Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {},
+                            ]}
+                            cursorColor={isDark ? "#00a884" : "#2563eb"}
+                            selectionColor={isDark ? "rgba(0,168,132,0.3)" : "rgba(37,99,235,0.3)"}
                             multiline
                             returnKeyType="send"
                             onSubmitEditing={() => { if (input.trim()) send(input); }}
@@ -801,6 +871,6 @@ export default function NauticBotScreen() {
                     )}
                 </View>
             </KeyboardAvoidingView>
-        </View>
+        </ImageBackground>
     );
 }

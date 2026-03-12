@@ -27,6 +27,7 @@ import {
    reserveTicketOnBoarding, // Reservar (pago al abordar)
    confirmAdminReservation, // Confirmar pago de reserva (admin)
    cancelTicketByAdmin,     // Cancelar ticket (admin/owner)
+   cancelMyTicket,          // Cancelación autogestionada (usuario final)
    updatePassengerInfo,     // Modificar datos de pasajero faltantes
 } from "../controllers/ticket.controller.js";
 
@@ -212,6 +213,12 @@ router.patch(
    requireAuth,
    requireOwnerOrAdmin,
    cancelTicketByAdmin
+);
+
+router.patch(
+  "/:id/cancel-self",
+  requireAuth,
+  cancelMyTicket
 );
 
 /**

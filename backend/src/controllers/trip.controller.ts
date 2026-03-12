@@ -117,7 +117,11 @@ export const getTrips: RequestHandler = async (req, res) => {
     const filter: any = { isActive: true };
 
     if (municipioId && mongoose.Types.ObjectId.isValid(municipioId as string)) {
-      filter.municipioId = new Types.ObjectId(municipioId as string);
+      const objId = new Types.ObjectId(municipioId as string);
+      filter.$or = [
+        { municipioId: objId },
+        { cityId: objId }
+      ];
     }
 
     // 🚀 FIX: Removed specific select to ensure full population
@@ -180,7 +184,11 @@ export const getManageTrips: RequestHandler = async (req, res) => {
     };
 
     if (municipioId && mongoose.Types.ObjectId.isValid(municipioId as string)) {
-      filter.municipioId = new Types.ObjectId(municipioId as string);
+      const objId = new Types.ObjectId(municipioId as string);
+      filter.$or = [
+        { municipioId: objId },
+        { cityId: objId }
+      ];
     }
 
     // 🚀 FIX: Removed specific select to ensure full population

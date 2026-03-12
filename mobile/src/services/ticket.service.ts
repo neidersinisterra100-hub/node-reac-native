@@ -256,6 +256,16 @@ export async function confirmAdminReservation(ticketId: string) {
   return response.data;
 }
 
+export async function cancelTicket(ticketId: string) {
+  const response = await api.patch(`/tickets/${ticketId}/cancel`);
+  return response.data;
+}
+
+export async function cancelMyTicket(ticketId: string) {
+  const response = await api.patch(`/tickets/${ticketId}/cancel-self`);
+  return response.data;
+}
+
 export async function updatePassengerInfo(ticketId: string, data: { passengerPhone?: string; passengerEmail?: string }) {
   const response = await api.patch(`/tickets/${ticketId}/passenger-info`, data);
   return response.data;

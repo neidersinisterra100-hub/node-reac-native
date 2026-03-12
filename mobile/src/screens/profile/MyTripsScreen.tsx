@@ -5,14 +5,18 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  Alert,
+  Platform,
+  TouchableOpacity,
 } from "react-native";
+import { Snackbar } from "react-native-paper";
 import { styled } from "nativewind";
 import { ScreenContainer } from "../../components/ui/ScreenContainer";
 import { PressableCard } from "../../components/ui/Card";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
-import { getMyTickets } from "../../services/ticket.service";
+import { cancelMyTicket, getMyTickets } from "../../services/ticket.service";
 import { Ticket as UITicket } from "../../types/ticket";
 import {
   Ticket as TicketIcon,
@@ -34,6 +38,10 @@ export const MyTripsScreen = () => {
 
   const [tickets, setTickets] = useState<UITicket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarError, setSnackbarError] = useState(false);
 
   useEffect(() => {
     if (isFocused) {
@@ -51,6 +59,43 @@ export const MyTripsScreen = () => {
       console.error("Error loading tickets", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const showInfo = (title: string, message: string) => {
+    setSnackbarMessage(`${title}: ${message}`);
+    setSnackbarError(title.toLowerCase().includes("error"));
+    setSnackbarVisible(true);
+  };
+
+  const showConfirm = async (title: string, message: string): Promise<boolean> => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      return window.confirm(`${title}\n\n${message}`);
+    }
+    return new Promise((resolve) => {
+      Alert.alert(title, message, [
+        { text: "No", style: "cancel", onPress: () => resolve(false) },
+        { text: "Sí", style: "destructive", onPress: () => resolve(true) },
+      ]);
+    });
+  };
+
+  const canCancel = (status?: string) =>
+    status === "active" || status === "reserved" || status === "pending_payment";
+
+  const handleCancelTicket = async (ticketId: string) => {
+    const confirmed = await showConfirm("Cancelar Ticket", "¿Seguro que quieres cancelar este ticket?");
+    if (!confirmed) return;
+    try {
+      setProcessingId(ticketId);
+      await cancelMyTicket(ticketId);
+      showInfo("Éxito", "Ticket cancelado correctamente.");
+      await loadTickets();
+    } catch (error) {
+      console.error("Error cancelando ticket propio", error);
+      showInfo("Error", "No se pudo cancelar el ticket.");
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -75,8 +120,22 @@ export const MyTripsScreen = () => {
           </StyledText>
         </StyledView>
 
-        <StyledText className="text-green-600 text-[10px] font-bold bg-green-100 px-2 py-0.5 rounded">
-          ✓ CONFIRMADO
+        <StyledText className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+          item.status === "reserved"
+            ? "text-yellow-700 bg-yellow-100"
+            : item.status === "used"
+              ? "text-blue-700 bg-blue-100"
+              : item.status === "cancelled"
+                ? "text-red-700 bg-red-100"
+                : "text-green-600 bg-green-100"
+        }`}>
+          {item.status === "reserved"
+            ? "RESERVADO"
+            : item.status === "used"
+              ? "USADO"
+              : item.status === "cancelled"
+                ? "CANCELADO"
+                : "CONFIRMADO"}
         </StyledText>
       </StyledView>
 
@@ -112,10 +171,24 @@ export const MyTripsScreen = () => {
         </StyledText>
 
         <StyledView className="flex-row items-center">
-          <StyledText className="mr-1 text-xs font-bold text-nautic-accent">
-            Ver detalle
-          </StyledText>
-          <TicketIcon size={14} color="#00B4D8" />
+          {canCancel(item.status) ? (
+            <TouchableOpacity
+              onPress={() => handleCancelTicket(item._id)}
+              disabled={processingId === item._id}
+              className="bg-red-500 px-3 py-1 rounded-lg"
+            >
+              <StyledText className="text-white text-xs font-bold">
+                {processingId === item._id ? "..." : "Cancelar"}
+              </StyledText>
+            </TouchableOpacity>
+          ) : (
+            <>
+              <StyledText className="mr-1 text-xs font-bold text-nautic-accent">
+                Ver detalle
+              </StyledText>
+              <TicketIcon size={14} color="#00B4D8" />
+            </>
+          )}
         </StyledView>
       </StyledView>
     </PressableCard>
@@ -160,6 +233,19 @@ export const MyTripsScreen = () => {
           )}
         />
       )}
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={2500}
+        style={{
+          marginBottom: 18,
+          backgroundColor: snackbarError ? "#dc2626" : "#0B4F9C",
+          borderRadius: 12,
+        }}
+        theme={{ colors: { inverseSurface: "#fff" } }}
+      >
+        {snackbarMessage}
+      </Snackbar>
     </ScreenContainer>
   );
 };

@@ -391,7 +391,7 @@ export const CompanyDashboardScreen = () => {
                                     <StyledView className="flex-row justify-between items-center mb-2 px-1">
                                         <StyledView>
                                             <StyledText className="text-xl font-black text-nautic-navy dark:text-dark-text tracking-tight">
-                                                {isOwner ? "Próximos Viajes" : "Tu Próximo Viaje"}
+                                                {isOwner ? "Próximos Viajes" : "Próximos Viajes"}
                                             </StyledText>
                                             <StyledView className="h-1 w-8 bg-emerald-500 rounded-full mt-1" />
                                         </StyledView>
@@ -404,7 +404,7 @@ export const CompanyDashboardScreen = () => {
                                         </TouchableOpacity>
                                     </StyledView>
 
-                                    {trips.slice(0, 1).map((item, idx) => {
+                                    {trips.slice(0, 2).map((item, idx) => {
                                         const isActive = item.isActive ?? item.active;
                                         return (
                                             <PressableCard

@@ -24,6 +24,7 @@ import marineRoutes from "./routes/marine.routes.js";
 import { router as itemsRoutes } from "./routes/items.routes.js";
 import rideRoutes from "./routes/ride.routes.js";
 import newsRoutes from "./routes/news.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
 
 /* ===============================
    MIDDLEWARES
@@ -81,6 +82,7 @@ app.use("/api/news", newsRoutes);
 app.use("/api/rides", rideRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/webhooks", webhookRoutes);
+app.use("/api/chat", chatRoutes);
 
 /* =========================================================
    404

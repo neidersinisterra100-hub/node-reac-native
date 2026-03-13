@@ -157,7 +157,7 @@ export default function TerrestreRideScreen() {
                             Buscando conductor...
                         </StyledText>
                         <StyledText className="text-slate-400 text-sm font-medium text-center px-4 mb-6">
-                            Conectando con el compañero náutico más cercano a tu ubicación.
+                            Conectando con el compañero  más cercano a tu ubicación.
                         </StyledText>
 
                         <TouchableOpacity

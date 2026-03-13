@@ -186,6 +186,8 @@ export type RootStackParamList = {
   WeatherMarine: undefined;
   CompleteProfile: undefined;
   NauticBot: undefined;
+  SupportChat: { conversationId?: string } | undefined;
+  AdminChatList: { conversationId?: string } | undefined;
 };
 
 

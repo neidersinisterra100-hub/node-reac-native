@@ -16,16 +16,16 @@ const cleanAll = async () => {
     const resCount = await SeatReservationModel.countDocuments({});
     const ticketCount = await TicketModel.countDocuments({});
     
-    console.log(\Found \ reservations and \ tickets.\);
+    console.log(`Found ${resCount} reservations and ${ticketCount} tickets.`);
 
     if (resCount > 0) {
       const result = await SeatReservationModel.deleteMany({});
-      console.log(\Deleted \ reservations.\);
+      console.log(`Deleted ${resCount} reservations.`);
     }
     
     if (ticketCount > 0) {
       const result = await TicketModel.deleteMany({});
-      console.log(\Deleted \ tickets.\);
+      console.log(`Deleted ${ticketCount} tickets.`);
     }
 
     await mongoose.disconnect();

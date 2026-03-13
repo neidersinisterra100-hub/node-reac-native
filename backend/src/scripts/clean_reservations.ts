@@ -13,11 +13,11 @@ const clean = async () => {
     console.log('Connected to MongoDB');
 
     const count = await SeatReservationModel.countDocuments({});
-    console.log(\Found \ active seat reservations.\);
+    console.log(`Found ${count} active seat reservations.`);
 
     if (count > 0) {
       const result = await SeatReservationModel.deleteMany({});
-      console.log(\Deleted \ reservations.\);
+      console.log(`Deleted ${count} reservations.`);
     }
 
     await mongoose.disconnect();

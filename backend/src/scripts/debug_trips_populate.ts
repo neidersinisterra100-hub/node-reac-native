@@ -26,7 +26,7 @@ const debug = async () => {
 
     console.log('Trips found:', trips.length);
     trips.forEach((t, i) => {
-      console.log(\Trip \:\);
+      console.log(`Trip ${i + 1}:`);
       console.log('  ID:', t._id);
       console.log('  Route:', JSON.stringify(t.routeId, null, 2));
       console.log('  Company:', JSON.stringify(t.companyId, null, 2));

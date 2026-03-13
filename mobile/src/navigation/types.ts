@@ -9,6 +9,7 @@ export type RootTabParamList = {
   History: undefined;
   Profile: undefined;
   Passengers: undefined;
+  AdminChatList: { conversationId?: string } | undefined;
 };
 
 export type HomeFlowParamList = {

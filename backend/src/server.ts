@@ -18,7 +18,7 @@ const startServer = async () => {
     // Wrap Express with http.Server so Socket.IO can share the same port
     const httpServer = http.createServer(app);
 
-    // Initialize Socket.IO chat gateway — MUST await before listen
+    // Initialize Socket.IO chat gateway — MUST await before listen prueb
     await initChatGateway(httpServer);
 
     httpServer.listen(PORT, "0.0.0.0", () => {

@@ -46,6 +46,8 @@ import ManageLocationsScreen from "../screens/ManageLocationsScreen";
 import { WeatherMarineScreen } from "../screens/WeatherMarineScreen";
 import CompleteProfileScreen from "../screens/CompleteProfileScreen";
 import NauticBotScreen from "../screens/NauticBotScreen";
+import SupportChatScreen from "../screens/SupportChatScreen";
+import AdminChatListScreen from "../screens/AdminChatListScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -131,6 +133,16 @@ export default function AppNavigator() {
             <Stack.Screen
               name="NauticBot"
               component={NauticBotScreen}
+              options={{ animation: "slide_from_bottom", headerShown: false }}
+            />
+            <Stack.Screen
+              name="SupportChat"
+              component={SupportChatScreen}
+              options={{ animation: "slide_from_bottom", headerShown: false }}
+            />
+            <Stack.Screen
+              name="AdminChatList"
+              component={AdminChatListScreen}
               options={{ animation: "slide_from_bottom", headerShown: false }}
             />
 

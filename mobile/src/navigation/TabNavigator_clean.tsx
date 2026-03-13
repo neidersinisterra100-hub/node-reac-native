@@ -103,7 +103,7 @@ export default function TabNavigator() {
             }}
           />
           <Tab.Screen
-            name="AdminChatList"
+            name="AdminChat"
             // @ts-ignore - Component type compatibility
             component={AdminChatListScreen}
             options={{

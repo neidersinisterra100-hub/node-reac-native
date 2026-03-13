@@ -1,15 +1,15 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { View, Text, TouchableOpacity, useColorScheme } from "react-native";
+import { View, Tet, TouchableOpacity, useColorScheme } from "react-native";
 import {
   Home,
-  FileText,
+  FileTet,
   User,
   Users,
   LayoutDashboard,
   MessageCircle,
 } from "lucide-react-native";
 import { styled } from "nativewind";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-contet";
 
 // Import new screens
 import { CompanyDashboardScreen } from "../screens/company/CompanyDashboardScreen"; // Owner Home
@@ -19,15 +19,15 @@ import PassengersScreen from "../screens/PassengersScreen";
 import AdminChatListScreen from "../screens/AdminChatListScreen";
 
 import { RootTabParamList } from "./types";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../contet/AuthContet";
 import { useNavigation } from "@react-navigation/native";
 
 const StyledView = styled(View);
-const StyledText = styled(Text);
+const StyledTet = styled(Tet);
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
-export default function TabNavigator() {
+eport default function TabNavigator() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
@@ -40,28 +40,28 @@ export default function TabNavigator() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: isDark ? "#0f172a" : "#FFFFFF",
+          backgroundColor: isDark ? "#f172a" : "#FFFFFF",
           borderTopColor: isDark ? "#1e293b" : "#F1F5F9",
           borderTopWidth: 1,
-          height: 60 + insets.bottom,
-          paddingBottom: Math.max(insets.bottom, 8),
+          height: 6 + insets.bottom,
+          paddingBottom: Math.ma(insets.bottom, 8),
           paddingTop: 8,
-          elevation: 10,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: isDark ? 0.4 : 0.1,
+          elevation: 1,
+          shadowColor: "#",
+          shadowOffset: { width: , height: -2 },
+          shadowOpacity: isDark ? .4 : .1,
           shadowRadius: 4,
         },
         tabBarItemStyle: {
-          flexDirection: "column",
+          fleDirection: "column",
           justifyContent: "center",
           alignItems: "center",
         },
         tabBarShowLabel: true,
-        tabBarActiveTintColor: isDark ? "#38bdf8" : "#0B4F9C",
+        tabBarActiveTintColor: isDark ? "#38bdf8" : "#B4F9C",
         tabBarInactiveTintColor: isDark ? "#64748b" : "#94A3B8",
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 1,
           marginTop: 2,
         },
       }}
@@ -84,7 +84,7 @@ export default function TabNavigator() {
         options={{
           tabBarLabel: "Mis Tickets",
           tabBarIcon: ({ color, size }) => (
-            <FileText color={color} size={size} />
+            <FileTet color={color} size={size} />
           ),
         }}
       />
@@ -103,7 +103,7 @@ export default function TabNavigator() {
             }}
           />
           <Tab.Screen
-            name="AdminChatList"
+            name="AdminChat"
             // @ts-ignore - Component type compatibility
             component={AdminChatListScreen}
             options={{

@@ -527,6 +527,11 @@ export const CompanyDashboardScreen = () => {
             {/* NauticBot FAB */}
             <FloatingBotButton onPress={() => navigation.navigate('NauticBot')} />
 
+            {/* Admin/Owner: Floating Chat Support Button (above bot) */}
+            {isOwner && (
+                <FloatingChatButton onPress={() => navigation.navigate('AdminChatList')} />
+            )}
+
         </ScreenContainer>
     );
 };
@@ -571,6 +576,52 @@ function FloatingBotButton({ onPress }: { onPress: () => void }) {
                 }}
             >
                 <MaterialCommunityIcons name="robot" size={30} color="white" />
+            </TouchableOpacity>
+        </View>
+    );
+}
+
+/* ─── Floating Chat Button (Admin/Owner) — pulsing emerald, stacked above bot ─── */
+function FloatingChatButton({ onPress }: { onPress: () => void }) {
+    const pulse = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulse, { toValue: 1.22, duration: 800, easing: Easing.out(Easing.sin), useNativeDriver: true }),
+                Animated.timing(pulse, { toValue: 1, duration: 800, easing: Easing.in(Easing.sin), useNativeDriver: true }),
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <View style={{
+            position: 'absolute', bottom: 100, right: 20,
+            zIndex: 999, elevation: 21,
+            width: 56, height: 56,
+            justifyContent: 'center', alignItems: 'center',
+        }}>
+            {/* Pulsing emerald ring — different color from bot's blue */}
+            <Animated.View style={{
+                position: 'absolute',
+                width: 56, height: 56, borderRadius: 28,
+                backgroundColor: 'rgba(16, 185, 129, 0.30)',
+                transform: [{ scale: pulse }]
+            }} />
+            <TouchableOpacity
+                onPress={onPress}
+                activeOpacity={0.82}
+                style={{
+                    width: 56, height: 56, borderRadius: 28,
+                    overflow: 'hidden',
+                    backgroundColor: '#059669',
+                    justifyContent: 'center', alignItems: 'center',
+                    elevation: 21,
+                    shadowColor: '#059669', shadowOpacity: 0.6,
+                    shadowRadius: 12, shadowOffset: { width: 0, height: 6 }
+                }}
+            >
+                <MaterialCommunityIcons name="message-text" size={26} color="white" />
             </TouchableOpacity>
         </View>
     );

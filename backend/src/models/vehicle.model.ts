@@ -6,7 +6,7 @@ export enum VehicleType {
     PREMIUM = "premium",
 }
 
-export interface IVehicle extends Document {
+export interface IVehicle extends Omit<Document, "model"> {
     brand: string;
     model: string;
     plate: string;

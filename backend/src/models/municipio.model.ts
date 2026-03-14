@@ -9,6 +9,8 @@ export interface MunicipioDocument extends Document {
     deactivatedAt?: Date;
     createdAt: Date;
     updatedAt: Date;
+    latitude?: number;
+    longitude?: number;
 }
 
 const MunicipioSchema = new Schema<MunicipioDocument>(

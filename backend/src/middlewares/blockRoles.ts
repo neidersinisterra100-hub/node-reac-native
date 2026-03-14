@@ -7,7 +7,7 @@ import { RequestHandler } from "express";
  * Ej: bloquear admin/owner en flujos de usuario final.
  */
 export const blockRoles = (
-  blockedRoles: Array<"user" | "admin" | "owner" | "super_owner">
+  blockedRoles: Array<"user" | "admin" | "owner" | "super_owner" | "driver">
 ): RequestHandler => {
   return (req, res, next) => {
     if (!req.user) {

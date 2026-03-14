@@ -93,14 +93,14 @@ export const getCompanyAudit: RequestHandler = async (req, res) => {
                     entityName = "Company";
                     entitySubtitle = String(metadata.companyName ?? "");
                     if (!entitySubtitle && Types.ObjectId.isValid(String(log.entityId))) {
-                        const company = await CompanyModel.findById(log.entityId).select("name").lean();
+                        const company = await CompanyModel.findById(log.entityId).select("name").lean() as any;
                         entitySubtitle = company?.name ?? "";
                     }
                 } else if (log.entity === "route") {
                     entityName = "Route";
                     entitySubtitle = String(metadata.routeName ?? "");
                     if (!entitySubtitle && Types.ObjectId.isValid(String(log.entityId))) {
-                        const route = await RouteModel.findById(log.entityId).select("origin destination").lean();
+                        const route = await RouteModel.findById(log.entityId).select("origin destination").lean() as any;
                         if (route) {
                             entitySubtitle = `${route.origin} - ${route.destination}`;
                         }

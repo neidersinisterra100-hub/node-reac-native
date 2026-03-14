@@ -7,6 +7,8 @@ export interface ICity extends Document {
     municipioId: Types.ObjectId;
     createdBy: Types.ObjectId;
     isActive: boolean;
+    latitude?: number;
+    longitude?: number;
 }
 
 const CitySchema = new Schema<ICity>(
